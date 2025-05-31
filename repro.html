@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reproductor Torrent</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#222; color:#eee; padding:20px; }
+  a { color: #89c; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  video, audio { width: 100%; max-width: 800px; margin-top: 20px; background:#000; }
+  #status { margin-top: 10px; }
+</style>
+</head>
+<body>
+<a href="index.html">← Volver al catálogo</a>
+<h1 id="title">Cargando...</h1>
+
+<div id="player-container">
+  <!-- Aquí irá el video/audio -->
+</div>
+
+<div id="status"></div>
+
+<!-- WebTorrent CDN -->
+<script src="https://cdn.jsdelivr.net/npm/webtorrent/webtorrent.min.js"></script>
+<script>
+  const client = new WebTorrent();
+  const params = new URLSearchParams(window.location.search);
+  const fileName = params.get('file');
+
+  if (!fileName) {
+    document.getElementById('title').textContent = 'No se especificó archivo torrent';
+  } else {
+    // Mostrar título bonito
+    const cleanTitle = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    document.getElementById('title').textContent = cleanTitle;
+
+    const status = document.getElementById('status');
+    const container = document.getElementById('player-container');
+
+    // Ruta al archivo torrent (ajusta si está en otra carpeta)
+    const torrentPath = 'videos/' + fileName + '.torrent';
+
+    status.textContent = 'Cargando torrent...';
+
+    client.add(torrentPath, function (torrent) {
+      status.textContent = 'Torrent cargado. Descargando...';
+
+      // Buscar archivo de video o audio (puedes ajustar tipos)
+      const file = torrent.files.find(f => /\.(mp4|webm|ogg|mp3|wav|mkv)$/i.test(f.name));
+
+      if (!file) {
+        status.textContent = 'No se encontró archivo de video/audio en el torrent.';
+        return;
+      }
+
+      status.textContent = 'Reproduciendo: ' + file.name;
+
+      // Renderizar video o audio según extensión
+      if (/\.(mp4|webm|ogg)$/i.test(file.name)) {
+        file.renderTo(container, { autoplay: true, controls: true });
+      } else if (/\.(mp3|wav)$/i.test(file.name)) {
+        file.getBlobURL(function(err, url) {
+          if (err) {
+            status.textContent = 'Error al cargar el audio.';
+            return;
+          }
+          const audio = document.createElement('audio');
+          audio.src = url;
+          audio.controls = true;
+          audio.autoplay = true;
+          container.appendChild(audio);
+        });
+      } else {
+        status.textContent = 'Tipo de archivo no soportado para reproducción.';
+      }
+
+      torrent.on('download', () => {
+        status.textContent = `Descargando: ${torrent.progress * 100 .toFixed(2)} %`;
+      });
+      torrent.on('done', () => {
+        status.textContent = 'Descarga completa.';
+      });
+    });
+
+  }
+</script>
+</body>
+</html>
