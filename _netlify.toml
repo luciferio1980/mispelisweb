@@ -1,1 +1,4 @@
-[[headers]]`n  for = "/*"`n  [headers.values]`n    Basic-Auth = "apoyardao:egabrense666@" 
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Basic-Auth = "apoyardao:egabrense666@" 
