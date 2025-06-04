@@ -2,106 +2,91 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Películas</title>
+  <title>🎬 Películas en Línea</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #000; /* fondo negro */
-      color: #fff; /* texto blanco */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #000;
+      color: #fff;
+    }
+
+    h1 {
+      text-align: center;
+      color: #FFD700;
+      font-size: 2.8em;
+      margin-top: 40px;
+      margin-bottom: 30px;
+      text-shadow: 2px 2px 4px #333;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr); /* 6 columnas por fila */
+      grid-template-columns: repeat(6, 1fr);
       gap: 20px;
       max-width: 1200px;
-      margin: 40px auto;
+      margin: auto;
+    }
+
+    .movie-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
     }
 
     .movie-icon {
       cursor: pointer;
       width: 100%;
       max-width: 150px;
-      transition: transform 0.2s;
+      border-radius: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .movie-icon:hover {
       transform: scale(1.05);
+      box-shadow: 0 0 10px #FFD700;
     }
 
-    .movie-container {
-      display: flex;
-      justify-content: center;
+    .movie-title {
+      color: #FFD700;
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 1em;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    a {
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
 
-  <h1 style="text-align:center;">Selecciona una Película</h1>
+  <h1>🎬 Películas en Línea</h1>
 
   <div class="grid">
-    <!-- Cada ícono abre un enlace diferente -->
     <div class="movie-container">
       <a href="https://nuuuppp.sbs/watch/JybAgQsRrfM7kz73jz3mGqo0kchHQ9q3jz3hBoWVlKYtDNVMY284?h=" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="El Padrino">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula2" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 2">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula3" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 3">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula4" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 4">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula5" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 5">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula6" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 6">
+        <img src="https://pics.filmaffinity.com/the_godfather-488102675-mmed.jpg" class="movie-icon" alt="El Padrino">
+        <div class="movie-title">El Padrino</div>
       </a>
     </div>
 
     <div class="movie-container">
-      <a href="https://example.com/pelicula7" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 7">
+      <a href="https://nuuuppp.sbs/wathcpremium/GHtG7btFSc74OVBomuScZ5oTiY2U04x7kz7nHXu8dQFhjw?h=" target="_blank">
+        <img src="https://pics.filmaffinity.com/gladiator_ii-808387712-mmed.jpg" class="movie-icon" alt="Gladiator 2">
+        <div class="movie-title">Gladiator 2</div>
       </a>
     </div>
+
     <div class="movie-container">
-      <a href="https://example.com/pelicula8" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 8">
+      <a href="https://example.com/pelicula3" target="_blank">
+        <img src="https://i.imgur.com/0XghU5S.png" class="movie-icon" alt="Película 3">
+        <div class="movie-title">Película 3</div>
       </a>
     </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula9" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 9">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula10" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 10">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula11" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 11">
-      </a>
-    </div>
-    <div class="movie-container">
-      <a href="https://example.com/pelicula12" target="_blank">
-        <img src="icono-pelicula.png" class="movie-icon" alt="Película 12">
-      </a>
-    </div>
+
+    <!-- Añade más películas aquí -->
   </div>
 
 </body>
