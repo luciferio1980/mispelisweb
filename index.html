@@ -5,6 +5,68 @@
   <title>🎬 Películas en Línea</title>
   <style>
     body {
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    #login {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    input {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+    }
+
+    #contenido {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Pantalla de login -->
+  <div id="login">
+    <h2>Acceso restringido 🔐</h2>
+    <input type="text" id="usuario" placeholder="Usuario">
+    <input type="password" id="clave" placeholder="Contraseña">
+    <button onclick="validar()">Entrar</button>
+    <p id="mensaje" style="color:red;"></p>
+  </div>
+
+   <script>
+    function validar() {
+      const user = document.getElementById('usuario').value;
+      const pass = document.getElementById('clave').value;
+
+      // Cambia aquí el usuario y la contraseña
+      if (user === "apoyardao" && pass === "egabrense666") {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("contenido").style.display = "block";
+      } else {
+        document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos.";
+      }
+    }
+  </script>
+
+</body>
+</html>
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>🎬 Películas en Línea</title>
+  <style>
+    body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #000;
       color: #fff;
