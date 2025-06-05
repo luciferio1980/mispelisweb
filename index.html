@@ -8,6 +8,8 @@
       background-color: #000;
       color: #fff;
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
 
     #login {
@@ -18,73 +20,44 @@
       height: 100vh;
     }
 
-    input {
+    input, button {
       padding: 10px;
       margin: 10px;
       font-size: 16px;
       border-radius: 5px;
+      border: none;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #FFD700;
+      color: #000;
+      font-weight: bold;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     #contenido {
       display: none;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Pantalla de login -->
-  <div id="login">
-    <h2>Acceso restringido 🔐</h2>
-    <input type="text" id="usuario" placeholder="Usuario">
-    <input type="password" id="clave" placeholder="Contraseña">
-    <button onclick="validar()">Entrar</button>
-    <p id="mensaje" style="color:red;"></p>
-  </div>
-
-   <script>
-    function validar() {
-      const user = document.getElementById('usuario').value;
-      const pass = document.getElementById('clave').value;
-
-      // Cambia aquí el usuario y la contraseña
-      if (user === "apoyardao" && pass === "egabrense666") {
-        document.getElementById("login").style.display = "none";
-        document.getElementById("contenido").style.display = "block";
-      } else {
-        document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos.";
-      }
-    }
-  </script>
-
-</body>
-</html>
-
-
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>🎬 Películas en Línea</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #000;
-      color: #fff;
+      padding: 40px 20px;
     }
 
     h1 {
       text-align: center;
       color: #FFD700;
-      font-size: 2.8em;
-      margin-top: 40px;
-      margin-bottom: 30px;
+      font-size: 2.5em;
       text-shadow: 2px 2px 4px #333;
+      margin-bottom: 40px;
     }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      gap: 20px;
+      gap: 30px;
       max-width: 1200px;
       margin: auto;
     }
@@ -97,11 +70,11 @@
     }
 
     .movie-icon {
-      cursor: pointer;
       width: 100%;
       max-width: 150px;
       border-radius: 10px;
       transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
     }
 
     .movie-icon:hover {
@@ -111,8 +84,8 @@
 
     .movie-title {
       color: #FFD700;
-      font-weight: bold;
       margin-top: 10px;
+      font-weight: bold;
       font-size: 1em;
       text-shadow: 1px 1px 2px #000;
     }
@@ -124,10 +97,27 @@
 </head>
 <body>
 
-  <h1>🎬 Películas en Línea</h1>
+  <!-- LOGIN -->
+  <div id="login">
+    <h2>Acceso restringido 🔐</h2>
+    <input type="text" id="usuario" placeholder="Usuario">
+    <input type="password" id="clave" placeholder="Contraseña">
+    
+    <div class="checkbox-container">
+      <input type="checkbox" id="recordar">
+      <label for="recordar">Recordar</label>
+    </div>
 
-  <div class="grid">
-    <div class="movie-container">
+    <button onclick="validar()">Entrar</button>
+    <p id="mensaje" style="color:red;"></p>
+  </div>
+
+  <!-- CONTENIDO PROTEGIDO -->
+  <div id="contenido">
+    <h1>🎬 Películas en Línea</h1>
+    
+    <div class="grid">
+       <div class="movie-container">
       <a href="https://ok.ru/videoembed/935438322385" target="_blank">
         <img src="https://online.tucineclasico.es/wp-content/uploads/2019/02/dfEQMuZMIcPgC7nt07D9uVQi7Tv-200x300.jpg" class="movie-icon" alt="El Padrino">
         <div class="movie-title">El Padrino</div>
@@ -265,10 +255,47 @@
         <img src="https://i.imgur.com/0XghU5S.png" class="movie-icon" alt="Película 3">
         <div class="movie-title">Película 3</div>
       </a>
+   
+      
+      </div>
     </div>
-	
-    <!-- Añade más películas aquí -->
   </div>
+
+  <script>
+    // Cargar usuario y contraseña si fueron recordados
+    window.onload = function () {
+      const savedUser = localStorage.getItem("usuario");
+      const savedPass = localStorage.getItem("clave");
+
+      if (savedUser && savedPass) {
+        document.getElementById("usuario").value = savedUser;
+        document.getElementById("clave").value = savedPass;
+        document.getElementById("recordar").checked = true;
+      }
+    };
+
+    function validar() {
+      const user = document.getElementById('usuario').value;
+      const pass = document.getElementById('clave').value;
+      const recordar = document.getElementById('recordar').checked;
+
+      // Cambia esto por tu usuario y contraseña reales
+      if (user === "apoyardao" && pass === "egabrense666") {
+        if (recordar) {
+          localStorage.setItem("usuario", user);
+          localStorage.setItem("clave", pass);
+        } else {
+          localStorage.removeItem("usuario");
+          localStorage.removeItem("clave");
+        }
+
+        document.getElementById("login").style.display = "none";
+        document.getElementById("contenido").style.display = "block";
+      } else {
+        document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos.";
+      }
+    }
+  </script>
 
 </body>
 </html>
