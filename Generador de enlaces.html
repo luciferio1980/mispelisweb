@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Generador de lista HTML</title>
+</head>
+<body style="background:#111; color:white; font-family:sans-serif; padding:20px;">
+
+<h2>Generar listado de capítulos</h2>
+<textarea id="inputLinks" style="width:100%; height:200px; background:#222; color:#0f0; padding:10px;"></textarea>
+<br><br>
+<button onclick="generar()">Generar HTML</button>
+<h3>Resultado:</h3>
+<pre id="output" style="background:#222; color:#0ff; padding:10px; white-space:pre-wrap;"></pre>
+
+<script>
+function generar() {
+    let texto = document.getElementById("inputLinks").value.trim();
+    if (!texto) return;
+
+    let enlaces = texto.split(/\s+/) // Separar por espacios o saltos de línea
+        .map(l => l.replace("/d/", "/e/")); // Cambiar /d/ por /e/
+
+    // Ordenar por número de capítulo (ascendente)
+    enlaces.sort((a, b) => {
+        let numA = parseInt(a.match(/Cap.tulo_(\d+)/i)?.[1] || 0);
+        let numB = parseInt(b.match(/Cap.tulo_(\d+)/i)?.[1] || 0);
+        return numA - numB;
+    });
+
+    // Generar HTML
+    let resultado = enlaces.map(link => {
+        let capNum = link.match(/Cap.tulo_(\d+)/i)?.[1] || "";
+        return `<div class="link-item"><span class="check">✔</span><a href="${link}" target="_blank">Initial D First Stage Castellano, Capítulo ${capNum}</a></div>`;
+    }).join("\n");
+
+    document.getElementById("output").textContent = resultado;
+}
+</script>
+
+</body>
+</html>
