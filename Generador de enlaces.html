@@ -18,20 +18,21 @@ function generar() {
     let texto = document.getElementById("inputLinks").value.trim();
     if (!texto) return;
 
-    let enlaces = texto.split(/\s+/) // Separar por espacios o saltos de línea
-        .map(l => l.replace("/d/", "/e/")); // Cambiar /d/ por /e/
+    let enlaces = texto.split(/\s+/)
+        .map(l => l.replace("/d/", "/e/")); // Convertir /d/ a /e/
 
-    // Ordenar por número de capítulo (ascendente)
+    // Ordenar por número de capítulo
     enlaces.sort((a, b) => {
         let numA = parseInt(a.match(/Cap.tulo_(\d+)/i)?.[1] || 0);
         let numB = parseInt(b.match(/Cap.tulo_(\d+)/i)?.[1] || 0);
         return numA - numB;
     });
 
-    // Generar HTML
+    // Generar HTML limpio
     let resultado = enlaces.map(link => {
         let capNum = link.match(/Cap.tulo_(\d+)/i)?.[1] || "";
-        return `<div class="link-item"><span class="check">✔</span><a href="${link}" target="_blank">Initial D First Stage Castellano, Capítulo ${capNum}</a></div>`;
+        let titulo = `Initial D First Stage Castellano, Capítulo ${capNum}`;
+        return `<div class="link-item"><span class="check">✔</span><a href="${link}" target="_blank">${titulo}</a></div>`;
     }).join("\n");
 
     document.getElementById("output").textContent = resultado;
