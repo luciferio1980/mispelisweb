@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor IPTV Avanzado</title>
+    <title>Reproductor IPTV Completo</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,101 +13,94 @@
         .container { background-color: #161b22; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); max-width: 900px; width: 100%; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; height: auto; }
         .video-player-container { position: relative; width: 100%; padding-top: 56.25%; background-color: #000; }
         .video-player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background-color: #000; }
-        .message-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #21262d; color: #c9d1d9; padding: 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); z-index: 1000; display: none; flex-direction: column; align-items: center; text-align: center; border: 1px solid #30363d; max-width: 350px; }
-        .message-box.show { display: flex; }
-        .message-box .title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
-        .message-box .message { margin-bottom: 1.5rem; }
-        .message-box button { background-color: #238636; color: #ffffff; font-weight: 600; padding: 0.5rem 1.5rem; border-radius: 6px; transition: background-color 0.2s; }
-        .message-box button:hover { background-color: #2ea043; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal.show { display: flex; }
-        .modal-content { background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 2rem; width: 90%; max-width: 800px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8); transform: scale(0.95); transition: transform 0.3s ease-in-out; }
-        .modal.show .modal-content { transform: scale(1); }
-        .content-list { flex-grow: 1; overflow-y: auto; margin-top: 1rem; padding-right: 0.5rem; }
+        .modal-content { background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 2rem; width: 90%; max-width: 800px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8); }
+        .content-list, .content-grid { flex-grow: 1; overflow-y: auto; margin-top: 1rem; padding-right: 0.5rem; }
+        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1.5rem; }
+        .content-item { cursor: pointer; text-align: center; transition: transform 0.2s; }
+        .content-item:hover { transform: scale(1.05); }
+        .content-item img { width: 100%; border-radius: 8px; aspect-ratio: 2 / 3; object-fit: cover; background-color: #30363d; }
+        .content-item p { margin-top: 0.5rem; font-size: 0.875rem; line-height: 1.2; }
         .channel-list-item { cursor: pointer; padding: 0.75rem; border-bottom: 1px solid #30363d; transition: background-color 0.2s; display: flex; align-items: center; }
         .channel-list-item:hover { background-color: #21262d; }
         .channel-list-item img { width: 2.5rem; height: 2.5rem; margin-right: 1rem; border-radius: 50%; object-fit: cover; background-color: #30363d; }
         .tab-button { padding: 0.75rem 1.5rem; border-radius: 8px 8px 0 0; font-weight: 600; background-color: #21262d; border-bottom: 2px solid transparent; transition: all 0.2s; }
         .tab-button.active { background-color: #161b22; border-bottom: 2px solid #58a6ff; color: #58a6ff; }
-        .initial-menu { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; width: 100%; max-width: 900px; }
-        .collapsible-header { cursor: pointer; padding: 1rem; background-color: #21262d; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-top: 0.5rem; transition: background-color 0.2s; }
-        .collapsible-header:hover { background-color: #30363d; }
-        .collapsible-header .fas { transition: transform 0.3s; }
-        .collapsible-header.active .fas { transform: rotate(180deg); }
-        .collapsible-content { padding-left: 1rem; overflow: hidden; transition: max-height 0.3s ease-in-out; max-height: 0; }
+        .collapsible-header { cursor: pointer; padding: 1rem; background-color: #21262d; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-top: 0.5rem; }
+        .collapsible-header.active .fa-chevron-down { transform: rotate(180deg); }
+        .collapsible-content { overflow: hidden; max-height: 0; transition: max-height 0.3s ease-out; }
         .collapsible-content.show { max-height: 10000px; }
-        .progress-container { display: flex; flex-direction: column; align-items: center; margin-top: 1rem; width: 100%; }
-        .progress-bar { width: 100%; height: 8px; background-color: #30363d; border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
-        .progress-bar-fill { height: 100%; width: 0%; background-color: #58a6ff; transition: width 0.3s ease; }
+        .progress-container { margin-top: 1rem; width: 100%; }
+        .progress-bar { width: 100%; background-color: #30363d; border-radius: 9999px; height: 0.625rem; }
+        .progress-bar-fill { background-color: #58a6ff; height: 0.625rem; border-radius: 9999px; transition: width 0.3s ease; }
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top: 4px solid #58a6ff; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 antialiased leading-tight">
-
-    <div id="initialMenu" class="initial-menu">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-6">Reproductor IPTV Avanzado</h1>
-        <p class="text-lg sm:text-xl text-gray-400 mb-8 max-w-sm" id="statusMessage">Selecciona una opción.</p>
+<body>
+    <div id="initialMenu" class="flex flex-col items-center justify-center text-center w-full max-w-lg">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-6">Reproductor IPTV</h1>
         <div class="flex flex-col space-y-4 w-full max-w-xs mb-8">
-            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105" data-action="show-content-list" data-content-type="live"><i class="fas fa-satellite-dish mr-2"></i>Live TV</button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105" data-action="show-content-list" data-content-type="movies"><i class="fas fa-film mr-2"></i>Películas</button>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105" data-action="show-content-list" data-content-type="series"><i class="fas fa-tv mr-2"></i>Series</button>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full" data-action="show-content-list" data-content-type="live"><i class="fas fa-satellite-dish mr-2"></i>Live TV</button>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full" data-action="show-content-list" data-content-type="movies"><i class="fas fa-film mr-2"></i>Películas</button>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full" data-action="show-content-list" data-content-type="series"><i class="fas fa-tv mr-2"></i>Series</button>
         </div>
-        <button class="absolute top-4 right-4 text-white text-2xl p-2 rounded-full hover:bg-gray-700 transition-colors" data-action="show-settings"><i class="fas fa-cog"></i></button>
+        <button class="absolute top-4 right-4 text-white text-2xl p-2 rounded-full hover:bg-gray-700" data-action="show-settings"><i class="fas fa-cog"></i></button>
     </div>
 
     <div id="mainApp" class="container hidden">
         <header class="flex justify-between items-center p-4 border-b border-gray-700">
             <h1 class="text-2xl font-bold text-white">Reproductor</h1>
             <div class="flex items-center space-x-2">
-                <button class="text-white text-xl p-2 rounded-full hover:bg-gray-700 transition-colors" data-action="show-initial-menu"><i class="fas fa-arrow-left"></i></button>
-                <button class="text-white text-xl p-2 rounded-full hover:bg-gray-700 transition-colors" data-action="show-content-list-modal"><i class="fas fa-bars"></i></button>
+                <button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-initial-menu"><i class="fas fa-arrow-left"></i></button>
+                <button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-content-list-modal"><i class="fas fa-bars"></i></button>
             </div>
         </header>
-
-        <div id="videoContainer" class="video-player-container rounded-t-lg">
-            <video id="videoPlayer" class="video-player rounded-t-lg" controls autoplay></video>
+        <div id="videoContainer" class="video-player-container">
+            <video id="videoPlayer" class="video-player" controls autoplay></video>
+            <div id="videoLoader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 hidden"><div class="spinner"></div></div>
         </div>
-
-        <div id="welcomeMessage" class="flex-grow flex items-center justify-center p-8 text-center">
-            <p class="text-xl text-gray-400">Selecciona un canal para empezar a reproducir.</p>
-        </div>
-
-        <div id="controlsContainer" class="p-4 flex-col sm:flex-row items-center justify-between hidden">
-            <div class="flex-1 text-center sm:text-left mb-4 sm:mb-0">
-                <h2 id="channelName" class="text-xl font-semibold"></h2>
-                <p id="channelDescription" class="text-gray-400"></p>
-            </div>
-        </div>
+        <div id="controlsContainer" class="p-4 hidden"><h2 id="mediaTitle" class="text-xl font-semibold text-center"></h2></div>
     </div>
-    
+
+    <div id="messageBox" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-lg shadow-lg z-[3000] text-center">
+        <h3 id="messageTitle" class="text-lg font-bold mb-2"></h3>
+        <p id="messageContent" class="mb-4"></p>
+        <button class="bg-blue-600 px-4 py-2 rounded-md" data-action="hide-message">OK</button>
+    </div>
+
     <div id="settingsModal" class="modal">
         <div class="modal-content">
-            <h2 class="text-2xl font-bold text-white mb-4">Opciones de Contenido</h2>
-            <div class="flex justify-center -mt-4 mb-4">
-                <button id="m3uTab" class="tab-button active" data-action="switch-tab" data-tab-name="m3u">URL M3U</button>
-                <button id="xtremioTab" class="tab-button" data-action="switch-tab" data-tab-name="xtremio">Xtremio</button>
+            <h2 class="text-2xl font-bold text-white mb-4">Configuración de Contenido</h2>
+            <div class="flex justify-center mb-4">
+                <button id="m3uSettingsTab" class="tab-button active" data-action="switch-settings-tab" data-tab-name="m3u">URL M3U</button>
+                <button id="xtremioSettingsTab" class="tab-button" data-action="switch-settings-tab" data-tab-name="xtremio">Xtream</button>
             </div>
-            <div id="m3uPanel" class="tab-panel flex flex-col flex-grow">
+
+            <div id="m3uSettingsPanel" class="flex flex-col flex-grow">
                 <p class="text-gray-400 mb-4">Pega la URL de tu lista `.m3u` o `.m3u8`.</p>
-                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-4">
-                    <input type="text" id="m3uUrlInput" placeholder="https://example.com/playlist.m3u8" class="flex-1 bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
-                    <button id="loadM3uBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-lg transition-colors" data-action="load-m3u"><i class="fas fa-cloud-download-alt mr-2"></i>Cargar</button>
+                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                    <input type="text" id="m3uUrlInput" placeholder="https://example.com/playlist.m3u8" class="flex-1 bg-gray-700 text-white p-2 rounded-md">
+                    <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md" data-action="load-m3u"><i class="fas fa-cloud-download-alt mr-2"></i>Cargar</button>
                 </div>
                 <div id="m3uProgress" class="progress-container hidden">
-                    <p id="m3uProgressText" class="text-sm text-gray-400">Cargando...</p>
-                    <div class="progress-bar"><div id="m3uProgressBarFill" class="progress-bar-fill"></div></div>
+                    <p id="m3uProgressText" class="text-sm text-gray-400 text-center mb-2"></p>
+                    <div class="progress-bar"><div id="m3uProgressBarFill" class="progress-bar-fill" style="width: 0%"></div></div>
                 </div>
             </div>
-            <div id="xtremioPanel" class="tab-panel hidden flex flex-col flex-grow">
-                <p class="text-gray-400 mb-4">Ingresa tus credenciales de Xtremio.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                    <input type="text" id="xtremioServer" placeholder="http://servidor:puerto" class="col-span-2 bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
-                    <input type="text" id="xtremioUsername" placeholder="Usuario" class="bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
-                    <input type="password" id="xtremioPassword" placeholder="Contraseña" class="bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
+
+            <div id="xtremioSettingsPanel" class="hidden flex-col flex-grow">
+                <p class="text-gray-400 mb-4">Ingresa tus credenciales de Xtream Codes.</p>
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <input type="text" id="xtremioServer" placeholder="http://servidor:puerto" class="bg-gray-700 text-white p-2 rounded-md">
+                    <input type="text" id="xtremioUsername" placeholder="Usuario" class="bg-gray-700 text-white p-2 rounded-md">
+                    <input type="password" id="xtremioPassword" placeholder="Contraseña" class="bg-gray-700 text-white p-2 rounded-md">
                 </div>
-                <button id="loadXtremioBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-lg transition-colors" data-action="load-xtremio"><i class="fas fa-sign-in-alt mr-2"></i>Conectar y Cargar</button>
+                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md" data-action="load-xtremio"><i class="fas fa-sign-in-alt mr-2"></i>Conectar y Cargar</button>
                 <div id="xtremioProgress" class="progress-container hidden">
-                    <p id="xtremioProgressText" class="text-sm text-gray-400">Cargando...</p>
-                    <div class="progress-bar"><div id="xtremioProgressBarFill" class="progress-bar-fill"></div></div>
+                    <p id="xtremioProgressText" class="text-sm text-gray-400 text-center mb-2"></p>
+                    <div class="progress-bar"><div id="xtremioProgressBarFill" class="progress-bar-fill" style="width: 0%"></div></div>
                 </div>
             </div>
         </div>
@@ -115,228 +108,249 @@
     
     <div id="contentListModal" class="modal">
         <div class="modal-content">
-            <h2 class="text-2xl font-bold text-white mb-4">Biblioteca de Contenido</h2>
-            <div class="flex justify-center -mt-4 mb-4">
-                <button id="liveContentTab" class="tab-button active" data-action="switch-content-tab" data-content-type="live">Live TV</button>
+            <div class="flex justify-center mb-4">
+                <button id="liveContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="live">Live TV</button>
                 <button id="moviesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="movies">Películas</button>
                 <button id="seriesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="series">Series</button>
             </div>
-            <div id="livePanel" class="content-panel h-full"><div id="liveList" class="content-list"></div></div>
-            <div id="moviesPanel" class="content-panel hidden h-full"><p class="text-gray-400 text-center py-4">Función de películas no implementada.</p></div>
-            <div id="seriesPanel" class="content-panel hidden h-full"><p class="text-gray-400 text-center py-4">Función de series no implementada.</p></div>
+            <div id="livePanel" class="content-panel"><div id="liveList" class="content-list"></div></div>
+            <div id="moviesPanel" class="content-panel hidden"><div id="movieGrid" class="content-grid"></div></div>
+            <div id="seriesPanel" class="content-panel hidden"><div id="seriesGrid" class="content-grid"></div></div>
         </div>
     </div>
 
-    <script type="module">
-        // --- VARIABLES GLOBALES ---
-        let liveChannels = [];
-        let movies = [];
-        let series = [];
-        let hls; // Instancia para HLS.js
-        let currentContentType = 'live';
+<script type="module">
+    // --- VARIABLES GLOBALES ---
+    let liveChannels = [], movies = [], series = [], hls, currentContentType = 'live';
 
-        // --- REFERENCIAS AL DOM ---
-        const mainApp = document.getElementById('mainApp');
-        const initialMenu = document.getElementById('initialMenu');
-        const videoContainer = document.getElementById('videoContainer');
-        const videoPlayer = document.getElementById('videoPlayer');
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const controlsContainer = document.getElementById('controlsContainer');
-        const contentListModal = document.getElementById('contentListModal');
-        const settingsModal = document.getElementById('settingsModal');
+    // --- REFERENCIAS AL DOM ---
+    const dom = {
+        mainApp: document.getElementById('mainApp'),
+        initialMenu: document.getElementById('initialMenu'),
+        videoPlayer: document.getElementById('videoPlayer'),
+        videoLoader: document.getElementById('videoLoader'),
+        mediaTitle: document.getElementById('mediaTitle'),
+        controlsContainer: document.getElementById('controlsContainer'),
+        contentListModal: document.getElementById('contentListModal'),
+        settingsModal: document.getElementById('settingsModal'),
+        messageBox: document.getElementById('messageBox')
+    };
 
-        // --- FUNCIONES DE REPRODUCCIÓN ---
-        /**
-         * Reproduce un stream HLS (.m3u8) usando HLS.js
-         * @param {string} url La URL del stream.
-         */
-        function playStream(url) {
-            if (hls) {
-                hls.destroy(); // Destruye la instancia anterior para limpiar
-            }
+    // --- REPRODUCTOR DE VIDEO ---
+    function playStream(url, title) {
+        dom.videoLoader.classList.remove('hidden');
+        dom.mediaTitle.textContent = title;
+        dom.controlsContainer.classList.remove('hidden');
+        
+        if (hls) hls.destroy();
+
+        const extension = new URL(url).pathname.split('.').pop().toLowerCase();
+        
+        if (['m3u8'].includes(extension)) {
             if (Hls.isSupported()) {
                 hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(videoPlayer);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play());
-            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                // Soporte nativo en navegadores como Safari
-                videoPlayer.src = url;
-            }
-            videoContainer.classList.remove('hidden');
-            welcomeMessage.classList.add('hidden');
-        }
-        
-        // --- FUNCIONES DE CARGA Y PARSEO ---
-        /**
-         * Parsea el texto de un archivo M3U y lo convierte en un array de objetos.
-         * @param {string} text Contenido del archivo M3U.
-         */
-        function parseM3u(text) {
-            liveChannels = [];
-            const lines = text.split('\n');
-            let currentChannel = {};
-            for (const line of lines) {
-                if (line.startsWith('#EXTINF:')) {
-                    const name = line.substring(line.lastIndexOf(',') + 1).trim();
-                    const logoMatch = line.match(/tvg-logo="([^"]*)"/);
-                    const groupMatch = line.match(/group-title="([^"]*)"/);
-                    currentChannel = {
-                        name: name,
-                        logo: logoMatch ? logoMatch[1] : 'https://via.placeholder.com/150/161b22/FFFFFF?text=TV',
-                        group: groupMatch ? groupMatch[1] : 'General',
-                        url: null
-                    };
-                } else if (line.trim() && !line.startsWith('#')) {
-                    if (currentChannel.name) {
-                        currentChannel.url = line.trim();
-                        liveChannels.push(currentChannel);
-                        currentChannel = {};
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        console.error('Error HLS:', data);
+                        showMessage('Error de Reproducción', 'No se pudo cargar el canal. Puede estar offline o protegido (CORS). Revisa la consola (F12) para más detalles.');
+                        dom.videoLoader.classList.add('hidden');
                     }
+                });
+                hls.loadSource(url);
+                hls.attachMedia(dom.videoPlayer);
+            } else if (dom.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                dom.videoPlayer.src = url;
+            }
+        } else {
+            dom.videoPlayer.src = url;
+        }
+        dom.videoPlayer.play().catch(e => showMessage('Aviso', 'El navegador bloqueó la reproducción automática. Pulsa play.'));
+    }
+    dom.videoPlayer.oncanplay = () => dom.videoLoader.classList.add('hidden');
+    dom.videoPlayer.onerror = () => {
+        showMessage('Error de Reproducción', 'El formato de video no es compatible, la URL es incorrecta o hay un problema de red.');
+        dom.videoLoader.classList.add('hidden');
+    };
+    
+    // --- CARGA DE DATOS ---
+    async function loadM3uList() {
+        const url = document.getElementById('m3uUrlInput').value.trim();
+        const progress = {
+            container: document.getElementById('m3uProgress'),
+            bar: document.getElementById('m3uProgressBarFill'),
+            text: document.getElementById('m3uProgressText'),
+        };
+        if (!url) { showMessage('Error', 'Ingresa una URL M3U.'); return; }
+        
+        progress.container.classList.remove('hidden');
+        const updateProgress = (p, t) => { progress.bar.style.width = `${p}%`; progress.text.textContent = t; };
+        
+        try {
+            updateProgress(20, 'Descargando lista...');
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+            const text = await response.text();
+            
+            updateProgress(70, 'Procesando canales...');
+            liveChannels = []; movies = []; series = []; // Limpiamos todo
+            const lines = text.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith('#EXTINF:')) {
+                    liveChannels.push({
+                        name: lines[i].substring(lines[i].lastIndexOf(',') + 1).trim(),
+                        logo: (lines[i].match(/tvg-logo="([^"]*)"/)?.[1] || 'https://via.placeholder.com/150/161b22/FFFFFF?text=TV'),
+                        group: (lines[i].match(/group-title="([^"]*)"/)?.[1] || 'General'),
+                        url: lines[++i].trim()
+                    });
                 }
             }
+            updateProgress(100, '¡Carga completa!');
+            setTimeout(() => {
+                dom.settingsModal.classList.remove('show');
+                renderAllContent();
+                showContentListModal('live');
+            }, 500);
+        } catch(e) {
+            updateProgress(100, 'Error en la carga.');
+            progress.bar.style.backgroundColor = 'red';
+            showMessage('Error', `No se pudo cargar la lista M3U. ${e.message}`);
         }
+    }
 
-        /**
-         * Carga una lista M3U desde una URL, mostrando el progreso.
-         */
-        async function loadM3uList() {
-            const m3uUrl = document.getElementById('m3uUrlInput')?.value.trim();
-            const progressContainer = document.getElementById('m3uProgress');
-            const progressBarFill = document.getElementById('m3uProgressBarFill');
-            const progressText = document.getElementById('m3uProgressText');
-            
-            if (!m3uUrl) { showMessage('Error', 'Por favor, ingresa una URL válida.'); return; }
-
-            progressContainer.classList.remove('hidden');
-            progressBarFill.style.width = '0%';
-            progressText.textContent = 'Contactando servidor...';
-            
-            try {
-                const response = await fetch(m3uUrl);
-                progressBarFill.style.width = '30%';
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-                
-                progressText.textContent = 'Descargando lista...';
-                const text = await response.text();
-                progressBarFill.style.width = '70%';
-                
-                progressText.textContent = 'Procesando canales...';
-                parseM3u(text);
-                
-                progressBarFill.style.width = '100%';
-                progressText.textContent = '¡Carga completa!';
-
-                setTimeout(() => {
-                    hideSettingsModal();
-                    renderLiveChannels();
-                    showContentListModal('live');
-                    progressContainer.classList.add('hidden');
-                }, 500);
-
-            } catch (error) {
-                progressText.textContent = 'Error al cargar. Revisa la URL y la consola.';
-                progressBarFill.style.backgroundColor = '#e3342f';
-                console.error('Error al cargar la lista .m3u:', error);
-            }
-        }
-
-        // --- FUNCIONES DE LA UI (RENDERIZADO) ---
-        /**
-         * Muestra los canales de TV en vivo en la lista, agrupados por categoría.
-         */
-        function renderLiveChannels() {
-            const liveList = document.getElementById('liveList');
-            liveList.innerHTML = '';
-            if (liveChannels.length === 0) {
-                liveList.innerHTML = '<p class="text-gray-400 text-center py-4">No hay canales. Carga una lista M3U o Xtremio.</p>';
-                return;
-            }
-
-            const groups = liveChannels.reduce((acc, channel) => {
-                (acc[channel.group] = acc[channel.group] || []).push(channel);
-                return acc;
-            }, {});
-
-            Object.keys(groups).sort().forEach(groupName => {
-                const header = document.createElement('div');
-                header.className = 'collapsible-header';
-                header.innerHTML = `<span>${groupName} (${groups[groupName].length})</span> <i class="fas fa-chevron-down"></i>`;
-                
-                const content = document.createElement('div');
-                content.className = 'collapsible-content';
-                
-                groups[groupName].forEach(channel => {
-                    const item = document.createElement('div');
-                    item.className = 'channel-list-item';
-                    item.innerHTML = `<img src="${channel.logo}" alt=""><span>${channel.name}</span>`;
-                    item.onclick = () => {
-                        playStream(channel.url);
-                        hideContentListModal();
-                        document.getElementById('channelName').textContent = channel.name;
-                        document.getElementById('channelDescription').textContent = `Grupo: ${channel.group}`;
-                        controlsContainer.classList.remove('hidden');
-                    };
-                    content.appendChild(item);
-                });
-
-                header.onclick = () => {
-                    header.classList.toggle('active');
-                    content.classList.toggle('show');
-                };
-
-                liveList.appendChild(header);
-                liveList.appendChild(content);
-            });
-        }
+    async function loadXtremioData() {
+        const server = document.getElementById('xtremioServer').value.trim();
+        const username = document.getElementById('xtremioUsername').value.trim();
+        const password = document.getElementById('xtremioPassword').value.trim();
+        const progress = {
+            container: document.getElementById('xtremioProgress'),
+            bar: document.getElementById('xtremioProgressBarFill'),
+            text: document.getElementById('xtremioProgressText'),
+        };
+        if (!server || !username || !password) { showMessage('Error', 'Todos los campos son obligatorios.'); return; }
         
-        // --- FUNCIONES DE LA UI (MANEJO DE MODALES Y PESTAÑAS) ---
-        function showMessage(title, message) { /* ... sin cambios ... */ }
-        function hideMessage() { /* ... sin cambios ... */ }
-        function showInitialMenu() { mainApp.classList.add('hidden'); initialMenu.classList.remove('hidden'); }
-        function showSettingsModal() { settingsModal.classList.add('show'); }
-        function hideSettingsModal() { settingsModal.classList.remove('show'); }
-        function showContentListModal(contentType = 'live') {
-            currentContentType = contentType;
-            initialMenu.classList.add('hidden');
-            mainApp.classList.remove('hidden');
-            contentListModal.classList.add('show');
-            switchContentTab(contentType);
-        }
-        function hideContentListModal() { contentListModal.classList.remove('show'); }
-        function switchTab(tabName) {
-            document.getElementById('m3uTab').classList.toggle('active', tabName === 'm3u');
-            document.getElementById('xtremioTab').classList.toggle('active', tabName === 'xtremio');
-            document.getElementById('m3uPanel').classList.toggle('hidden', tabName !== 'm3u');
-            document.getElementById('xtremioPanel').classList.toggle('hidden', tabName !== 'xtremio');
-        }
-        function switchContentTab(tabName) {
-            document.getElementById('liveContentTab').classList.toggle('active', tabName === 'live');
-            document.getElementById('moviesContentTab').classList.toggle('active', tabName === 'movies');
-            document.getElementById('seriesContentTab').classList.toggle('active', tabName === 'series');
-            document.getElementById('livePanel').classList.toggle('hidden', tabName !== 'live');
-            document.getElementById('moviesPanel').classList.toggle('hidden', tabName !== 'movies');
-            document.getElementById('seriesPanel').classList.toggle('hidden', tabName !== 'series');
-        }
+        progress.container.classList.remove('hidden');
+        const updateProgress = (p, t) => { progress.bar.style.width = `${p}%`; progress.text.textContent = t; };
+        
+        try {
+            const baseUrl = `${server}/player_api.php?username=${username}&password=${password}`;
+            
+            updateProgress(10, 'Cargando canales en vivo...');
+            const liveRes = await (await fetch(`${baseUrl}&action=get_live_streams`)).json();
+            liveChannels = liveRes.map(c => ({ name: c.name, logo: c.stream_icon, group: 'Live TV', url: `${server}/live/${username}/${password}/${c.stream_id}.ts` }));
 
-        // --- MANEJADOR DE EVENTOS GLOBAL ---
-        document.addEventListener('click', (e) => {
-            const actionTarget = e.target.closest('[data-action]');
-            if (e.target.classList.contains('modal')) { e.target.classList.remove('show'); }
-            if (!actionTarget) return;
+            updateProgress(40, 'Cargando películas...');
+            const moviesRes = await (await fetch(`${baseUrl}&action=get_vod_streams`)).json();
+            movies = moviesRes.map(m => ({ ...m, url: `${server}/movie/${username}/${password}/${m.stream_id}.${m.container_extension}` }));
 
+            updateProgress(70, 'Cargando series...');
+            const seriesRes = await (await fetch(`${baseUrl}&action=get_series`)).json();
+            series = seriesRes.map(s => ({ ...s, url: `${server}/series/${username}/${password}/${s.stream_id}.${s.container_extension}` }));
+            
+            updateProgress(100, '¡Carga completa!');
+            setTimeout(() => {
+                dom.settingsModal.classList.remove('show');
+                renderAllContent();
+                showContentListModal('live');
+            }, 500);
+        } catch (e) {
+            updateProgress(100, 'Error en la conexión.');
+            progress.bar.style.backgroundColor = 'red';
+            showMessage('Error', `No se pudo conectar. Revisa los datos. ${e.message}`);
+        }
+    }
+    
+    // --- RENDERIZADO DE CONTENIDO ---
+    function renderAllContent() {
+        renderLiveChannels();
+        renderVodGrid('movies');
+        renderVodGrid('series');
+    }
+
+    function renderLiveChannels() {
+        const container = document.getElementById('liveList');
+        const groups = liveChannels.reduce((acc, c) => ((acc[c.group] = [...(acc[c.group] || []), c]), acc), {});
+        container.innerHTML = Object.keys(groups).sort().map(groupName => `
+            <div class="collapsible-header" data-action="toggle-collapse"><span>${groupName} (${groups[groupName].length})</span><i class="fas fa-chevron-down"></i></div>
+            <div class="collapsible-content">
+                ${groups[groupName].map(channel => `
+                    <div class="channel-list-item" data-url="${channel.url}" data-title="${channel.name}">
+                        <img src="${channel.logo}" alt=""><span>${channel.name}</span>
+                    </div>`).join('')}
+            </div>
+        `).join('');
+    }
+
+    function renderVodGrid(type) {
+        const data = type === 'movies' ? movies : series;
+        const container = document.getElementById(type === 'movies' ? 'movieGrid' : 'seriesGrid');
+        if (!data || data.length === 0) {
+            container.innerHTML = `<p class="col-span-full text-center text-gray-500">No hay ${type} disponibles.</p>`;
+            return;
+        }
+        container.innerHTML = data.map(item => `
+            <div class="content-item" data-url="${item.url}" data-title="${item.name}">
+                <img src="${item.stream_icon || item.cover}" loading="lazy" alt="${item.name}">
+                <p>${item.name}</p>
+            </div>`).join('');
+    }
+    
+    // --- MANEJO DE LA UI ---
+    function showMessage(title, content) {
+        document.getElementById('messageTitle').textContent = title;
+        document.getElementById('messageContent').textContent = content;
+        dom.messageBox.classList.remove('hidden');
+    }
+
+    function showContentListModal(contentType = 'live') {
+        currentContentType = contentType;
+        dom.initialMenu.classList.add('hidden');
+        dom.mainApp.classList.remove('hidden');
+        dom.contentListModal.classList.add('show');
+        switchContentTab(contentType);
+    }
+    
+    function switchContentTab(tabName) {
+        ['live', 'movies', 'series'].forEach(type => {
+            document.getElementById(`${type}ContentTab`).classList.toggle('active', type === tabName);
+            document.getElementById(`${type}Panel`).classList.toggle('hidden', type !== tabName);
+        });
+    }
+
+    // --- MANEJADOR DE EVENTOS GLOBAL ---
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) e.target.classList.remove('show');
+        
+        const actionTarget = e.target.closest('[data-action]');
+        if (actionTarget) {
             const action = actionTarget.dataset.action;
             switch (action) {
-                case 'show-settings': showSettingsModal(); break;
+                case 'show-settings': dom.settingsModal.classList.add('show'); break;
+                case 'show-initial-menu': dom.mainApp.classList.add('hidden'); dom.initialMenu.classList.remove('hidden'); break;
                 case 'show-content-list': showContentListModal(actionTarget.dataset.contentType); break;
-                case 'show-initial-menu': showInitialMenu(); break;
-                case 'show-content-list-modal': showContentListModal(currentContentType); break;
-                case 'switch-tab': switchTab(actionTarget.dataset.tabName); break;
+                case 'show-content-list-modal': dom.contentListModal.classList.add('show'); break;
                 case 'switch-content-tab': switchContentTab(actionTarget.dataset.contentType); break;
+                case 'switch-settings-tab': 
+                    ['m3u', 'xtremio'].forEach(t => {
+                        document.getElementById(`${t}SettingsTab`).classList.toggle('active', t === actionTarget.dataset.tabName);
+                        document.getElementById(`${t}SettingsPanel`).classList.toggle('hidden', t !== actionTarget.dataset.tabName);
+                    });
+                    break;
                 case 'load-m3u': loadM3uList(); break;
-                case 'load-xtremio': alert('Función Xtremio no implementada en este ejemplo.'); break;
+                case 'load-xtremio': loadXtremioData(); break;
+                case 'hide-message': dom.messageBox.classList.add('hidden'); break;
+                case 'toggle-collapse':
+                    actionTarget.classList.toggle('active');
+                    actionTarget.nextElementSibling.classList.toggle('show');
+                    break;
             }
-        });
-    </script>
+        }
+
+        const playableItem = e.target.closest('[data-url]');
+        if (playableItem) {
+            playStream(playableItem.dataset.url, playableItem.dataset.title);
+            dom.contentListModal.classList.remove('show');
+        }
+    });
+</script>
 </body>
 </html>
