@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reproductor IPTV</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -84,6 +86,8 @@
         .message-box button:hover {
             background-color: #2ea043;
         }
+
+        /* Estilos para los modales */
         .modal {
             position: fixed;
             top: 0;
@@ -106,7 +110,7 @@
             padding: 2rem;
             width: 90%;
             max-width: 800px;
-            max-height: 90vh;
+            height: 90vh;
             display: flex;
             flex-direction: column;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
@@ -121,19 +125,9 @@
             padding: 0.75rem;
             border-bottom: 1px solid #30363d;
             transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
         }
         .channel-list-item:hover {
             background-color: #21262d;
-        }
-        .channel-list-item img {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-            border-radius: 4px;
-            background-color: #0d1117;
         }
         .content-list {
             flex-grow: 1;
@@ -158,9 +152,6 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 1rem;
-            overflow-y: auto;
-            flex-grow: 1;
-            padding: 1rem;
         }
         .content-item {
             cursor: pointer;
@@ -176,7 +167,6 @@
             object-fit: cover;
             aspect-ratio: 2 / 3;
             transition: transform 0.2s;
-            background-color: #0d1117;
         }
         .content-item:hover img {
             transform: scale(1.05);
@@ -192,6 +182,12 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         .collapsible-header {
             cursor: pointer;
@@ -211,7 +207,7 @@
             max-height: 0;
         }
         .collapsible-content.show {
-            max-height: 10000px;
+            max-height: 10000px; /* Suficientemente grande para cualquier lista */
         }
         .progress-container {
             display: flex;
@@ -238,86 +234,105 @@
 </head>
 <body class="bg-gray-900 text-gray-200 antialiased leading-tight">
 
-    <div id="appContainer" class="w-full h-full" style="display: none;">
-
-        <div id="initialMenu" class="initial-menu w-full h-full absolute top-0 left-0">
-            <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-6">Reproductor IPTV</h1>
-            <p class="text-lg sm:text-xl text-gray-400 mb-8 max-w-sm" id="statusMessage">Cargando...</p>
-            <div class="flex flex-col space-y-4 w-full max-w-xs mb-8">
-                <button data-action="show-content-list" data-content-type="live" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105">
-                    <i class="fas fa-satellite-dish mr-2"></i>Live TV
-                </button>
-                <button data-action="show-content-list" data-content-type="movies" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105">
-                    <i class="fas fa-film mr-2"></i>Películas
-                </button>
-                <button data-action="show-content-list" data-content-type="series" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105">
-                    <i class="fas fa-tv mr-2"></i>Series
-                </button>
-            </div>
-            <button data-action="show-settings" class="absolute top-4 right-4 text-white text-2xl p-2 rounded-full hover:bg-gray-700 transition-colors">
-                <i class="fas fa-cog"></i>
+    <!-- Menú de Inicio -->
+    <div id="initialMenu" class="initial-menu">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-6">Reproductor IPTV</h1>
+        <p class="text-lg sm:text-xl text-gray-400 mb-8 max-w-sm" id="statusMessage">Cargando...</p>
+        <div class="flex flex-col space-y-4 w-full max-w-xs mb-8">
+            <button id="liveTvButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105" data-action="show-content-list" data-content-type="live">
+                <i class="fas fa-satellite-dish mr-2"></i>Live TV
+            </button>
+            <button id="moviesButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105" data-action="show-content-list" data-content-type="movies">
+                <i class="fas fa-film mr-2"></i>Películas
+            </button>
+            <button id="seriesButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105" data-action="show-content-list" data-content-type="series">
+                <i class="fas fa-tv mr-2"></i>Series
             </button>
         </div>
-    
-        <div id="mainApp" class="container hidden">
-            <header class="flex justify-between items-center p-4 border-b border-gray-700">
-                <h1 class="text-2xl font-bold text-white">Reproductor IPTV</h1>
-                <div class="flex items-center space-x-2">
-                    <button data-action="show-initial-menu" class="text-white text-xl p-2 rounded-full hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <button data-action="show-content-list-modal" class="text-white text-xl p-2 rounded-full hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                </div>
-            </header>
-            <div id="videoContainer" class="video-player-container rounded-t-lg hidden">
-                <iframe id="videoPlayer" class="video-player rounded-t-lg" allow="encrypted-media" allowfullscreen></iframe>
+        <button id="settingsBtn" class="absolute top-4 right-4 text-white text-2xl p-2 rounded-full hover:bg-gray-700 transition-colors" data-action="show-settings">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+
+    <div id="mainApp" class="container hidden">
+        <!-- Título de la app -->
+        <header class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h1 class="text-2xl font-bold text-white">Reproductor IPTV</h1>
+            <div class="flex items-center space-x-2">
+                <button id="backToMenuBtn" class="text-white text-xl p-2 rounded-full hover:bg-gray-700 transition-colors" data-action="show-initial-menu">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button id="showContentListBtn" class="text-white text-xl p-2 rounded-full hover:bg-gray-700 transition-colors" data-action="show-content-list-modal">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <i class="fas fa-signal text-green-500"></i>
+                <i class="fas fa-wifi text-green-500"></i>
             </div>
-            <div id="welcomeMessage" class="flex-grow flex items-center justify-center p-8 text-center">
-                <p class="text-xl text-gray-400">Selecciona un canal, película o serie para empezar a reproducir.</p>
+        </header>
+
+        <!-- Contenedor del reproductor de video -->
+        <div id="videoContainer" class="video-player-container rounded-t-lg hidden">
+            <iframe id="videoPlayer" class="video-player rounded-t-lg" allow="encrypted-media" allowfullscreen></iframe>
+        </div>
+
+        <!-- Mensaje de bienvenida para cuando no hay video -->
+        <div id="welcomeMessage" class="flex-grow flex items-center justify-center p-8 text-center">
+            <p class="text-xl text-gray-400">Selecciona un canal, película o serie para empezar a reproducir.</p>
+        </div>
+
+        <!-- Controles y detalles del canal -->
+        <div id="controlsContainer" class="p-4 flex flex-col sm:flex-row items-center justify-between hidden">
+            <div class="flex-1 text-center sm:text-left mb-4 sm:mb-0">
+                <h2 id="channelName" class="text-xl font-semibold">Canal de Ejemplo</h2>
+                <p id="channelDescription" class="text-gray-400">Transmisión de ejemplo para mostrar la funcionalidad.</p>
             </div>
-            <div id="controlsContainer" class="p-4 flex-col sm:flex-row items-center justify-between hidden">
-                <div class="flex-1 text-center sm:text-left mb-4 sm:mb-0">
-                    <h2 id="channelName" class="text-xl font-semibold"></h2>
-                    <p id="channelDescription" class="text-gray-400"></p>
-                </div>
-                <div class="flex space-x-4">
-                    <button data-action="play-live" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors">
-                        <i class="fas fa-play mr-2"></i>Reproducir
-                    </button>
-                    <button id="catchUpButton" data-action="show-catchup-modal" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors hidden">
-                        <i class="fas fa-history mr-2"></i>Catch-Up
-                    </button>
-                </div>
+            <div class="flex space-x-4">
+                <button id="liveButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors" data-action="play-live">
+                    <i class="fas fa-play mr-2"></i>Reproducir En Vivo
+                </button>
+                <button id="catchUpButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors hidden" data-action="show-catchup-modal">
+                    <i class="fas fa-history mr-2"></i>Catch-Up
+                </button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Contenedor del cuadro de mensaje personalizado -->
     <div id="messageBox" class="message-box rounded-lg">
         <h3 id="messageTitle" class="title"></h3>
         <p id="messageContent" class="message text-gray-400"></p>
-        <button data-action="hide-message">OK</button>
+        <button id="closeMessageBtn" data-action="hide-message">OK</button>
     </div>
 
+    <!-- Modal para las opciones de configuración (M3U/Xtremio) -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h2 class="text-2xl font-bold text-white mb-4">Opciones de Contenido</h2>
             <div class="flex justify-center -mt-4 mb-4">
-                <button data-action="switch-tab" data-tab-name="m3u" class="tab-button active">URL M3U</button>
-                <button data-action="switch-tab" data-tab-name="xtremio" class="tab-button">Xtremio</button>
+                <button id="m3uTab" class="tab-button active" data-action="switch-tab" data-tab-name="m3u">URL M3U</button>
+                <button id="xtremioTab" class="tab-button" data-action="switch-tab" data-tab-name="xtremio">Xtremio</button>
             </div>
             <div id="m3uPanel" class="tab-panel flex flex-col flex-grow">
-                <p class="text-gray-400 mb-4">Pega la URL de tu lista `.m3u` o `.m3u8`.</p>
+                <p class="text-gray-400 mb-4">Pega la URL de tu lista `.m3u`, `.m3u8` o `.m3u_plus`.</p>
                 <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-4">
                     <input type="text" id="m3uUrlInput" placeholder="https://example.com/playlist.m3u8" class="flex-1 bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
-                    <button data-action="load-m3u" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-lg transition-colors">
+                    <button id="loadM3uBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-lg transition-colors" data-action="load-m3u">
                         <i class="fas fa-cloud-download-alt mr-2"></i>Cargar
                     </button>
                 </div>
+                <!-- Menú desplegable para idioma preferido -->
+                <div class="flex flex-col mb-4 hidden" id="languageFilterContainer">
+                    <label for="languageSelect" class="text-gray-400 mb-2">Organizar por idioma:</label>
+                    <select id="languageSelect" class="bg-gray-700 text-white p-2 rounded-md focus:outline-none focus:border-blue-500" data-action="set-language-filter">
+                        <option value="">Seleccionar idioma</option>
+                    </select>
+                </div>
+                <!-- Barra de progreso para M3U -->
                 <div id="m3uProgress" class="progress-container hidden">
                     <p id="m3uProgressText" class="text-sm text-gray-400">Cargando...</p>
-                    <div class="progress-bar"><div id="m3uProgressBarFill" class="progress-bar-fill"></div></div>
+                    <div class="progress-bar">
+                        <div id="m3uProgressBarFill" class="progress-bar-fill"></div>
+                    </div>
                 </div>
             </div>
             <div id="xtremioPanel" class="tab-panel hidden flex flex-col flex-grow">
@@ -327,44 +342,63 @@
                     <input type="text" id="xtremioUsername" placeholder="Usuario" class="bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
                     <input type="password" id="xtremioPassword" placeholder="Contraseña" class="bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-md p-2 focus:outline-none focus:border-blue-500">
                 </div>
-                <button data-action="load-xtremio" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-lg transition-colors">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Conectar y Cargar
-                </button>
-                <div id="xtremioProgress" class="progress-container hidden">
-                    <p id="xtremioProgressText" class="text-sm text-gray-400">Cargando...</p>
-                    <div class="progress-bar"><div id="xtremioProgressBarFill" class="progress-bar-fill"></div></div>
-                </div>
+                <button id="loadXtremioBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-lg transition-colors" data-action="load-xtremio">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Conectar y Cargar
+                    </button>
+                    <!-- Barra de progreso para Xtremio -->
+                    <div id="xtremioProgress" class="progress-container hidden">
+                        <p id="xtremioProgressText" class="text-sm text-gray-400">Cargando...</p>
+                        <div class="progress-bar">
+                            <div id="xtremioProgressBarFill" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
             </div>
-            <div class="mt-auto pt-4 flex justify-between items-center">
-                <button data-action="clear-data" class="text-sm text-gray-400 hover:text-red-400 transition-colors">
+            <div class="mt-4 flex justify-between items-center">
+                <button id="clearDataBtn" class="text-sm text-gray-400 hover:text-red-400 transition-colors" data-action="clear-data">
                     <i class="fas fa-trash-alt mr-1"></i>Limpiar datos guardados
                 </button>
-                <button data-action="hide-settings" class="text-sm text-gray-400 hover:text-white transition-colors">Cerrar</button>
+                <div class="text-sm text-gray-500 flex items-center">
+                    <i class="fas fa-user-circle mr-2"></i>
+                    <span id="userIdDisplay">Cargando usuario...</span>
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- Modal para la lista de contenido (Live, Movies, Series) -->
     <div id="contentListModal" class="modal">
         <div class="modal-content">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-white mb-4">Biblioteca de Contenido</h2>
-                <button data-action="hide-content-list-modal" class="text-white text-2xl p-2 -mt-4"><i class="fas fa-times"></i></button>
-            </div>
+            <h2 class="text-2xl font-bold text-white mb-4">Biblioteca de Contenido</h2>
             <div class="flex justify-center -mt-4 mb-4">
-                <button data-action="switch-content-tab" data-content-type="live" class="tab-button active">Live TV</button>
-                <button data-action="switch-content-tab" data-content-type="movies" class="tab-button">Películas</button>
-                <button data-action="switch-content-tab" data-content-type="series" class="tab-button">Series</button>
+                <button id="liveContentTab" class="tab-button active" data-action="switch-content-tab" data-content-type="live">Live TV</button>
+                <button id="moviesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="movies">Películas</button>
+                <button id="seriesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="series">Series</button>
             </div>
-            <div id="livePanel" class="content-panel h-full flex flex-col"><div id="liveList" class="content-list"></div></div>
-            <div id="moviesPanel" class="content-panel hidden h-full flex flex-col"><div id="movieGrid" class="content-grid"></div></div>
-            <div id="seriesPanel" class="content-panel hidden h-full flex flex-col"><div id="seriesGrid" class="content-grid"></div></div>
+            <div id="contentPanels" class="flex-grow flex flex-col">
+                <div id="livePanel" class="content-panel h-full">
+                    <div id="liveList" class="content-list">
+                        <p class="text-gray-400 text-center py-4" id="liveStatus">Ingresa tus credenciales para cargar la lista de canales en vivo.</p>
+                    </div>
+                </div>
+                <div id="moviesPanel" class="content-panel hidden h-full">
+                    <div id="movieGrid" class="content-grid">
+                        <p class="text-gray-400 text-center py-4 col-span-full" id="movieStatus">Ingresa tus credenciales para cargar las películas.</p>
+                    </div>
+                </div>
+                <div id="seriesPanel" class="content-panel hidden h-full">
+                    <div id="seriesGrid" class="content-grid">
+                        <p class="text-gray-400 text-center py-4 col-span-full" id="seriesStatus">Ingresa tus credenciales para cargar las series.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
+    <!-- Modal para la función Catch-Up -->
     <div id="catchUpModal" class="modal">
         <div class="modal-content">
             <h2 class="text-2xl font-bold text-white mb-4">Retrocede en el Tiempo</h2>
-            <p class="text-gray-400 mb-4">Selecciona una fecha y hora para ver el contenido. Esta función solo es compatible con proveedores que la soporten (como Xtremio).</p>
+            <p class="text-gray-400 mb-4">Selecciona una fecha y hora para ver el contenido hasta 7 días en el pasado. Esta función solo es compatible con proveedores que la soporten (como Xtremio).</p>
             <div class="flex flex-col space-y-4">
                 <label for="catchUpDate" class="text-sm font-semibold text-gray-400">Selecciona la fecha:</label>
                 <input type="date" id="catchUpDate" class="bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:border-blue-500">
@@ -372,421 +406,829 @@
                 <input type="time" id="catchUpTime" class="bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:border-blue-500">
             </div>
             <div class="flex space-x-4 mt-8">
-                <button data-action="play-catchup" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors flex-1">
+                <button id="playCatchUpBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors flex-1" data-action="play-catchup">
                     <i class="fas fa-play mr-2"></i>Reproducir
                 </button>
-                <button data-action="hide-catchup-modal" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors flex-1">
+                <button id="cancelCatchUpBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-colors flex-1" data-action="hide-catchup-modal">
                     Cancelar
                 </button>
             </div>
         </div>
     </div>
 
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =================================================================================
-        // ==! IMPORTANTE: REEMPLAZA ESTO CON LA CONFIGURACIÓN DE TU PROPIO PROYECTO FIREBASE !==
-        // =================================================================================
-        const firebaseConfig = {
-            apiKey: "TU_API_KEY",
-            authDomain: "TU_AUTH_DOMAIN",
-            projectId: "TU_PROJECT_ID",
-            storageBucket: "TU_STORAGE_BUCKET",
-            messagingSenderId: "TU_MESSAGING_SENDER_ID",
-            appId: "TU_APP_ID"
-        };
+        // Variables globales para Firebase y la aplicación
+        let db;
+        let auth;
+        let userId = 'cargando';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(__firebase_config);
 
-        // --- Inicialización de Firebase y Variables Globales ---
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        let userId = null;
-
+        // Variables globales para almacenar el contenido
         let liveChannels = [];
         let movies = [];
         let series = [];
         let currentContentType = 'live';
-        let currentChannel = null;
-        let userData = null;
+        let currentChannel = null; // Almacena el canal seleccionado
+        let preferredLanguage = '';
 
-        // --- Referencias a elementos del DOM ---
-        const dom = {
-            appContainer: document.getElementById('appContainer'),
-            statusMessage: document.getElementById('statusMessage'),
-            settingsModal: document.getElementById('settingsModal'),
-            contentListModal: document.getElementById('contentListModal'),
-            catchUpModal: document.getElementById('catchUpModal'),
-            messageBox: document.getElementById('messageBox'),
-            mainApp: document.getElementById('mainApp'),
-            initialMenu: document.getElementById('initialMenu'),
-            videoContainer: document.getElementById('videoContainer'),
-            videoPlayer: document.getElementById('videoPlayer'),
-            welcomeMessage: document.getElementById('welcomeMessage'),
-            controlsContainer: document.getElementById('controlsContainer'),
-            catchUpButton: document.getElementById('catchUpButton'),
-            liveList: document.getElementById('liveList'),
-            movieGrid: document.getElementById('movieGrid'),
-            seriesGrid: document.getElementById('seriesGrid'),
-        };
-
+        // Referencias a los elementos del DOM
+        const statusMessage = document.getElementById('statusMessage');
+        const settingsModal = document.getElementById('settingsModal');
+        const contentListModal = document.getElementById('contentListModal');
+        const catchUpModal = document.getElementById('catchUpModal');
+        const mainApp = document.getElementById('mainApp');
+        const initialMenu = document.getElementById('initialMenu');
+        const videoContainer = document.getElementById('videoContainer');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const controlsContainer = document.getElementById('controlsContainer');
+        const liveButton = document.getElementById('liveButton');
+        const catchUpButton = document.getElementById('catchUpButton');
+        
         // --- Funciones de la UI ---
 
+        /**
+         * Muestra el cuadro de mensaje personalizado.
+         */
         function showMessage(title, message) {
-            dom.messageBox.querySelector('#messageTitle').textContent = title;
-            dom.messageBox.querySelector('#messageContent').textContent = message;
-            dom.messageBox.classList.add('show');
+            document.getElementById('messageTitle').textContent = title;
+            document.getElementById('messageContent').textContent = message;
+            document.getElementById('messageBox').classList.add('show');
         }
 
+        /**
+         * Oculta el cuadro de mensaje personalizado.
+         */
         function hideMessage() {
-            dom.messageBox.classList.remove('show');
+            document.getElementById('messageBox').classList.remove('show');
         }
-
+        
+        /**
+         * Muestra el menú de inicio y oculta la aplicación principal.
+         */
         function showInitialMenu() {
-            dom.mainApp.classList.add('hidden');
-            dom.initialMenu.classList.remove('hidden');
-            hideContentListModal();
+            if (mainApp) mainApp.classList.add('hidden');
+            if (initialMenu) initialMenu.classList.remove('hidden');
         }
 
-        function showSettingsModal() { dom.settingsModal.classList.add('show'); }
-        function hideSettingsModal() { dom.settingsModal.classList.remove('show'); }
+        /**
+         * Muestra el modal de configuración.
+         */
+        function showSettingsModal() {
+            if (settingsModal) settingsModal.classList.add('show');
+        }
+
+        /**
+         * Oculta el modal de configuración.
+         */
+        function hideSettingsModal() {
+            if (settingsModal) settingsModal.classList.remove('show');
+        }
+        
+        /**
+         * Muestra el modal de la lista de contenido y la aplicación principal.
+         * @param {string} contentType - 'live', 'movies' o 'series'.
+         */
         function showContentListModal(contentType) {
             currentContentType = contentType;
-            dom.initialMenu.classList.add('hidden');
-            dom.mainApp.classList.remove('hidden');
-            dom.contentListModal.classList.add('show');
+            if (initialMenu) initialMenu.classList.add('hidden');
+            if (mainApp) mainApp.classList.remove('hidden');
+            if (contentListModal) contentListModal.classList.add('show');
             switchContentTab(contentType);
         }
-        function hideContentListModal() { dom.contentListModal.classList.remove('show'); }
+
+        /**
+         * Oculta el modal de la lista de contenido.
+         */
+        function hideContentListModal() {
+            if (contentListModal) contentListModal.classList.remove('show');
+        }
+        
+        /**
+         * Muestra el modal de Catch-Up.
+         */
         function showCatchUpModal() {
-            if (!currentChannel) return showMessage('Error', 'Por favor, selecciona un canal primero.');
-            dom.catchUpModal.classList.add('show');
-            const dateInput = document.getElementById('catchUpDate');
-            const today = new Date();
-            const minDate = new Date();
-            minDate.setDate(today.getDate() - 7);
-            dateInput.max = today.toISOString().split('T')[0];
-            dateInput.min = minDate.toISOString().split('T')[0];
+            if (!currentChannel) {
+                showMessage('Error', 'Por favor, selecciona un canal primero.');
+                return;
+            }
+            if (catchUpModal) catchUpModal.classList.add('show');
+            const catchUpDateInput = document.getElementById('catchUpDate');
+            if (catchUpDateInput) {
+                const today = new Date();
+                const minDate = new Date();
+                minDate.setDate(today.getDate() - 7);
+                catchUpDateInput.max = today.toISOString().split('T')[0];
+                catchUpDateInput.min = minDate.toISOString().split('T')[0];
+            }
         }
-        function hideCatchUpModal() { dom.catchUpModal.classList.remove('show'); }
 
+        /**
+         * Oculta el modal de Catch-Up.
+         */
+        function hideCatchUpModal() {
+            if (catchUpModal) catchUpModal.classList.remove('show');
+        }
+
+        /**
+         * Cambia entre las pestañas del modal de configuración (M3U y Xtremio).
+         * @param {string} tabName - 'm3u' o 'xtremio'.
+         */
         function switchTab(tabName) {
-            document.querySelectorAll('#settingsModal .tab-button').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('#settingsModal .tab-panel').forEach(p => p.classList.add('hidden'));
-            document.querySelector(`[data-tab-name="${tabName}"]`).classList.add('active');
-            document.getElementById(`${tabName}Panel`).classList.remove('hidden');
+            const m3uTab = document.getElementById('m3uTab');
+            const xtremioTab = document.getElementById('xtremioTab');
+            const m3uPanel = document.getElementById('m3uPanel');
+            const xtremioPanel = document.getElementById('xtremioPanel');
+
+            if (m3uTab) m3uTab.classList.remove('active');
+            if (xtremioTab) xtremioTab.classList.remove('active');
+            if (m3uPanel) m3uPanel.classList.add('hidden');
+            if (xtremioPanel) xtremioPanel.classList.add('hidden');
+
+            const activeTab = document.getElementById(`${tabName}Tab`);
+            const activePanel = document.getElementById(`${tabName}Panel`);
+
+            if (activeTab) activeTab.classList.add('active');
+            if (activePanel) activePanel.classList.remove('hidden');
         }
 
+        /**
+         * Cambia entre las pestañas de contenido (Live, Movies, Series).
+         * @param {string} tabName - 'live', 'movies' o 'series'.
+         */
         function switchContentTab(tabName) {
-            document.querySelectorAll('#contentListModal .tab-button').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('#contentListModal .content-panel').forEach(p => p.classList.add('hidden'));
-            document.querySelector(`#contentListModal [data-content-type="${tabName}"]`).classList.add('active');
-            document.getElementById(`${tabName}Panel`).classList.remove('hidden');
-            // Re-render content when switching tabs
-            if(tabName === 'live') renderLiveChannels();
-            else if (tabName === 'movies') renderContentGrid(movies, dom.movieGrid);
-            else if (tabName === 'series') renderContentGrid(series, dom.seriesGrid);
-        }
-        
-        // --- Lógica de la aplicación ---
-
-        async function updateProgress(type, percentage, text) {
-            const progressContainer = document.getElementById(`${type}Progress`);
-            const progressBarFill = document.getElementById(`${type}ProgressBarFill`);
-            const progressText = document.getElementById(`${type}ProgressText`);
-
-            if(percentage === 0) {
-                progressContainer.classList.remove('hidden');
-                progressBarFill.style.backgroundColor = '#58a6ff';
-            }
+            const liveContentTab = document.getElementById('liveContentTab');
+            const moviesContentTab = document.getElementById('moviesContentTab');
+            const seriesContentTab = document.getElementById('seriesContentTab');
             
-            progressBarFill.style.width = `${percentage}%`;
-            progressText.textContent = text;
+            const livePanel = document.getElementById('livePanel');
+            const moviesPanel = document.getElementById('moviesPanel');
+            const seriesPanel = document.getElementById('seriesPanel');
+
+            if (liveContentTab) liveContentTab.classList.remove('active');
+            if (moviesContentTab) moviesContentTab.classList.remove('active');
+            if (seriesContentTab) seriesContentTab.classList.remove('active');
             
-            if (percentage === 100 && !text.toLowerCase().includes('error')) {
-                setTimeout(() => progressContainer.classList.add('hidden'), 1500);
+            if (livePanel) livePanel.classList.add('hidden');
+            if (moviesPanel) moviesPanel.classList.add('hidden');
+            if (seriesPanel) seriesPanel.classList.add('hidden');
+
+            const activeContentTab = document.getElementById(`${tabName}ContentTab`);
+            const activeContentPanel = document.getElementById(`${tabName}Panel`);
+
+            if (activeContentTab) activeContentTab.classList.add('active');
+            if (activeContentPanel) activeContentPanel.classList.remove('hidden');
+
+            if(tabName === 'live') {
+                renderLiveChannels();
+            } else if (tabName === 'movies') {
+                renderContentGrid(movies, 'movieGrid');
+            } else if (tabName === 'series') {
+                renderContentGrid(series, 'seriesGrid');
             }
         }
-        
-        function parseM3u(text) {
-            liveChannels = [];
-            movies = [];
-            series = [];
 
-            const lines = text.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                if (lines[i].startsWith('#EXTINF:')) {
-                    const infoLine = lines[i];
-                    const url = lines[++i]?.trim();
-                    if (!url || url.startsWith('#')) continue;
+        // --- Funciones de carga de datos ---
 
-                    const name = infoLine.split(',').pop()?.trim() || 'Sin Nombre';
-                    const tvgId = infoLine.match(/tvg-id="([^"]*)"/)?.[1] || '';
-                    const tvgLogo = infoLine.match(/tvg-logo="([^"]*)"/)?.[1] || '';
-                    const groupTitle = infoLine.match(/group-title="([^"]*)"/)?.[1] || 'General';
-
-                    const item = { name, url, logo: tvgLogo, group: groupTitle, id: tvgId };
-
-                    if (url.includes('/movie/')) movies.push(item);
-                    else if (url.includes('/series/')) series.push(item);
-                    else liveChannels.push(item);
-                }
-            }
-            renderLiveChannels();
-        }
-
-        function renderLiveChannels() {
-            if (!liveChannels.length) {
-                dom.liveList.innerHTML = `<p class="text-gray-400 text-center py-4">No hay canales en vivo disponibles. Carga una lista en Ajustes.</p>`;
-                return;
-            }
-
-            const grouped = liveChannels.reduce((acc, channel) => {
-                const group = channel.group || 'General';
-                if (!acc[group]) acc[group] = [];
-                acc[group].push(channel);
-                return acc;
-            }, {});
-
-            let html = '';
-            for (const group in grouped) {
-                html += `
-                    <div class="collapsible-header" data-action="toggle-collapse">
-                        <span>${group}</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div class="collapsible-content">
-                        ${grouped[group].map(channel => `
-                            <div class="channel-list-item" data-action="play-content" data-url="${channel.url}" data-type="live">
-                                <img src="${channel.logo}" alt="" onerror="this.style.display='none'">
-                                <span>${channel.name}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            dom.liveList.innerHTML = html;
-        }
-        
-        function renderContentGrid(items, gridElement) {
-             if (!items.length) {
-                gridElement.innerHTML = `<p class="text-gray-400 text-center py-4 col-span-full">No hay contenido disponible. Carga una lista en Ajustes.</p>`;
-                return;
-            }
-            gridElement.innerHTML = items.map(item => `
-                <div class="content-item" data-action="play-content" data-url="${item.url}" data-type="${gridElement.id === 'movieGrid' ? 'movie' : 'series'}">
-                    <img src="${item.logo}" alt="${item.name}" onerror="this.src='https://via.placeholder.com/120x180?text=No+Image'">
-                    <p>${item.name}</p>
-                </div>
-            `).join('');
-        }
-
-        function playContent(url, type) {
-            const item = [...liveChannels, ...movies, ...series].find(c => c.url === url);
-            if (!item) return;
-
-            currentChannel = item;
-            
-            dom.videoContainer.classList.remove('hidden');
-            dom.welcomeMessage.classList.add('hidden');
-            dom.videoPlayer.src = item.url;
-            
-            dom.controlsContainer.classList.remove('hidden');
-            dom.controlsContainer.querySelector('#channelName').textContent = item.name;
-            dom.controlsContainer.querySelector('#channelDescription').textContent = `Grupo: ${item.group}`;
-
-            // Habilitar catch-up solo si es un canal en vivo y la info está en la URL de Xtremio
-            const canCatchUp = type === 'live' && userData?.type === 'xtremio';
-            dom.catchUpButton.classList.toggle('hidden', !canCatchUp);
-            
-            hideContentListModal();
-        }
-
-        async function loadDataFromSource(sourceData) {
-            if (!sourceData) return;
-
-            if (sourceData.type === 'm3u') {
-                document.getElementById('m3uUrlInput').value = sourceData.url;
-                await loadM3uList();
-            } else if (sourceData.type === 'xtremio') {
-                const { server, username, password } = sourceData.credentials;
-                document.getElementById('xtremioServer').value = server;
-                document.getElementById('xtremioUsername').value = username;
-                document.getElementById('xtremioPassword').value = password;
-                await loadXtremioData();
-            }
-        }
-        
+        /**
+         * Carga y parsea un archivo .m3u desde una URL.
+         */
         async function loadM3uList() {
             const m3uUrl = document.getElementById('m3uUrlInput')?.value.trim();
-            if (!m3uUrl) return showMessage('Error', 'Por favor, ingresa una URL de lista válida.');
+            const progressContainer = document.getElementById('m3uProgress');
+            const progressBarFill = document.getElementById('m3uProgressBarFill');
+            const progressText = document.getElementById('m3uProgressText');
             
-            await updateProgress('m3u', 0, 'Cargando lista...');
+            if (!m3uUrl) {
+                showMessage('Error', 'Por favor, ingresa una URL de lista válida.');
+                return;
+            }
+
+            // Mostrar barra de progreso
+            if (progressContainer) progressContainer.classList.remove('hidden');
+            if (progressBarFill) {
+                progressBarFill.style.width = '0%';
+                progressBarFill.style.backgroundColor = '#58a6ff';
+            }
+            if (progressText) progressText.textContent = 'Cargando lista...';
+
             try {
                 const response = await fetch(m3uUrl);
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-                await updateProgress('m3u', 50, 'Descargado, parseando...');
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                if (progressBarFill) progressBarFill.style.width = '50%';
+                if (progressText) progressText.textContent = 'Descargado, parseando...';
+
                 const text = await response.text();
                 parseM3u(text);
-                await updateProgress('m3u', 100, '¡Carga completa!');
-                showMessage('Éxito', 'Contenido cargado correctamente.');
+                
+                if (progressBarFill) progressBarFill.style.width = '100%';
+                if (progressText) progressText.textContent = '¡Carga completa!';
+
+                showMessage('Éxito', 'Canales cargados correctamente. ¡Selecciona uno para empezar!');
+                
+                // Guardar la URL en Firestore
                 await saveUserData({ type: 'm3u', url: m3uUrl });
-                setTimeout(hideSettingsModal, 500);
+                
+                // Ocultar barra de progreso y cerrar modal después de un breve delay
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.classList.add('hidden');
+                    hideSettingsModal();
+                    showContentListModal('live');
+                }, 500);
+
             } catch (error) {
                 console.error('Error al cargar la lista .m3u:', error);
-                await updateProgress('m3u', 100, `Error al cargar: ${error.message}`);
+                if (progressText) progressText.textContent = 'Error al cargar. Revisa la URL.';
+                if (progressBarFill) {
+                    progressBarFill.style.width = '100%';
+                    progressBarFill.style.backgroundColor = '#e3342f';
+                }
                 showMessage('Error', `No se pudo cargar la lista. Revisa la URL. Detalle: ${error.message}`);
+                
+                // Ocultar barra de progreso después de un delay para que el usuario vea el mensaje de error
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.classList.add('hidden');
+                }, 2000);
             }
         }
-        
+
+        /**
+         * Carga los canales, películas y series desde una conexión Xtremio.
+         */
         async function loadXtremioData() {
             const server = document.getElementById('xtremioServer')?.value.trim();
             const username = document.getElementById('xtremioUsername')?.value.trim();
             const password = document.getElementById('xtremioPassword')?.value.trim();
-            if (!server || !username || !password) return showMessage('Error', 'Por favor, rellena todos los campos.');
+            const progressContainer = document.getElementById('xtremioProgress');
+            const progressBarFill = document.getElementById('xtremioProgressBarFill');
+            const progressText = document.getElementById('xtremioProgressText');
 
-            await updateProgress('xtremio', 0, 'Conectando...');
+            if (!server || !username || !password) {
+                showMessage('Error', 'Por favor, rellena todos los campos.');
+                return;
+            }
+
+            // Mostrar barra de progreso
+            if (progressContainer) progressContainer.classList.remove('hidden');
+            if (progressBarFill) {
+                progressBarFill.style.width = '0%';
+                progressBarFill.style.backgroundColor = '#58a6ff';
+            }
+            if (progressText) progressText.textContent = 'Conectando con el servidor...';
+            
+            // Cargar Live TV
             try {
-                // Función para construir la URL de reproducción
-                const buildUrl = (type, streamId, extension) => `${server}/${type}/${username}/${password}/${streamId}.${extension}`;
-
-                // Cargar Live TV
-                await updateProgress('xtremio', 10, 'Cargando canales en vivo...');
-                let response = await fetch(`${server}/player_api.php?username=${username}&password=${password}&action=get_live_streams`);
-                let data = await response.json();
-                if (data.user_info && data.user_info.auth === 0) throw new Error(data.user_info.message || 'Credenciales inválidas');
-                liveChannels = data.map(c => ({ name: c.name, url: buildUrl('live', c.stream_id, c.stream_type === 'live' ? 'ts' : c.target_container[0]), logo: c.stream_icon, group: c.category_name, id: c.stream_id }));
+                const liveUrl = `${server}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
+                const liveResponse = await fetch(liveUrl);
+                const liveData = await liveResponse.json();
                 
+                if (liveData.user_info && liveData.user_info.auth === 0) {
+                    throw new Error(liveData.user_info.message);
+                }
+
+                if (progressBarFill) progressBarFill.style.width = '33%';
+                if (progressText) progressText.textContent = 'Cargando canales en vivo...';
+                
+                liveChannels = liveData.reduce((acc, stream) => {
+                    const streamUrl = `${server}/live/${username}/${password}/${stream.stream_id}`;
+                    // Verificar si el canal soporta Catch-up (generalmente indicado por un atributo "tvg-rec" o similar)
+                    const catchupSupported = stream.tv_archive === 1 || stream.tv_archive === "1";
+                    acc.push({ name: stream.name, url: streamUrl, group: stream.category_name, language: 'Desconocido', catchup: catchupSupported, streamId: stream.stream_id, server: server, username: username, password: password });
+                    return acc;
+                }, []);
+                renderLiveChannels();
+
                 // Cargar Películas
-                await updateProgress('xtremio', 40, 'Cargando películas...');
-                response = await fetch(`${server}/player_api.php?username=${username}&password=${password}&action=get_vod_streams`);
-                data = await response.json();
-                movies = data.map(m => ({ name: m.name, url: buildUrl('movie', m.stream_id, m.container_extension), logo: m.stream_icon, group: m.category_name, id: m.stream_id }));
+                if (progressBarFill) progressBarFill.style.width = '66%';
+                if (progressText) progressText.textContent = 'Cargando películas...';
+                const moviesUrl = `${server}/player_api.php?username=${username}&password=${password}&action=get_vod_streams`;
+                const moviesResponse = await fetch(moviesUrl);
+                const moviesData = await moviesResponse.json();
+                
+                movies = moviesData.reduce((acc, movie) => {
+                    const streamUrl = `${server}/movie/${username}/${password}/${movie.stream_id}`;
+                    acc.push({ name: movie.name, url: streamUrl, cover: movie.stream_icon, group: movie.category_name });
+                    return acc;
+                }, []);
+                renderContentGrid(movies, 'movieGrid');
 
                 // Cargar Series
-                await updateProgress('xtremio', 70, 'Cargando series...');
-                response = await fetch(`${server}/player_api.php?username=${username}&password=${password}&action=get_series`);
-                data = await response.json();
-                series = data.map(s => ({ name: s.name, url: buildUrl('series', s.series_id, ''), logo: s.cover, group: s.category_name, id: s.series_id }));
+                if (progressBarFill) progressBarFill.style.width = '90%';
+                if (progressText) progressText.textContent = 'Cargando series...';
+                const seriesUrl = `${server}/player_api.php?username=${username}&password=${password}&action=get_series`;
+                const seriesResponse = await fetch(seriesUrl);
+                const seriesData = await seriesResponse.json();
+                
+                series = seriesData.reduce((acc, serie) => {
+                    const streamUrl = `${server}/series/${username}/${password}/${serie.series_id}`;
+                    acc.push({ name: serie.title, url: streamUrl, cover: serie.cover, group: serie.category_name });
+                    return acc;
+                }, []);
+                renderContentGrid(series, 'seriesGrid');
 
-                await updateProgress('xtremio', 100, '¡Carga completa!');
-                showMessage('Éxito', 'Contenido de Xtremio cargado correctamente.');
-                await saveUserData({ type: 'xtremio', credentials: { server, username, password } });
-                renderLiveChannels();
-                setTimeout(hideSettingsModal, 500);
+                if (progressBarFill) progressBarFill.style.width = '100%';
+                if (progressText) progressText.textContent = '¡Carga completa!';
 
-            } catch(error) {
-                console.error("Error al cargar datos de Xtremio:", error);
-                await updateProgress('xtremio', 100, `Error: ${error.message}`);
-                showMessage('Error', `No se pudo conectar. Detalle: ${error.message}`);
+                showMessage('Éxito', 'Contenido cargado correctamente. ¡Selecciona algo para empezar!');
+                
+                // Guardar credenciales en Firestore
+                await saveUserData({ type: 'xtremio', server, username, password });
+
+                // Ocultar barra de progreso y cerrar modal después de un breve delay
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.classList.add('hidden');
+                    hideSettingsModal();
+                    showContentListModal(currentContentType);
+                }, 500);
+
+            } catch (error) {
+                console.error('Error al cargar datos de Xtremio:', error);
+                if (progressText) progressText.textContent = `Error: ${error.message}`;
+                if (progressBarFill) {
+                    progressBarFill.style.width = '100%';
+                    progressBarFill.style.backgroundColor = '#e3342f';
+                }
+                showMessage('Error', `No se pudo conectar con el servidor Xtremio. Mensaje: ${error.message}`);
+                
+                // Ocultar barra de progreso después de un delay
+                setTimeout(() => {
+                    if (progressContainer) progressContainer.classList.add('hidden');
+                }, 2000);
             }
         }
-        
-        function playCatchUp() {
-            const date = document.getElementById('catchUpDate').value;
-            const time = document.getElementById('catchUpTime').value;
-            if(!date || !time || !currentChannel || !userData.type === 'xtremio') {
-                return showMessage('Error', 'Datos inválidos para Catch-Up.');
+
+        /**
+         * Parsea el contenido de un archivo .m3u, .m3u8, o .m3u_plus y extrae los canales.
+         * @param {string} m3uContent - El contenido de texto del archivo.
+         */
+        function parseM3u(m3uContent) {
+            liveChannels = [];
+            const lines = m3uContent.split('\n');
+            let currentChannel = {};
+            const languages = new Set();
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.startsWith('#EXTINF:')) {
+                    // Extraer atributos del canal
+                    const attrs = line.match(/([a-zA-Z0-9-]+)="([^"]*)"/g) || [];
+                    const channelData = {};
+                    attrs.forEach(attr => {
+                        const [key, value] = attr.split('=').map(s => s.trim().replace(/"/g, ''));
+                        channelData[key] = value;
+                    });
+                    
+                    const nameMatch = line.match(/,([^\r\n]*)/);
+                    channelData.name = nameMatch ? nameMatch[1].trim() : 'Sin Nombre';
+                    channelData.group = channelData['group-title'] || channelData['tvg-name'] || 'Otros';
+                    channelData.language = channelData['tvg-language'] || 'Desconocido';
+                    languages.add(channelData.language);
+                    currentChannel = { ...channelData };
+                } else if (line.startsWith('http')) {
+                    currentChannel.url = line.trim();
+                    if (currentChannel.name && currentChannel.url) {
+                        liveChannels.push(currentChannel);
+                    }
+                }
             }
-            const { server, username, password } = userData.credentials;
-            const formattedDateTime = `${date}:${time}`; // Formato YYYY-MM-DD:HH-MM
-            const catchUpUrl = `${server}/timeshift/${username}/${password}/3600/${formattedDateTime}/${currentChannel.id}.ts`;
+            populateLanguageDropdown(Array.from(languages));
+        }
+
+        // --- Funciones de renderizado ---
+
+        /**
+         * Renderiza la lista de canales en el panel de Live TV.
+         */
+        function renderLiveChannels() {
+            const listContainer = document.getElementById('liveList');
+            if (!listContainer) return;
+
+            listContainer.innerHTML = '';
             
-            playContent(catchUpUrl, 'live');
+            const filteredChannels = liveChannels.filter(channel => 
+                preferredLanguage === '' || channel.language === preferredLanguage
+            );
+
+            if (filteredChannels.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-400 text-center py-4">No se encontraron canales para este idioma. <br> Intenta seleccionar otro o limpia tus datos guardados.</p>';
+                return;
+            }
+
+            // Agrupar canales por categoría
+            const groupedChannels = filteredChannels.reduce((acc, channel) => {
+                const group = channel.group || 'Sin Categoría';
+                if (!acc[group]) {
+                    acc[group] = [];
+                }
+                acc[group].push(channel);
+                return acc;
+            }, {});
+
+            // Renderizar los grupos como secciones colapsables
+            for (const group in groupedChannels) {
+                const groupElement = document.createElement('div');
+                groupElement.className = 'my-2';
+
+                const header = document.createElement('div');
+                header.className = 'collapsible-header';
+                header.innerHTML = `
+                    <span>${group}</span>
+                    <i class="fas fa-chevron-down text-sm"></i>
+                `;
+                // Use data-action for handling clicks
+                header.dataset.action = "toggle-collapsible";
+                header.dataset.targetId = `collapsible-content-${group.replace(/\s/g, '-')}`;
+                groupElement.appendChild(header);
+
+                const content = document.createElement('div');
+                content.id = `collapsible-content-${group.replace(/\s/g, '-')}`;
+                content.className = 'collapsible-content';
+                groupedChannels[group].forEach(channel => {
+                    const channelElement = document.createElement('div');
+                    channelElement.className = 'channel-list-item';
+                    channelElement.textContent = channel.name;
+                    // Use data-action for click handler
+                    channelElement.dataset.action = 'play-channel';
+                    channelElement.dataset.channel = JSON.stringify(channel);
+                    content.appendChild(channelElement);
+                });
+                groupElement.appendChild(content);
+                listContainer.appendChild(groupElement);
+            }
+        }
+
+        /**
+         * Renderiza la lista de contenido (películas/series) en una cuadrícula.
+         * @param {Array} contentArray - Array de objetos de contenido.
+         * @param {string} containerId - ID del contenedor para renderizar.
+         */
+        function renderContentGrid(contentArray, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = ''; // Limpiar contenido anterior
+
+            if (contentArray.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 text-center py-4 col-span-full" id="${containerId.replace('Grid', 'Status')}">Ingresa tus credenciales para cargar el contenido.</p>`;
+                return;
+            }
+
+            contentArray.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'content-item';
+                // Use data-action for click handler
+                itemElement.dataset.action = 'play-channel';
+                itemElement.dataset.channel = JSON.stringify(item);
+                
+                const img = document.createElement('img');
+                img.src = item.cover || 'https://placehold.co/150x225/161b22/c9d1d9?text=Sin+Imagen';
+                img.alt = item.name;
+                img.onerror = function() { this.src = 'https://placehold.co/150x225/161b22/c9d1d9?text=Sin+Imagen'; };
+                
+                const name = document.createElement('p');
+                name.textContent = item.name;
+
+                itemElement.appendChild(img);
+                itemElement.appendChild(name);
+                container.appendChild(itemElement);
+            });
+        }
+
+        /**
+         * Rellena el menú desplegable de idiomas.
+         * @param {Array} languages - Array de idiomas.
+         */
+        function populateLanguageDropdown(languages) {
+            const select = document.getElementById('languageSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">Todos los idiomas</option>';
+            languages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = lang;
+                select.appendChild(option);
+            });
+            const filterContainer = document.getElementById('languageFilterContainer');
+            if (filterContainer) filterContainer.classList.remove('hidden');
+        }
+
+        /**
+         * Establece el idioma preferido para filtrar los canales.
+         * @param {string} lang - Código de idioma.
+         */
+        function setPreferredLanguage(lang) {
+            preferredLanguage = lang;
+            renderLiveChannels();
+        }
+
+        // --- Funciones de reproducción ---
+
+        /**
+         * Reproduce el canal seleccionado.
+         * @param {object} channel - Objeto del canal con URL.
+         */
+        function playChannel(channel) {
+            currentChannel = channel;
+            const player = document.getElementById('videoPlayer');
+            const welcomeMsg = document.getElementById('welcomeMessage');
+            const videoCont = document.getElementById('videoContainer');
+            const controlsCont = document.getElementById('controlsContainer');
+
+            // Mostrar el reproductor y los controles, ocultar el mensaje de bienvenida
+            if (welcomeMsg) welcomeMsg.classList.add('hidden');
+            if (videoCont) videoCont.classList.remove('hidden');
+            if (controlsCont) controlsCont.classList.remove('hidden');
+            
+            if (player) {
+                player.src = channel.url;
+            }
+            if (document.getElementById('channelName')) {
+                document.getElementById('channelName').textContent = channel.name;
+            }
+            if (document.getElementById('channelDescription')) {
+                document.getElementById('channelDescription').textContent = channel.group || '';
+            }
+            
+            // Lógica para mostrar/ocultar botones de reproducción
+            if (liveButton) {
+                liveButton.classList.remove('bg-gray-600');
+                liveButton.classList.add('bg-green-600');
+            }
+            if (catchUpButton) {
+                if (channel.catchup) {
+                    catchUpButton.classList.remove('hidden');
+                } else {
+                    catchUpButton.classList.add('hidden');
+                }
+            }
+            hideContentListModal();
+        }
+        
+        /**
+         * Reproduce el canal actualmente seleccionado en vivo.
+         */
+        function playLive() {
+            if (!currentChannel) {
+                showMessage('Error', 'No hay un canal seleccionado.');
+                return;
+            }
+            playChannel(currentChannel);
+        }
+
+        /**
+         * Reproduce el canal en modo Catch-Up.
+         */
+        function playCatchUp() {
+            const dateInput = document.getElementById('catchUpDate')?.value;
+            const timeInput = document.getElementById('catchUpTime')?.value;
+
+            if (!dateInput || !timeInput || !currentChannel?.catchup) {
+                showMessage('Error', 'Por favor, selecciona una fecha y hora válidas. Esta función no es compatible con el canal seleccionado.');
+                return;
+            }
+
+            const datetime = new Date(`${dateInput}T${timeInput}`);
+            const unixTimestamp = Math.floor(datetime.getTime() / 1000);
+
+            // La URL de Catch-Up para Xtremio es diferente
+            const catchupUrl = `${currentChannel.server}/timeshift/${currentChannel.username}/${currentChannel.password}/${currentChannel.streamId}/${unixTimestamp}`;
+
+            const player = document.getElementById('videoPlayer');
+            if (!player) return;
+            player.src = catchupUrl;
+            document.getElementById('channelDescription').textContent = `Reproduciendo contenido de ${dateInput} a las ${timeInput}`;
+            
+            if (liveButton) {
+                liveButton.classList.remove('bg-green-600');
+                liveButton.classList.add('bg-gray-600');
+            }
             hideCatchUpModal();
         }
 
-        async function saveUserData(data) {
-            if (!userId) return;
-            userData = data;
-            const userDocRef = doc(db, 'users', userId);
-            await setDoc(userDocRef, data);
-        }
+        // --- Funciones de persistencia con Firestore ---
 
-        async function clearUserData() {
-            if (!userId) return;
-            const userDocRef = doc(db, 'users', userId);
-            await deleteDoc(userDocRef);
-            liveChannels = movies = series = [];
-            userData = null;
-            document.querySelectorAll('input').forEach(i => i.value = '');
-            renderLiveChannels();
-            renderContentGrid([], dom.movieGrid);
-            renderContentGrid([], dom.seriesGrid);
-            showMessage('Éxito', 'Todos los datos guardados han sido eliminados.');
-        }
-
-        // --- Manejador de eventos principal (Event Delegation) ---
-        
-        function handleAction(event) {
-            let target = event.target;
-            while(target && target !== document.body) {
-                const action = target.dataset.action;
-                if(action) {
-                    event.preventDefault();
-                    switch (action) {
-                        case 'show-settings': showSettingsModal(); break;
-                        case 'hide-settings': hideSettingsModal(); break;
-                        case 'show-content-list': showContentListModal(target.dataset.contentType); break;
-                        case 'show-content-list-modal': showContentListModal(currentContentType); break;
-                        case 'hide-content-list-modal': hideContentListModal(); break;
-                        case 'show-initial-menu': showInitialMenu(); break;
-                        case 'hide-message': hideMessage(); break;
-                        case 'switch-tab': switchTab(target.dataset.tabName); break;
-                        case 'switch-content-tab': switchContentTab(target.dataset.contentType); break;
-                        case 'load-m3u': loadM3uList(); break;
-                        case 'load-xtremio': loadXtremioData(); break;
-                        case 'clear-data': clearUserData(); break;
-                        case 'play-content': playContent(target.dataset.url, target.dataset.type); break;
-                        case 'play-live': playContent(currentChannel.url, 'live'); break;
-                        case 'show-catchup-modal': showCatchUpModal(); break;
-                        case 'hide-catchup-modal': hideCatchUpModal(); break;
-                        case 'play-catchup': playCatchUp(); break;
-                        case 'toggle-collapse':
-                            const content = target.nextElementSibling;
-                            content.classList.toggle('show');
-                            target.querySelector('i').classList.toggle('fa-chevron-down');
-                            target.querySelector('i').classList.toggle('fa-chevron-up');
-                            break;
+        /**
+         * Carga los datos guardados del usuario desde Firestore.
+         */
+        async function loadUserData() {
+            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/iptv_settings/current`);
+            onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.type === 'm3u') {
+                        const m3uUrlInput = document.getElementById('m3uUrlInput');
+                        if (m3uUrlInput) m3uUrlInput.value = data.url || '';
+                        loadM3uList();
+                        switchTab('m3u');
+                    } else if (data.type === 'xtremio') {
+                        const xtremioServer = document.getElementById('xtremioServer');
+                        const xtremioUsername = document.getElementById('xtremioUsername');
+                        const xtremioPassword = document.getElementById('xtremioPassword');
+                        if (xtremioServer) xtremioServer.value = data.server || '';
+                        if (xtremioUsername) xtremioUsername.value = data.username || '';
+                        if (xtremioPassword) xtremioPassword.value = data.password || '';
+                        loadXtremioData();
+                        switchTab('xtremio');
                     }
-                    return; // Acción manejada
                 }
-                target = target.parentElement;
+            }, (error) => {
+                console.error("Error al escuchar cambios en Firestore:", error);
+                showMessage("Error de Carga", "No se pudo cargar la configuración. Por favor, revisa la conexión.");
+            });
+        }
+        
+        /**
+         * Guarda los datos de configuración del usuario en Firestore.
+         * @param {object} data - Datos a guardar (ej. {type: 'm3u', url: '...'}).
+         */
+        async function saveUserData(data) {
+            try {
+                const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/iptv_settings/current`);
+                await setDoc(userDocRef, data, { merge: true });
+                console.log("Configuración guardada en Firestore.");
+            } catch (e) {
+                console.error("Error al guardar en Firestore:", e);
+                showMessage("Error al Guardar", "No se pudo guardar la configuración.");
             }
         }
-        
-        // --- Inicialización de la Aplicación ---
-        
+
+        /**
+         * Limpia los datos guardados en Firestore.
+         */
+        async function clearSavedData() {
+            try {
+                const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/iptv_settings/current`);
+                await setDoc(userDocRef, { type: 'none' }, { merge: true });
+                liveChannels = [];
+                movies = [];
+                series = [];
+                renderLiveChannels();
+                renderContentGrid(movies, 'movieGrid');
+                renderContentGrid(series, 'seriesGrid');
+                const m3uUrlInput = document.getElementById('m3uUrlInput');
+                const xtremioServer = document.getElementById('xtremioServer');
+                const xtremioUsername = document.getElementById('xtremioUsername');
+                const xtremioPassword = document.getElementById('xtremioPassword');
+                const languageFilterContainer = document.getElementById('languageFilterContainer');
+
+                if (m3uUrlInput) m3uUrlInput.value = '';
+                if (xtremioServer) xtremioServer.value = '';
+                if (xtremioUsername) xtremioUsername.value = '';
+                if (xtremioPassword) xtremioPassword.value = '';
+                if (languageFilterContainer) languageFilterContainer.classList.add('hidden');
+                
+                showMessage('Datos Limpiados', 'La configuración ha sido eliminada. Por favor, ingresa nuevos datos.');
+            } catch (e) {
+                console.error("Error al limpiar datos en Firestore:", e);
+                showMessage("Error al Limpiar", "No se pudo eliminar la configuración.");
+            }
+        }
+
+        // --- Manejador de Clics Universal (Delegación de Eventos) ---
+        document.addEventListener('click', (event) => {
+            let target = event.target;
+            while (target && !target.dataset.action) {
+                target = target.parentElement;
+            }
+
+            if (!target) return;
+            const actionToPerform = target.dataset.action;
+            const contentType = target.dataset.contentType;
+            const tabName = target.dataset.tabName;
+            const targetId = target.dataset.targetId;
+            const channel = target.dataset.channel;
+
+            switch (actionToPerform) {
+                case 'show-content-list':
+                    showContentListModal(contentType);
+                    break;
+                case 'show-settings':
+                    showSettingsModal();
+                    break;
+                case 'show-initial-menu':
+                    showInitialMenu();
+                    break;
+                case 'show-content-list-modal':
+                    showContentListModal(currentContentType);
+                    break;
+                case 'play-live':
+                    playLive();
+                    break;
+                case 'show-catchup-modal':
+                    showCatchUpModal();
+                    break;
+                case 'hide-message':
+                    hideMessage();
+                    break;
+                case 'load-m3u':
+                    loadM3uList();
+                    break;
+                case 'load-xtremio':
+                    loadXtremioData();
+                    break;
+                case 'clear-data':
+                    clearSavedData();
+                    break;
+                case 'switch-tab':
+                    switchTab(tabName);
+                    break;
+                case 'switch-content-tab':
+                    switchContentTab(contentType);
+                    break;
+                case 'play-catchup':
+                    playCatchUp();
+                    break;
+                case 'hide-catchup-modal':
+                    hideCatchUpModal();
+                    break;
+                case 'toggle-collapsible':
+                    const content = document.getElementById(targetId);
+                    const icon = target.querySelector('i');
+                    if (content) content.classList.toggle('show');
+                    if (icon) {
+                        icon.classList.toggle('fa-chevron-down');
+                        icon.classList.toggle('fa-chevron-up');
+                    }
+                    break;
+                case 'play-channel':
+                    // **CORRECCIÓN**
+                    // La lógica del manejador de clics universal no estaba extrayendo el JSON del canal
+                    // de forma segura y correcta. Esto ha sido corregido.
+                    if (channel) {
+                        try {
+                            const channelData = JSON.parse(channel);
+                            playChannel(channelData);
+                        } catch (e) {
+                            console.error("Error al parsear los datos del canal:", e);
+                            showMessage("Error", "No se pudo cargar la información del canal.");
+                        }
+                    } else {
+                        console.error("El atributo 'data-channel' está ausente.");
+                        showMessage("Error", "No se encontró información para el canal seleccionado.");
+                    }
+                    break;
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
-            dom.appContainer.style.display = 'block'; // Mostrar la app una vez cargado el DOM
+            console.log("Script loaded. Attaching event listeners.");
+            if (statusMessage) statusMessage.textContent = "¡Listo para empezar!";
+
+            const languageSelect = document.getElementById('languageSelect');
+            if (languageSelect) {
+                languageSelect.addEventListener('change', (event) => setPreferredLanguage(event.target.value));
+            }
+
+            // Para cerrar modales al hacer clic fuera
+            if (settingsModal) {
+                settingsModal.addEventListener('click', (event) => {
+                    if (event.target.id === 'settingsModal') hideSettingsModal();
+                });
+            }
+            if (contentListModal) {
+                contentListModal.addEventListener('click', (event) => {
+                    if (event.target.id === 'contentListModal') hideContentListModal();
+                });
+            }
+            if (catchUpModal) {
+                catchUpModal.addEventListener('click', (event) => {
+                    if (event.target.id === 'catchUpModal') hideCatchUpModal();
+                });
+            }
+
+            // Inicialización de Firebase una vez que el DOM esté listo
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
             
-            // Usar delegación de eventos para todos los clics
-            document.body.addEventListener('click', handleAction);
-            
+            // Autenticación del usuario
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
-                    dom.statusMessage.textContent = '¡Listo para empezar! Carga tu contenido en Ajustes.';
-                    const userDocRef = doc(db, 'users', userId);
-                    const userDocSnap = await getDoc(userDocRef);
-                    if (userDocSnap.exists()) {
-                        dom.statusMessage.textContent = 'Cargando tu configuración guardada...';
-                        userData = userDocSnap.data();
-                        await loadDataFromSource(userData);
-                        dom.statusMessage.textContent = '¡Configuración cargada! Selecciona una opción.';
-                    }
+                    const userIdDisplay = document.getElementById('userIdDisplay');
+                    if (userIdDisplay) userIdDisplay.textContent = userId;
+                    // Cargar datos del usuario una vez autenticado
+                    loadUserData();
                 } else {
-                    signInAnonymously(auth).catch(error => {
-                        console.error("Error en el inicio de sesión anónimo:", error);
-                        dom.statusMessage.textContent = 'Error de autenticación. La configuración no se guardará.';
-                    });
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined') {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Error al iniciar sesión:", error);
+                        showMessage("Error", "No se pudo iniciar sesión. Por favor, intenta de nuevo más tarde.");
+                    }
                 }
             });
         });
-
     </script>
 </body>
 </html>
