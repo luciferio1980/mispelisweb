@@ -76,6 +76,12 @@
     <div id="mainApp" class="container hidden"><header class="flex justify-between items-center p-4 border-b border-gray-700"><h1 class="text-2xl font-bold text-white">Reproductor</h1><div class="flex items-center space-x-2"><button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-initial-menu"><i class="fas fa-arrow-left"></i></button><button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-content-list-modal"><i class="fas fa-bars"></i></button></div></header>
     <div id="videoContainer" class="video-player-container">
         <video id="videoPlayer" class="video-player" controls autoplay></video>
+<!-- Botón "Ver desde el inicio" -->
+<button id="restartButton" 
+    class="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg z-20 hidden"
+    data-action="restart-stream">
+    <i class="fas fa-undo mr-2"></i> Ver desde el inicio
+</button>
         <div id="videoLoader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 hidden"><div class="spinner"></div></div>
         <div id="epgOverlay"></div>
     </div>
@@ -165,6 +171,8 @@
     
     // --- REPRODUCTOR DE VIDEO Y EPG ---
     function playStream(url, title, type, streamId) {
+        // Guardamos info del stream actual
+        window.currentStream = { url, title, type, streamId };
         dom.mediaTitle.textContent = title;
         dom.controlsContainer.classList.remove('hidden');
         dom.videoLoader.classList.remove('hidden');
@@ -190,6 +198,11 @@
                 } else if (dom.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) { dom.videoPlayer.src = url; }
             } else { dom.videoPlayer.src = url; }
             dom.videoPlayer.play().catch(e => console.warn('Reproducción necesita interacción del usuario.'));
+        if (type === 'live' && streamId) {
+            document.getElementById('restartButton').classList.remove('hidden');
+        } else {
+            document.getElementById('restartButton').classList.add('hidden');
+        }
         } catch (error) {
             showMessage('Error', 'La URL del contenido no es válida.');
             dom.videoLoader.classList.add('hidden');
@@ -477,6 +490,19 @@
                 case 'show-movie-detail': (actionTarget.dataset.isM3u === 'true') ? {} : showXtremioMovieDetail(actionTarget.dataset.vodId); break;
                 case 'show-series-detail': (actionTarget.dataset.isM3u === 'true') ? {} : showXtremioSeriesDetail(actionTarget.dataset.seriesId); break;
                 case 'toggle-collapse': actionTarget.classList.toggle('active'); actionTarget.nextElementSibling.classList.toggle('show'); break;
+                case 'restart-stream':
+                    if (window.currentStream && window.currentStream.type === 'live' && window.currentStream.streamId) {
+                        const creds = JSON.parse(localStorage.getItem('iptv_xtremio_creds'));
+                        if (creds) {
+                            const restartUrl = `${creds.server}/timeshift/${creds.username}/${creds.password}/${window.currentStream.streamId}.ts?start=0`;
+                            playStream(restartUrl, window.currentStream.title, 'live', window.currentStream.streamId);
+                        } else {
+                            showMessage('Error', 'No hay credenciales Xtream cargadas.');
+                        }
+                    } else {
+                        showMessage('Info', 'Solo disponible para canales Xtream.');
+                    }
+                    break;
             }
         }
         
