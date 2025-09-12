@@ -229,6 +229,18 @@
                     console.warn("Título EPG no está en Base64, usando original.");
                 }
 
+                // Guardamos EPG en window.currentStream para la funcionalidad de 'ver desde el inicio'
+                try {
+                    window.currentStream = window.currentStream || {};
+                    window.currentStream.epg = {
+                        start_timestamp: currentProgram.start_timestamp,
+                        end_timestamp: currentProgram.end_timestamp,
+                        title: programTitle
+                    };
+                } catch (e) {
+                    console.warn('No se pudo guardar EPG en currentStream', e);
+                }
+
                 const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
                 
                 // --- CAMBIO CLAVE: Verificación para evitar 'Invalid Date' ---
@@ -249,13 +261,14 @@
 
             } else {
                 dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
+                // eliminamos epg si no hay info
+                if (window.currentStream) { delete window.currentStream.epg; }
             }
         } catch (error) {
             console.error('Error al obtener EPG:', error);
             dom.epgOverlay.innerHTML = '<em>Error al cargar EPG. Verifique la consola (F12).</em>';
         }
     }
-
 
     dom.videoPlayer.oncanplay = () => dom.videoLoader.classList.add('hidden');
     dom.videoPlayer.onerror = () => {
@@ -494,8 +507,21 @@
                     if (window.currentStream && window.currentStream.type === 'live' && window.currentStream.streamId) {
                         const creds = JSON.parse(localStorage.getItem('iptv_xtremio_creds'));
                         if (creds) {
-                            const restartUrl = `${creds.server}/timeshift/${creds.username}/${creds.password}/${window.currentStream.streamId}.ts?start=0`;
-                            playStream(restartUrl, window.currentStream.title, 'live', window.currentStream.streamId);
+                            const epg = window.currentStream.epg;
+                            if (epg && epg.start_timestamp && !isNaN(epg.start_timestamp)) {
+                                const startMs = Number(epg.start_timestamp) * 1000;
+                                const nowMs = Date.now();
+                                let secondsAgo = Math.floor((nowMs - startMs) / 1000);
+                                if (secondsAgo < 0) secondsAgo = 0;
+                                // limitar a un máximo razonable (24h) para evitar números enormes
+                                const maxSeconds = 24 * 3600;
+                                if (secondsAgo > maxSeconds) secondsAgo = maxSeconds;
+                                // Duración por defecto: 3 horas (10800s)
+                                const restartUrl = `${creds.server}/timeshift/${creds.username}/${creds.password}/${window.currentStream.streamId}.ts?start=${secondsAgo}&duration=10800`;
+                                playStream(restartUrl, window.currentStream.title + ' (Desde inicio)', 'live', window.currentStream.streamId);
+                            } else {
+                                showMessage('Error', 'No se encontró EPG válido para calcular el inicio.');
+                            }
                         } else {
                             showMessage('Error', 'No hay credenciales Xtream cargadas.');
                         }
