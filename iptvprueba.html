@@ -147,7 +147,13 @@
         }
     }
     dom.videoPlayer.oncanplay = () => dom.videoLoader.classList.add('hidden');
-    dom.videoPlayer.onerror = () => { showMessage('Error de Reproducción', 'Formato no compatible o URL incorrecta.'); dom.videoLoader.classList.add('hidden'); };
+    dom.videoPlayer.onerror = () => {
+        // Evitar mostrar error si no hay una fuente de video cargada
+        if (dom.videoPlayer.getAttribute('src')) {
+            showMessage('Error de Reproducción', 'Formato no compatible o URL incorrecta.');
+            dom.videoLoader.classList.add('hidden');
+        }
+    };
 
     // --- CARGA DE DATOS ---
     async function loadM3uList(isAutoLoad = false) {
@@ -211,7 +217,6 @@
             }
             series = Object.values(seriesGroups);
             updateProgress(100, '¡Completo!'); saveCredentials('m3u', { url });
-            // Almacenar datos en localStorage y precargar imágenes
             localStorage.setItem('iptv_channels', JSON.stringify(liveChannels));
             localStorage.setItem('iptv_movies', JSON.stringify(movies));
             localStorage.setItem('iptv_series', JSON.stringify(series));
@@ -244,11 +249,24 @@
             
             updateProgress(70, 'Cargando Series...');
             const seriesRes = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_series`)).json();
-            series = seriesRes.map(s => ({ ...s, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}.${s.container_extension}` }));
+            
+            // **FIX #1: Asegurar que las URLs de las carátulas de series sean absolutas**
+            series = seriesRes.map(s => {
+                let coverUrl = s.cover;
+                if (coverUrl && !coverUrl.startsWith('http')) {
+                    const serverBase = creds.server.endsWith('/') ? creds.server.slice(0, -1) : creds.server;
+                    const coverPath = coverUrl.startsWith('/') ? coverUrl.slice(1) : coverUrl;
+                    coverUrl = `${serverBase}/${coverPath}`;
+                }
+                return { 
+                    ...s, 
+                    cover: coverUrl, 
+                    url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}`
+                };
+            });
             
             updateProgress(100, '¡Completo!');
             saveCredentials('xtremio', creds);
-            // Almacenar datos en localStorage y precargar imágenes
             localStorage.setItem('iptv_channels', JSON.stringify(liveChannels));
             localStorage.setItem('iptv_movies', JSON.stringify(movies));
             localStorage.setItem('iptv_series', JSON.stringify(series));
@@ -394,7 +412,6 @@
         const action = `data-action="show-${type === 'movies' ? 'movie' : 'series'}-detail"`;
         const vodId = item.isM3u ? `data-m3u-name="${item.name}" data-m3u-url="${item.url}" data-m3u-poster="${item.stream_icon}"` : `data-vod-id="${item.stream_id || ''}"`;
         const seriesId = `data-series-id="${item.series_id || ''}"`;
-        // **FIX**: Prioritize `item.cover` for series, then `item.stream_icon` for movies, with a fallback.
         const imageUrl = item.cover || item.stream_icon || 'https://via.placeholder.com/400x600/161b22/FFFFFF?text=N/A';
         return `<div class="content-item" ${action} ${type === 'movies' ? vodId : seriesId} data-is-m3u="${!!item.isM3u}" data-title="${item.name}">
                     <img src="${imageUrl}" loading="lazy" alt="${item.name}"><p>${item.name}</p>
@@ -451,15 +468,14 @@
         }
     }
     
-    // **NEW**: Handler for live channel search
     function handleLiveSearch(event) {
         const searchTerm = event.target.value.toLowerCase();
         if (!searchTerm) {
-            renderLiveChannels(liveChannels); // Render all if search is empty
+            renderLiveChannels(liveChannels);
             return;
         }
         const filteredChannels = liveChannels.filter(channel => channel.name.toLowerCase().includes(searchTerm));
-        renderLiveChannels(filteredChannels); // Render only filtered channels
+        renderLiveChannels(filteredChannels);
     }
 
 
@@ -499,9 +515,13 @@
             switch (action) {
                 case 'show-settings': dom.settingsModal.classList.add('show'); break;
                 case 'show-initial-menu':
-                    // **IMPROVEMENT**: Stop video when returning to menu
+                    // **FIX #2: Limpiar el reproductor correctamente para evitar errores**
                     dom.videoPlayer.pause();
-                    dom.videoPlayer.src = '';
+                    if (hls) {
+                        hls.destroy();
+                    }
+                    dom.videoPlayer.removeAttribute('src'); // Eliminar el atributo src
+                    dom.videoPlayer.load(); // Resetear el elemento de video
                     dom.mediaTitle.textContent = '';
                     dom.controlsContainer.classList.add('hidden');
                     dom.mainApp.classList.add('hidden');
@@ -546,7 +566,6 @@
         }
     });
 
-    // Add event listeners for search inputs
     dom.liveSearchInput.addEventListener('input', handleLiveSearch);
     dom.movieSearchInput.addEventListener('input', handleSearch);
     dom.seriesSearchInput.addEventListener('input', handleSearch);
