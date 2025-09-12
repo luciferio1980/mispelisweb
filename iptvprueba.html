@@ -313,14 +313,10 @@
             updateProgress(70, 'Cargando Series...');
             const seriesRes = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_series`)).json();
             series = seriesRes.map(s => {
-    let coverUrl = s.cover;
-    if (coverUrl && !coverUrl.startsWith('http')) {
-        const serverBase = creds.server.replace(/\\/$/, '');
-        const coverPath = coverUrl.startsWith('/') ? coverUrl.slice(1) : coverUrl;
-        coverUrl = `${serverBase}/${coverPath}`;
-    }
-    return { ...s, cover: coverUrl, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}` };
-});
+                let coverUrl = s.cover;
+                if (coverUrl && !coverUrl.startsWith('http')) { const serverBase = creds.server.endsWith('/') ? creds.server.slice(0, -1) : creds.server; const coverPath = coverUrl.startsWith('/') ? coverUrl.slice(1) : coverUrl; coverUrl = `${serverBase}/${coverPath}`; }
+                return { ...s, cover: coverUrl, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}` };
+            });
             updateProgress(100, '¡Completo!'); saveCredentials('xtremio', creds);
             localStorage.setItem('iptv_channels', JSON.stringify(liveChannels)); localStorage.setItem('iptv_movies', JSON.stringify(movies)); localStorage.setItem('iptv_series', JSON.stringify(series));
             setTimeout(() => { if (!isAutoLoad) dom.settingsModal.classList.remove('show'); renderAllContent(); showContentListModal('live'); }, 500);
@@ -371,12 +367,29 @@
         container.innerHTML = Object.keys(groups).sort().map(groupName => `<div class="collapsible-header" data-action="toggle-collapse"><span>${groupName} (${groups[groupName].length})</span><i class="fas fa-chevron-down"></i></div><div class="collapsible-content">${groups[groupName].map(channel => `<div class="channel-list-item playable-item" data-url="${channel.url}" data-title="${channel.name}" data-type="live" data-stream-id="${channel.stream_id || ''}"><img src="${channel.logo || 'https://via.placeholder.com/150/161b22/FFFFFF?text=TV'}" alt=""><span>${channel.name}</span></div>`).join('')}</div>`).join('');
     }
 
-    function renderVirtualGrid(type) {
-        const container = dom[type === 'movies' ? 'movieGrid' : 'seriesGrid']; const dataToRender = type === 'movies' ? movieDataToRender : seriesDataToRender;
-        if (!dataToRender || dataToRender.length === 0) { container.innerHTML = `<p class="col-span-full text-center text-gray-500">No hay contenido disponible.</p>`; return; }
-        const startIndex = 0; const endIndex = Math.min(ITEMS_PER_PAGE, dataToRender.length); const fragment = document.createDocumentFragment();
-        for (let i = startIndex; i < endIndex; i++) { const item = dataToRender[i]; const itemHtml = createGridItemHtml(item, type); const div = document.createElement('div'); div.innerHTML = itemHtml; fragment.appendChild(div.firstChild); }
-        container.innerHTML = ''; container.appendChild(fragment); container.dataset.renderedEndIndex = endIndex;
+    function renderVirtualGrid(type, append = false) {
+        const container = dom[type === 'movies' ? 'movieGrid' : 'seriesGrid'];
+        const dataToRender = type === 'movies' ? movieDataToRender : seriesDataToRender;
+        if (!dataToRender || dataToRender.length === 0) {
+            container.innerHTML = `<p class="col-span-full text-center text-gray-500">No hay contenido disponible.</p>`;
+            return;
+        }
+
+        let startIndex = append ? parseInt(container.dataset.renderedEndIndex || "0") : 0;
+        let endIndex = Math.min(startIndex + ITEMS_PER_PAGE, dataToRender.length);
+
+        const fragment = document.createDocumentFragment();
+        for (let i = startIndex; i < endIndex; i++) {
+            const item = dataToRender[i];
+            const itemHtml = createGridItemHtml(item, type);
+            const div = document.createElement('div');
+            div.innerHTML = itemHtml;
+            fragment.appendChild(div.firstChild);
+        }
+
+        if (!append) container.innerHTML = "";
+        container.appendChild(fragment);
+        container.dataset.renderedEndIndex = endIndex;
     }
 
     function createGridItemHtml(item, type) {
@@ -485,17 +498,54 @@
         }
     });
     // --- CORRECCIÓN: Detector de scroll para la carga infinita ---
-    dom.movieGrid.addEventListener('scroll', () => {
-    if (dom.movieGrid.scrollTop + dom.movieGrid.clientHeight >= dom.movieGrid.scrollHeight - 50) {
-        loadMore('movies');
-    }
-});
+    (function attachScrollListeners() {
+        try {
+            // Prefer the grid (content-grid) because it has overflow-y:auto in CSS.
+            if (dom.movieGrid) {
+                dom.movieGrid.addEventListener('scroll', () => {
+                    if (dom.movieGrid.scrollTop + dom.movieGrid.clientHeight >= dom.movieGrid.scrollHeight - 50) {
+                        loadMore('movies');
+                    }
+                });
+            }
+        } catch (e) { console.warn('movieGrid scroll listener failed', e); }
 
-    dom.seriesGrid.addEventListener('scroll', () => {
-    if (dom.seriesGrid.scrollTop + dom.seriesGrid.clientHeight >= dom.seriesGrid.scrollHeight - 50) {
-        loadMore('series');
-    }
-});
+        try {
+            if (dom.seriesGrid) {
+                dom.seriesGrid.addEventListener('scroll', () => {
+                    if (dom.seriesGrid.scrollTop + dom.seriesGrid.clientHeight >= dom.seriesGrid.scrollHeight - 50) {
+                        loadMore('series');
+                    }
+                });
+            }
+        } catch (e) { console.warn('seriesGrid scroll listener failed', e); }
+
+        // Fallback: also attach to panels in case CSS/layout changes in some builds
+        try {
+            if (dom.moviesPanel && dom.moviesPanel !== dom.movieGrid) {
+                dom.moviesPanel.addEventListener('scroll', () => {
+                    if (dom.moviesPanel.scrollTop + dom.moviesPanel.clientHeight >= dom.moviesPanel.scrollHeight - 50) {
+                        loadMore('movies');
+                    }
+                });
+            }
+        } catch (e) { console.warn('moviesPanel scroll listener failed', e); }
+
+        try {
+            if (dom.seriesPanel && dom.seriesPanel !== dom.seriesGrid) {
+                dom.seriesPanel.addEventListener('scroll', () => {
+                    if (dom.seriesPanel.scrollTop + dom.seriesPanel.clientHeight >= dom.seriesPanel.scrollHeight - 50) {
+                        loadMore('series');
+                    }
+                });
+            }
+        } catch (e) { console.warn('seriesPanel scroll listener failed', e); }
+    })();
+dom.seriesPanel.addEventListener('scroll', () => {
+        if (dom.seriesPanel.scrollHeight - dom.seriesPanel.scrollTop <= dom.seriesPanel.clientHeight + 50) {
+            loadMore('series');
+        }
+    });
 
     // --- Búsquedas ---
     dom.liveSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); renderLiveChannels(liveChannels.filter(c => c.name.toLowerCase().includes(term))); });
