@@ -14,7 +14,8 @@
         .container { background-color: var(--container-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); max-width: 900px; width: 100%; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; height: auto; }
         .video-player-container { position: relative; width: 100%; padding-top: 56.25%; background-color: #000; }
         .video-player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background-color: #000; }
-        /* --- NUEVO: Estilos para la superposición de EPG --- */
+        
+        /* --- MODIFICADO: Estilos para la superposición de EPG --- */
         #epgOverlay {
             position: absolute;
             bottom: 60px; /* Ajusta esta distancia para que no choque con la barra de progreso */
@@ -25,14 +26,16 @@
             padding: 8px 12px;
             border-radius: 6px;
             font-size: 0.9rem;
-            opacity: 0;
+            opacity: 0; /* Por defecto oculto */
             transition: opacity 0.3s ease-in-out;
             pointer-events: none; /* Para poder hacer clic a través del elemento */
             text-shadow: 1px 1px 2px black;
         }
-        #videoContainer:hover #epgOverlay {
+        /* La visibilidad ahora depende de una clase en el contenedor */
+        #videoContainer.controls-visible #epgOverlay {
             opacity: 1;
         }
+        
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal.show { display: flex; }
         .modal-content { background-color: var(--container-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; width: 90%; max-width: 800px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8); }
@@ -89,18 +92,20 @@
 <script type="module">
     // --- VARIABLES GLOBALES ---
     let liveChannels = [], movies = [], series = [], hls, currentContentType = 'live';
+    let controlsTimer; // --- NUEVO: Temporizador para ocultar el EPG
 
     // --- DOM REFERENCES ---
     const dom = {
         mainApp: document.getElementById('mainApp'), initialMenu: document.getElementById('initialMenu'), initialStatus: document.getElementById('initialStatus'),
         videoPlayer: document.getElementById('videoPlayer'), videoLoader: document.getElementById('videoLoader'), mediaTitle: document.getElementById('mediaTitle'),
+        videoContainer: document.getElementById('videoContainer'), // --- NUEVO: Referencia al contenedor del video
         controlsContainer: document.getElementById('controlsContainer'), contentListModal: document.getElementById('contentListModal'),
         settingsModal: document.getElementById('settingsModal'), messageBox: document.getElementById('messageBox'),
         movieDetailModal: document.getElementById('movieDetailModal'), movieDetailContent: document.getElementById('movieDetailContent'),
         seriesDetailModal: document.getElementById('seriesDetailModal'), seriesDetailContent: document.getElementById('seriesDetailContent'),
         liveSearchInput: document.getElementById('liveSearchInput'), movieSearchInput: document.getElementById('movieSearchInput'), seriesSearchInput: document.getElementById('seriesSearchInput'),
         movieGrid: document.getElementById('movieGrid'), seriesGrid: document.getElementById('seriesGrid'),
-        epgOverlay: document.getElementById('epgOverlay') // --- NUEVO: Referencia al overlay EPG ---
+        epgOverlay: document.getElementById('epgOverlay')
     };
 
     // --- VARIABLES DE VIRTUALIZACIÓN ---
@@ -181,7 +186,7 @@
         }
     }
 
-    // --- NUEVO: Función para obtener y mostrar datos EPG ---
+    // --- Función para obtener y mostrar datos EPG ---
     async function fetchEpgData(streamId) {
         const creds = JSON.parse(localStorage.getItem('iptv_xtremio_creds'));
         if (!creds || !streamId) return;
@@ -194,7 +199,6 @@
             
             if (data.epg_listings && data.epg_listings.length > 0) {
                 const currentProgram = data.epg_listings[0];
-                // El título a veces viene codificado en Base64
                 const programTitle = atob(currentProgram.title); 
 
                 const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
@@ -330,7 +334,6 @@
         const container = document.getElementById('liveList');
         if (!channelsToRender || channelsToRender.length === 0) { container.innerHTML = `<p class="col-span-full text-center text-gray-500 mt-8">No se encontraron canales.</p>`; return; }
         const groups = channelsToRender.reduce((acc, c) => ((acc[c.group] = [...(acc[c.group] || []), c]), acc), {});
-        // --- MODIFICADO: Añadir data-type y data-stream-id para EPG ---
         container.innerHTML = Object.keys(groups).sort().map(groupName => `<div class="collapsible-header" data-action="toggle-collapse"><span>${groupName} (${groups[groupName].length})</span><i class="fas fa-chevron-down"></i></div><div class="collapsible-content">${groups[groupName].map(channel => `<div class="channel-list-item playable-item" data-url="${channel.url}" data-title="${channel.name}" data-type="live" data-stream-id="${channel.stream_id || ''}"><img src="${channel.logo || 'https://via.placeholder.com/150/161b22/FFFFFF?text=TV'}" alt=""><span>${channel.name}</span></div>`).join('')}</div>`).join('');
     }
 
@@ -360,6 +363,21 @@
         if (tabName === 'series') { dom.seriesSearchInput.value = ''; renderVirtualGrid('series'); }
         if (tabName === 'live') { dom.liveSearchInput.value = ''; renderLiveChannels(); }
     }
+    
+    // --- NUEVO: Lógica de visibilidad del EPG ---
+    dom.videoContainer.addEventListener('mousemove', () => {
+        dom.videoContainer.classList.add('controls-visible');
+        clearTimeout(controlsTimer);
+        controlsTimer = setTimeout(() => {
+            dom.videoContainer.classList.remove('controls-visible');
+        }, 3000); // Los controles se ocultan después de 3 segundos de inactividad
+    });
+
+    dom.videoContainer.addEventListener('mouseleave', () => {
+        clearTimeout(controlsTimer);
+        dom.videoContainer.classList.remove('controls-visible');
+    });
+
     // --- EVENT LISTENER GLOBAL ---
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) e.target.classList.remove('show');
@@ -370,11 +388,10 @@
                 case 'show-initial-menu':
                     dom.videoPlayer.pause(); if (hls) { hls.destroy(); }
                     dom.videoPlayer.removeAttribute('src'); dom.videoPlayer.load();
-                    dom.mediaTitle.textContent = ''; dom.epgOverlay.innerHTML = ''; // Limpiar EPG
+                    dom.mediaTitle.textContent = ''; dom.epgOverlay.innerHTML = '';
                     dom.controlsContainer.classList.add('hidden'); dom.mainApp.classList.add('hidden'); dom.initialMenu.classList.remove('hidden'); 
                     break;
                 case 'show-content-list': showContentListModal(actionTarget.dataset.contentType); break;
-                // Resto de casos... (acortado por brevedad, sin cambios)
                 case 'show-settings': dom.settingsModal.classList.add('show'); break;
                 case 'show-content-list-modal': dom.contentListModal.classList.add('show'); break;
                 case 'switch-content-tab': switchContentTab(actionTarget.dataset.contentType); break;
