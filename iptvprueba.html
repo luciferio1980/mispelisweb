@@ -396,7 +396,6 @@
                 </div>`;
     }
 
-    let lastScrollTop = 0;
     let isScrolling = false;
 
     function handleScroll(event) {
@@ -404,18 +403,13 @@
 
         isScrolling = true;
         requestAnimationFrame(() => {
-            const currentPanel = document.querySelector('.content-panel:not(.hidden)');
-            if (!currentPanel) {
-                isScrolling = false;
-                return;
-            }
-
-            const gridContainer = currentPanel.querySelector('.content-grid');
-            const data = currentPanel.id === 'moviesPanel' ? movieDataToRender : seriesDataToRender;
+            const gridContainer = event.target;
+            const type = gridContainer.id === 'movieGrid' ? 'movies' : 'series';
+            const data = type === 'movies' ? movieDataToRender : seriesDataToRender;
             const renderedCount = parseInt(gridContainer.dataset.renderedEndIndex);
             
             const scrollDistanceToEnd = gridContainer.scrollHeight - gridContainer.scrollTop - gridContainer.clientHeight;
-            const threshold = 300; // Carga más contenido cuando quedan 300px para el final
+            const threshold = 300; 
 
             if (scrollDistanceToEnd < threshold && renderedCount < data.length) {
                 const nextChunkStart = renderedCount;
@@ -424,7 +418,7 @@
 
                 for (let i = nextChunkStart; i < nextChunkEnd; i++) {
                     const item = data[i];
-                    const itemHtml = createGridItemHtml(item, currentPanel.id === 'moviesPanel' ? 'movies' : 'series');
+                    const itemHtml = createGridItemHtml(item, type);
                     const div = document.createElement('div');
                     div.innerHTML = itemHtml;
                     fragment.appendChild(div.firstChild);
@@ -458,8 +452,21 @@
     function switchContentTab(tabName) {
         ['live', 'movies', 'series'].forEach(type => { document.getElementById(`${type}ContentTab`).classList.toggle('active', type === tabName); document.getElementById(`${type}Panel`).classList.toggle('hidden', type !== tabName); });
         currentContentType = tabName;
-        if (tabName === 'movies') { dom.movieSearchInput.value = ''; renderVirtualGrid('movies'); }
-        if (tabName === 'series') { dom.seriesSearchInput.value = ''; renderVirtualGrid('series'); }
+
+        // Desactivar listener anterior
+        dom.movieGrid.removeEventListener('scroll', handleScroll);
+        dom.seriesGrid.removeEventListener('scroll', handleScroll);
+
+        if (tabName === 'movies') { 
+            dom.movieSearchInput.value = ''; 
+            renderVirtualGrid('movies');
+            dom.movieGrid.addEventListener('scroll', handleScroll); // <<-- CAMBIO AQUI
+        }
+        if (tabName === 'series') { 
+            dom.seriesSearchInput.value = ''; 
+            renderVirtualGrid('series');
+            dom.seriesGrid.addEventListener('scroll', handleScroll); // <<-- CAMBIO AQUI
+        }
     }
 
     // --- EVENT LISTENER GLOBAL ---
@@ -512,8 +519,6 @@
     });
     dom.movieSearchInput.addEventListener('input', handleSearch);
     dom.seriesSearchInput.addEventListener('input', handleSearch);
-    dom.movieGrid.parentElement.addEventListener('scroll', handleScroll);
-    dom.seriesGrid.parentElement.addEventListener('scroll', handleScroll);
     document.addEventListener('DOMContentLoaded', loadAndPlayFromStorage);
 </script>
 </body>
