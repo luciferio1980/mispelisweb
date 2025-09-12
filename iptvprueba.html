@@ -405,6 +405,30 @@
         dom.videoContainer.classList.remove('controls-visible');
     });
 
+    // --- NUEVO: Función para cargar más items de forma dinámica ---
+    function loadMore(type) {
+        const container = dom[type === 'movies' ? 'movieGrid' : 'seriesGrid'];
+        const dataToRender = type === 'movies' ? movieDataToRender : seriesDataToRender;
+        let renderedEndIndex = parseInt(container.dataset.renderedEndIndex || '0');
+
+        if (renderedEndIndex < dataToRender.length) {
+            const startIndex = renderedEndIndex;
+            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, dataToRender.length);
+            const fragment = document.createDocumentFragment();
+
+            for (let i = startIndex; i < endIndex; i++) {
+                const item = dataToRender[i];
+                const itemHtml = createGridItemHtml(item, type);
+                const div = document.createElement('div');
+                div.innerHTML = itemHtml;
+                fragment.appendChild(div.firstChild);
+            }
+
+            container.appendChild(fragment);
+            container.dataset.renderedEndIndex = endIndex;
+        }
+    }
+    
     // --- EVENT LISTENER GLOBAL ---
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) e.target.classList.remove('show');
@@ -453,10 +477,29 @@
             seriesDetailContent.querySelector(`#season-${seasonTab.dataset.season}-episodes`).classList.remove('hidden');
         }
     });
+
+    // --- NUEVO: Detector de scroll para la carga infinita ---
+    dom.contentListModal.addEventListener('scroll', (e) => {
+        // Obtenemos el panel de contenido visible (películas o series)
+        const activePanel = document.querySelector('#contentListModal .content-panel:not(.hidden)');
+        if (!activePanel) return;
+
+        // Comprobamos si el usuario ha llegado al final del scroll dentro del panel
+        const isAtBottom = activePanel.scrollHeight - activePanel.scrollTop <= activePanel.clientHeight + 50;
+
+        if (isAtBottom) {
+            if (currentContentType === 'movies') {
+                loadMore('movies');
+            } else if (currentContentType === 'series') {
+                loadMore('series');
+            }
+        }
+    });
+
     // --- Búsquedas ---
     dom.liveSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); renderLiveChannels(liveChannels.filter(c => c.name.toLowerCase().includes(term))); });
-    dom.movieSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); movieDataToRender = movies.filter(m => m.name.toLowerCase().includes(term)); renderVirtualGrid('movies'); });
-    dom.seriesSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); seriesDataToRender = series.filter(s => s.name.toLowerCase().includes(term)); renderVirtualGrid('series'); });
+    dom.movieSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); movieDataToRender = movies.filter(m => m.name.toLowerCase().includes(term)); dom.movieGrid.innerHTML = ''; renderVirtualGrid('movies'); });
+    dom.seriesSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); seriesDataToRender = series.filter(s => s.name.toLowerCase().includes(term)); dom.seriesGrid.innerHTML = ''; renderVirtualGrid('series'); });
     document.addEventListener('DOMContentLoaded', loadAndPlayFromStorage);
 </script>
 </body>
