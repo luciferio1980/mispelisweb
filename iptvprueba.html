@@ -481,17 +481,17 @@
         }
     });
     // --- CORRECCIÓN: Detector de scroll para la carga infinita ---
-    dom.moviesPanel.addEventListener('scroll', () => {
-        if (dom.moviesPanel.scrollHeight - dom.moviesPanel.scrollTop <= dom.moviesPanel.clientHeight + 50) {
-            loadMore('movies');
-        }
-    });
+    dom.movieGrid.addEventListener('scroll', () => {
+    if (dom.movieGrid.scrollTop + dom.movieGrid.clientHeight >= dom.movieGrid.scrollHeight - 50) {
+        loadMore('movies');
+    }
+});
 
-    dom.seriesPanel.addEventListener('scroll', () => {
-        if (dom.seriesPanel.scrollHeight - dom.seriesPanel.scrollTop <= dom.seriesPanel.clientHeight + 50) {
-            loadMore('series');
-        }
-    });
+    dom.seriesGrid.addEventListener('scroll', () => {
+    if (dom.seriesGrid.scrollTop + dom.seriesGrid.clientHeight >= dom.seriesGrid.scrollHeight - 50) {
+        loadMore('series');
+    }
+});
 
     // --- Búsquedas ---
     dom.liveSearchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); renderLiveChannels(liveChannels.filter(c => c.name.toLowerCase().includes(term))); });
