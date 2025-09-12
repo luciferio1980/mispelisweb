@@ -313,10 +313,14 @@
             updateProgress(70, 'Cargando Series...');
             const seriesRes = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_series`)).json();
             series = seriesRes.map(s => {
-                let coverUrl = s.cover;
-                if (coverUrl && !coverUrl.startsWith('http')) { const serverBase = creds.server.endsWith('/') ? creds.server.slice(0, -1) : creds.server; const coverPath = coverUrl.startsWith('/') ? coverUrl.slice(1) : coverUrl; coverUrl = `${serverBase}/${coverPath}`; }
-                return { ...s, cover: coverUrl, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}` };
-            });
+    let coverUrl = s.cover;
+    if (coverUrl && !coverUrl.startsWith('http')) {
+        const serverBase = creds.server.replace(/\\/$/, '');
+        const coverPath = coverUrl.startsWith('/') ? coverUrl.slice(1) : coverUrl;
+        coverUrl = `${serverBase}/${coverPath}`;
+    }
+    return { ...s, cover: coverUrl, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}` };
+});
             updateProgress(100, '¡Completo!'); saveCredentials('xtremio', creds);
             localStorage.setItem('iptv_channels', JSON.stringify(liveChannels)); localStorage.setItem('iptv_movies', JSON.stringify(movies)); localStorage.setItem('iptv_series', JSON.stringify(series));
             setTimeout(() => { if (!isAutoLoad) dom.settingsModal.classList.remove('show'); renderAllContent(); showContentListModal('live'); }, 500);
