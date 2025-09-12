@@ -391,8 +391,9 @@
         const action = `data-action="show-${type === 'movies' ? 'movie' : 'series'}-detail"`;
         const vodId = item.isM3u ? `data-m3u-name="${item.name}" data-m3u-url="${item.url}" data-m3u-poster="${item.stream_icon}"` : `data-vod-id="${item.stream_id || ''}"`;
         const seriesId = `data-series-id="${item.series_id || ''}"`;
+        const imageUrl = item.stream_icon || item.cover || 'https://via.placeholder.com/400x600/161b22/FFFFFF?text=N/A';
         return `<div class="content-item" ${action} ${type === 'movies' ? vodId : seriesId} data-is-m3u="${!!item.isM3u}" data-title="${item.name}">
-                    <img src="${item.stream_icon || item.cover}" loading="lazy" alt="${item.name}"><p>${item.name}</p>
+                    <img src="${imageUrl}" loading="lazy" alt="${item.name}"><p>${item.name}</p>
                 </div>`;
     }
 
@@ -453,19 +454,18 @@
         ['live', 'movies', 'series'].forEach(type => { document.getElementById(`${type}ContentTab`).classList.toggle('active', type === tabName); document.getElementById(`${type}Panel`).classList.toggle('hidden', type !== tabName); });
         currentContentType = tabName;
 
-        // Desactivar listener anterior
         dom.movieGrid.removeEventListener('scroll', handleScroll);
         dom.seriesGrid.removeEventListener('scroll', handleScroll);
 
         if (tabName === 'movies') { 
             dom.movieSearchInput.value = ''; 
             renderVirtualGrid('movies');
-            dom.movieGrid.addEventListener('scroll', handleScroll); // <<-- CAMBIO AQUI
+            dom.movieGrid.addEventListener('scroll', handleScroll);
         }
         if (tabName === 'series') { 
             dom.seriesSearchInput.value = ''; 
             renderVirtualGrid('series');
-            dom.seriesGrid.addEventListener('scroll', handleScroll); // <<-- CAMBIO AQUI
+            dom.seriesGrid.addEventListener('scroll', handleScroll);
         }
     }
 
