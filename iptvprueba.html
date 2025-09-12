@@ -165,7 +165,7 @@
         const updateProgress = (p, t) => { progress.bar.style.width = `${p}%`; progress.text.textContent = t; };
         try {
             updateProgress(20, 'Descargando...'); 
-            const res = await fetch(url, { mode: 'cors' }); 
+            const res = await fetch(`proxy.php?url=${encodeURIComponent(url)}`); 
             if (!res.ok) throw new Error(`HTTP error: ${res.status}`); 
             const text = await res.text();
             updateProgress(70, 'Procesando...');
