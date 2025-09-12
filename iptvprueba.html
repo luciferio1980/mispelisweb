@@ -234,15 +234,15 @@
         try {
             const baseUrl = `${creds.server}/player_api.php?username=${creds.username}&password=${creds.password}`;
             updateProgress(10, 'Cargando TV...');
-            const liveStreamsRes = await (await fetch(`${baseUrl}&action=get_live_streams`, { mode: 'cors' })).json();
+            const liveStreamsRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_live_streams`)}`)).json();
             const liveCategoriesRes = await (await fetch(`${baseUrl}&action=get_live_categories`, { mode: 'cors' })).json();
             const categoryMap = liveCategoriesRes.reduce((map, cat) => { map[cat.category_id] = cat.category_name; return map; }, {});
             liveChannels = liveStreamsRes.map(c => ({ name: c.name, logo: c.stream_icon, group: categoryMap[c.category_id] || 'General', url: `${creds.server}/live/${creds.username}/${creds.password}/${c.stream_id}.ts` }));
             updateProgress(40, 'Cargando Películas...');
-            const moviesRes = await (await fetch(`${baseUrl}&action=get_vod_streams`, { mode: 'cors' })).json();
+            const moviesRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_vod_streams`)}`)).json();
             movies = moviesRes.map(m => ({ ...m, url: `${creds.server}/movie/${creds.username}/${creds.password}/${m.stream_id}.${m.container_extension}` }));
             updateProgress(70, 'Cargando Series...');
-            const seriesRes = await (await fetch(`${baseUrl}&action=get_series`, { mode: 'cors' })).json();
+            const seriesRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_series`)}`)).json();
             series = seriesRes.map(s => ({ ...s, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}.${s.container_extension}` }));
             updateProgress(100, '¡Completo!');
             saveCredentials('xtremio', creds);
