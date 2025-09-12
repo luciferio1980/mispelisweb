@@ -165,7 +165,7 @@
         const updateProgress = (p, t) => { progress.bar.style.width = `${p}%`; progress.text.textContent = t; };
         try {
             updateProgress(20, 'Descargando...'); 
-            const res = await fetch(`proxy.php?url=${encodeURIComponent(url)}`); 
+            const res = await fetch(https://cors-anywhere.herokuapp.com/${url}); 
             if (!res.ok) throw new Error(`HTTP error: ${res.status}`); 
             const text = await res.text();
             updateProgress(70, 'Procesando...');
@@ -236,19 +236,19 @@
         updateProgress(10, 'Cargando TV...');
         
         // Llamada al proxy para obtener los streams en vivo
-        const liveStreamsRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_live_streams`)}`)).json();
+        const liveStreamsRes = await (await fetch(https://cors-anywhere.herokuapp.com/${baseUrl}&action=get_live_streams)).json();
         const liveCategoriesRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_live_categories`)}`)).json();
         const categoryMap = liveCategoriesRes.reduce((map, cat) => { map[cat.category_id] = cat.category_name; return map; }, {});
         liveChannels = liveStreamsRes.map(c => ({ name: c.name, logo: c.stream_icon, group: categoryMap[c.category_id] || 'General', url: `${creds.server}/live/${creds.username}/${creds.password}/${c.stream_id}.ts` }));
 
         updateProgress(40, 'Cargando Películas...');
         // Llamada al proxy para obtener las películas
-        const moviesRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_vod_streams`)}`)).json();
+        const moviesRes = await (await fetch(https://cors-anywhere.herokuapp.com/${baseUrl}&action=get_vod_streams)).json();
         movies = moviesRes.map(m => ({ ...m, url: `${creds.server}/movie/${creds.username}/${creds.password}/${m.stream_id}.${m.container_extension}` }));
         
         updateProgress(70, 'Cargando Series...');
         // Llamada al proxy para obtener las series
-        const seriesRes = await (await fetch(`proxy.php?url=${encodeURIComponent(`${baseUrl}&action=get_series`)}`)).json();
+        const seriesRes = await (await fetch(https://cors-anywhere.herokuapp.com/${baseUrl}&action=get_series)).json();
         series = seriesRes.map(s => ({ ...s, url: `${creds.server}/series/${creds.username}/${creds.password}/${s.series_id}.${s.container_extension}` }));
         
         updateProgress(100, '¡Completo!');
