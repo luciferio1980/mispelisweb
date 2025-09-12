@@ -55,7 +55,7 @@
     <div id="messageBox" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-lg shadow-lg z-[3000] text-center"><h3 id="messageTitle" class="text-lg font-bold mb-2"></h3><p id="messageContent" class="mb-4"></p><button class="bg-blue-600 px-4 py-2 rounded-md" data-action="hide-message">OK</button></div>
 
     <div id="settingsModal" class="modal"><div class="modal-content"><h2 class="text-2xl font-bold text-white mb-4">Configuración</h2><div class="flex justify-center mb-4"><button id="m3uSettingsTab" class="tab-button active" data-action="switch-settings-tab" data-tab-name="m3u">URL M3U</button><button id="xtremioSettingsTab" class="tab-button" data-action="switch-settings-tab" data-tab-name="xtremio">Xtream</button></div><div id="m3uSettingsPanel" class="flex flex-col flex-grow"><p class="text-gray-400 mb-4">Pega la URL de tu lista M3U.</p><div class="flex flex-col sm:flex-row gap-4 mb-4"><input type="text" id="m3uUrlInput" placeholder="https://example.com/playlist.m3u8" class="flex-1 bg-gray-700 text-white p-2 rounded-md"><button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md" data-action="load-m3u"><i class="fas fa-cloud-download-alt mr-2"></i>Cargar</button></div><div id="m3uProgress" class="hidden mt-4 w-full"><p id="m3uProgressText" class="text-sm text-center mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5"><div id="m3uProgressBarFill" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div></div><div class="mt-auto pt-4"><button class="btn-danger" data-action="clear-m3u"><i class="fas fa-trash-alt mr-1"></i>Borrar URL Guardada</button></div></div><div id="xtremioSettingsPanel" class="hidden flex-col flex-grow"><p class="text-gray-400 mb-4">Ingresa tus credenciales de Xtream.</p><div class="grid grid-cols-1 gap-4 mb-4"><input type="text" id="xtremioServer" placeholder="http://servidor:puerto" class="bg-gray-700 text-white p-2 rounded-md"><input type="text" id="xtremioUsername" placeholder="Usuario" class="bg-gray-700 text-white p-2 rounded-md"><input type="password" id="xtremioPassword" placeholder="Contraseña" class="bg-gray-700 text-white p-2 rounded-md"></div><button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md" data-action="load-xtremio"><i class="fas fa-sign-in-alt mr-2"></i>Conectar y Cargar</button><div id="xtremioProgress" class="hidden mt-4 w-full"><p id="xtremioProgressText" class="text-sm text-center mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5"><div id="xtremioProgressBarFill" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div></div><div class="mt-auto pt-4"><button class="btn-danger" data-action="clear-xtremio"><i class="fas fa-trash-alt mr-1"></i>Borrar Credenciales</button></div></div></div></div>
-    <div id="contentListModal" class="modal"><div class="modal-content"><div class="flex justify-center mb-4 border-b border-gray-700"><button id="liveContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="live">Live TV</button><button id="moviesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="movies">Películas</button><button id="seriesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="series">Series</button></div><div id="livePanel" class="content-panel"><div id="liveList" class="content-list"></div></div><div id="moviesPanel" class="content-panel hidden"><input type="search" id="movieSearchInput" placeholder="Buscar película por título..." class="search-bar"><div id="movieGrid" class="content-grid"></div></div><div id="seriesPanel" class="content-panel hidden"><input type="search" id="seriesSearchInput" placeholder="Buscar serie por título..." class="search-bar"><div id="seriesGrid" class="content-grid"></div></div></div></div>
+    <div id="contentListModal" class="modal"><div class="modal-content"><div class="flex justify-center mb-4 border-b border-gray-700"><button id="liveContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="live">Live TV</button><button id="moviesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="movies">Películas</button><button id="seriesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="series">Series</button></div><div id="livePanel" class="content-panel"><input type="search" id="liveSearchInput" placeholder="Buscar canal por nombre..." class="search-bar"><div id="liveList" class="content-list"></div></div><div id="moviesPanel" class="content-panel hidden"><input type="search" id="movieSearchInput" placeholder="Buscar película por título..." class="search-bar"><div id="movieGrid" class="content-grid"></div></div><div id="seriesPanel" class="content-panel hidden"><input type="search" id="seriesSearchInput" placeholder="Buscar serie por título..." class="search-bar"><div id="seriesGrid" class="content-grid"></div></div></div></div>
     
     <div id="movieDetailModal" class="modal"><div class="modal-content"><button class="absolute top-4 right-4 text-2xl" data-action="hide-movie-detail">&times;</button><div id="movieDetailContent" class="flex flex-col md:flex-row gap-8 h-full"></div></div></div>
     
@@ -73,7 +73,7 @@
         settingsModal: document.getElementById('settingsModal'), messageBox: document.getElementById('messageBox'),
         movieDetailModal: document.getElementById('movieDetailModal'), movieDetailContent: document.getElementById('movieDetailContent'),
         seriesDetailModal: document.getElementById('seriesDetailModal'), seriesDetailContent: document.getElementById('seriesDetailContent'),
-        movieSearchInput: document.getElementById('movieSearchInput'), seriesSearchInput: document.getElementById('seriesSearchInput'),
+        liveSearchInput: document.getElementById('liveSearchInput'), movieSearchInput: document.getElementById('movieSearchInput'), seriesSearchInput: document.getElementById('seriesSearchInput'),
         movieGrid: document.getElementById('movieGrid'), seriesGrid: document.getElementById('seriesGrid')
     };
 
@@ -354,10 +354,13 @@
         renderVirtualGrid('series');
     }
 
-    function renderLiveChannels() {
+    function renderLiveChannels(channelsToRender = liveChannels) {
         const container = document.getElementById('liveList');
-        if (!liveChannels || liveChannels.length === 0) { container.innerHTML = `<p class="col-span-full text-center text-gray-500 mt-8">No hay canales de TV en la lista.</p>`; return; }
-        const groups = liveChannels.reduce((acc, c) => ((acc[c.group] = [...(acc[c.group] || []), c]), acc), {});
+        if (!channelsToRender || channelsToRender.length === 0) { 
+            container.innerHTML = `<p class="col-span-full text-center text-gray-500 mt-8">No se encontraron canales.</p>`; 
+            return; 
+        }
+        const groups = channelsToRender.reduce((acc, c) => ((acc[c.group] = [...(acc[c.group] || []), c]), acc), {});
         container.innerHTML = Object.keys(groups).sort().map(groupName => `<div class="collapsible-header" data-action="toggle-collapse"><span>${groupName} (${groups[groupName].length})</span><i class="fas fa-chevron-down"></i></div><div class="collapsible-content">${groups[groupName].map(channel => `<div class="channel-list-item" data-url="${channel.url}" data-title="${channel.name}"><img src="${channel.logo || 'https://via.placeholder.com/150/161b22/FFFFFF?text=TV'}" alt=""><span>${channel.name}</span></div>`).join('')}</div>`).join('');
     }
 
@@ -391,7 +394,8 @@
         const action = `data-action="show-${type === 'movies' ? 'movie' : 'series'}-detail"`;
         const vodId = item.isM3u ? `data-m3u-name="${item.name}" data-m3u-url="${item.url}" data-m3u-poster="${item.stream_icon}"` : `data-vod-id="${item.stream_id || ''}"`;
         const seriesId = `data-series-id="${item.series_id || ''}"`;
-        const imageUrl = item.stream_icon || item.cover || 'https://via.placeholder.com/400x600/161b22/FFFFFF?text=N/A';
+        // **FIX**: Prioritize `item.cover` for series, then `item.stream_icon` for movies, with a fallback.
+        const imageUrl = item.cover || item.stream_icon || 'https://via.placeholder.com/400x600/161b22/FFFFFF?text=N/A';
         return `<div class="content-item" ${action} ${type === 'movies' ? vodId : seriesId} data-is-m3u="${!!item.isM3u}" data-title="${item.name}">
                     <img src="${imageUrl}" loading="lazy" alt="${item.name}"><p>${item.name}</p>
                 </div>`;
@@ -435,7 +439,7 @@
 
     function handleSearch(event) {
         const searchTerm = event.target.value.toLowerCase();
-        const type = event.target.id === 'movieSearchInput' ? 'movies' : 'series';
+        const type = event.target.id.includes('movie') ? 'movies' : 'series';
         const data = type === 'movies' ? movies : series;
         const filteredData = data.filter(item => item.name.toLowerCase().includes(searchTerm));
         if (type === 'movies') {
@@ -446,6 +450,18 @@
             renderVirtualGrid('series');
         }
     }
+    
+    // **NEW**: Handler for live channel search
+    function handleLiveSearch(event) {
+        const searchTerm = event.target.value.toLowerCase();
+        if (!searchTerm) {
+            renderLiveChannels(liveChannels); // Render all if search is empty
+            return;
+        }
+        const filteredChannels = liveChannels.filter(channel => channel.name.toLowerCase().includes(searchTerm));
+        renderLiveChannels(filteredChannels); // Render only filtered channels
+    }
+
 
     // --- MANEJO DE LA UI ---
     function showMessage(title, content) { document.getElementById('messageTitle').textContent = title; document.getElementById('messageContent').textContent = content; dom.messageBox.classList.remove('hidden'); }
@@ -467,6 +483,10 @@
             renderVirtualGrid('series');
             dom.seriesGrid.addEventListener('scroll', handleScroll);
         }
+        if (tabName === 'live') {
+            dom.liveSearchInput.value = '';
+            renderLiveChannels();
+        }
     }
 
     // --- EVENT LISTENER GLOBAL ---
@@ -478,7 +498,15 @@
             const isM3u = actionTarget.dataset.isM3u === 'true';
             switch (action) {
                 case 'show-settings': dom.settingsModal.classList.add('show'); break;
-                case 'show-initial-menu': dom.mainApp.classList.add('hidden'); dom.initialMenu.classList.remove('hidden'); break;
+                case 'show-initial-menu':
+                    // **IMPROVEMENT**: Stop video when returning to menu
+                    dom.videoPlayer.pause();
+                    dom.videoPlayer.src = '';
+                    dom.mediaTitle.textContent = '';
+                    dom.controlsContainer.classList.add('hidden');
+                    dom.mainApp.classList.add('hidden');
+                    dom.initialMenu.classList.remove('hidden'); 
+                    break;
                 case 'show-content-list': showContentListModal(actionTarget.dataset.contentType); break;
                 case 'show-content-list-modal': dom.contentListModal.classList.add('show'); break;
                 case 'switch-content-tab': switchContentTab(actionTarget.dataset.contentType); break;
@@ -517,6 +545,9 @@
             seriesDetailContent.querySelector(`#season-${seasonTab.dataset.season}-episodes`).classList.remove('hidden');
         }
     });
+
+    // Add event listeners for search inputs
+    dom.liveSearchInput.addEventListener('input', handleLiveSearch);
     dom.movieSearchInput.addEventListener('input', handleSearch);
     dom.seriesSearchInput.addEventListener('input', handleSearch);
     document.addEventListener('DOMContentLoaded', loadAndPlayFromStorage);
