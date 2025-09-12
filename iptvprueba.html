@@ -55,7 +55,7 @@
     <div id="messageBox" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-lg shadow-lg z-[3000] text-center"><h3 id="messageTitle" class="text-lg font-bold mb-2"></h3><p id="messageContent" class="mb-4"></p><button class="bg-blue-600 px-4 py-2 rounded-md" data-action="hide-message">OK</button></div>
 
     <div id="settingsModal" class="modal"><div class="modal-content"><h2 class="text-2xl font-bold text-white mb-4">Configuración</h2><div class="flex justify-center mb-4"><button id="m3uSettingsTab" class="tab-button active" data-action="switch-settings-tab" data-tab-name="m3u">URL M3U</button><button id="xtremioSettingsTab" class="tab-button" data-action="switch-settings-tab" data-tab-name="xtremio">Xtream</button></div><div id="m3uSettingsPanel" class="flex flex-col flex-grow"><p class="text-gray-400 mb-4">Pega la URL de tu lista M3U.</p><div class="flex flex-col sm:flex-row gap-4 mb-4"><input type="text" id="m3uUrlInput" placeholder="https://example.com/playlist.m3u8" class="flex-1 bg-gray-700 text-white p-2 rounded-md"><button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md" data-action="load-m3u"><i class="fas fa-cloud-download-alt mr-2"></i>Cargar</button></div><div id="m3uProgress" class="hidden mt-4 w-full"><p id="m3uProgressText" class="text-sm text-center mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5"><div id="m3uProgressBarFill" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div></div><div class="mt-auto pt-4"><button class="btn-danger" data-action="clear-m3u"><i class="fas fa-trash-alt mr-1"></i>Borrar URL Guardada</button></div></div><div id="xtremioSettingsPanel" class="hidden flex-col flex-grow"><p class="text-gray-400 mb-4">Ingresa tus credenciales de Xtream.</p><div class="grid grid-cols-1 gap-4 mb-4"><input type="text" id="xtremioServer" placeholder="http://servidor:puerto" class="bg-gray-700 text-white p-2 rounded-md"><input type="text" id="xtremioUsername" placeholder="Usuario" class="bg-gray-700 text-white p-2 rounded-md"><input type="password" id="xtremioPassword" placeholder="Contraseña" class="bg-gray-700 text-white p-2 rounded-md"></div><button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md" data-action="load-xtremio"><i class="fas fa-sign-in-alt mr-2"></i>Conectar y Cargar</button><div id="xtremioProgress" class="hidden mt-4 w-full"><p id="xtremioProgressText" class="text-sm text-center mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5"><div id="xtremioProgressBarFill" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div></div><div class="mt-auto pt-4"><button class="btn-danger" data-action="clear-xtremio"><i class="fas fa-trash-alt mr-1"></i>Borrar Credenciales</button></div></div></div></div>
-    <div id="contentListModal" class="modal"><div class="modal-content"><div class="flex justify-center mb-4 border-b border-gray-700"><button id="liveContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="live">Live TV</button><button id="moviesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="movies">Películas</button><button id="seriesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="series">Series</button></div><div id="livePanel" class="content-panel"><div id="liveList" class="content-list"></div></div><div id="moviesPanel" class="content-panel hidden"><input type="search" id="movieSearchInput" placeholder="Buscar película por título..." class="search-bar"><div id="movieGrid" class="content-grid"></div></div><div id="seriesPanel" class="content-panel hidden"><input type="search" id="seriesSearchInput" placeholder="Buscar serie por título..." class="search-bar"><div id="seriesGrid" class="content-grid"></div></div></div></div>
+    <div id="contentListModal" class="modal"><div class="modal-content"><div class="flex justify-center mb-4 border-b border-gray-700"><button id="liveContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="live">Live TV</button><button id="moviesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="movies">Películas</button><button id="seriesContentTab" class="tab-button" data-action="switch-content-tab" data-content-type="series">Series</button></div><div id="livePanel" class="content-panel"><input type="search" id="liveSearchInput" placeholder="Buscar canal por nombre..." class="search-bar"><div id="liveList" class="content-list"></div></div><div id="moviesPanel" class="content-panel hidden"><input type="search" id="movieSearchInput" placeholder="Buscar película por título..." class="search-bar"><div id="movieGrid" class="content-grid"></div></div><div id="seriesPanel" class="content-panel hidden"><input type="search" id="seriesSearchInput" placeholder="Buscar serie por título..." class="search-bar"><div id="seriesGrid" class="content-grid"></div></div></div></div>
     
     <div id="movieDetailModal" class="modal"><div class="modal-content"><button class="absolute top-4 right-4 text-2xl" data-action="hide-movie-detail">&times;</button><div id="movieDetailContent" class="flex flex-col md:flex-row gap-8 h-full"></div></div></div>
     
@@ -73,7 +73,7 @@
         settingsModal: document.getElementById('settingsModal'), messageBox: document.getElementById('messageBox'),
         movieDetailModal: document.getElementById('movieDetailModal'), movieDetailContent: document.getElementById('movieDetailContent'),
         seriesDetailModal: document.getElementById('seriesDetailModal'), seriesDetailContent: document.getElementById('seriesDetailContent'),
-        movieSearchInput: document.getElementById('movieSearchInput'), seriesSearchInput: document.getElementById('seriesSearchInput')
+        liveSearchInput: document.getElementById('liveSearchInput'), movieSearchInput: document.getElementById('movieSearchInput'), seriesSearchInput: document.getElementById('seriesSearchInput')
     };
     
     // --- PERSISTENCIA (LocalStorage) ---
@@ -114,12 +114,12 @@
             localStorage.removeItem('iptv_m3u_url'); document.getElementById('m3uUrlInput').value = '';
             localStorage.removeItem('iptv_channels'); localStorage.removeItem('iptv_movies'); localStorage.removeItem('iptv_series');
             if (localStorage.getItem('iptv_last_source') === 'm3u') localStorage.removeItem('iptv_last_source');
-            showMessage('Éxito', 'URL M3U guardada ha sido borrada.');
+            showMessage('Éxito', 'URL M3U guardada ha sido borrada. La caché de datos también se ha limpiado.');
         } else if (type === 'xtremio') {
             localStorage.removeItem('iptv_xtremio_creds'); document.getElementById('xtremioServer').value = ''; document.getElementById('xtremioUsername').value = ''; document.getElementById('xtremioPassword').value = '';
             localStorage.removeItem('iptv_channels'); localStorage.removeItem('iptv_movies'); localStorage.removeItem('iptv_series');
             if (localStorage.getItem('iptv_last_source') === 'xtremio') localStorage.removeItem('iptv_last_source');
-            showMessage('Éxito', 'Credenciales Xtream guardadas han sido borradas.');
+            showMessage('Éxito', 'Credenciales Xtream guardadas han sido borradas. La caché de datos también se ha limpiado.');
         }
     }
     
@@ -351,11 +351,11 @@
     }
 
     // --- RENDERIZADO Y BÚSQUEDA ---
-    function renderAllContent() { renderLiveChannels(); renderVodGrid('movies', movies); renderVodGrid('series', series); }
-    function renderLiveChannels() {
+    function renderAllContent() { renderLiveChannels(liveChannels); renderVodGrid('movies', movies); renderVodGrid('series', series); }
+    function renderLiveChannels(channelsToRender) {
         const container = document.getElementById('liveList');
-        if (!liveChannels || liveChannels.length === 0) { container.innerHTML = `<p class="col-span-full text-center text-gray-500 mt-8">No hay canales de TV en la lista.</p>`; return; }
-        const groups = liveChannels.reduce((acc, c) => ((acc[c.group] = [...(acc[c.group] || []), c]), acc), {});
+        if (!channelsToRender || channelsToRender.length === 0) { container.innerHTML = `<p class="col-span-full text-center text-gray-500 mt-8">No hay canales de TV en la lista.</p>`; return; }
+        const groups = channelsToRender.reduce((acc, c) => ((acc[c.group] = [...(acc[c.group] || []), c]), acc), {});
         container.innerHTML = Object.keys(groups).sort().map(groupName => `<div class="collapsible-header" data-action="toggle-collapse"><span>${groupName} (${groups[groupName].length})</span><i class="fas fa-chevron-down"></i></div><div class="collapsible-content">${groups[groupName].map(channel => `<div class="channel-list-item" data-url="${channel.url}" data-title="${channel.name}"><img src="${channel.logo || 'https://via.placeholder.com/150/161b22/FFFFFF?text=TV'}" alt=""><span>${channel.name}</span></div>`).join('')}</div>`).join('');
     }
     function renderVodGrid(type, dataToRender) {
@@ -373,7 +373,8 @@
     }
     function handleSearch(event) {
         const searchTerm = event.target.value.toLowerCase();
-        if (event.target.id === 'movieSearchInput') { renderVodGrid('movies', movies.filter(m => m.name.toLowerCase().includes(searchTerm))); } 
+        if (event.target.id === 'liveSearchInput') { renderLiveChannels(liveChannels.filter(c => c.name.toLowerCase().includes(searchTerm))); }
+        else if (event.target.id === 'movieSearchInput') { renderVodGrid('movies', movies.filter(m => m.name.toLowerCase().includes(searchTerm))); } 
         else if (event.target.id === 'seriesSearchInput') { renderVodGrid('series', series.filter(s => s.name.toLowerCase().includes(searchTerm))); }
     }
 
@@ -383,6 +384,7 @@
     function switchContentTab(tabName) {
         ['live', 'movies', 'series'].forEach(type => { document.getElementById(`${type}ContentTab`).classList.toggle('active', type === tabName); document.getElementById(`${type}Panel`).classList.toggle('hidden', type !== tabName); });
         currentContentType = tabName;
+        if (tabName === 'live') { dom.liveSearchInput.value = ''; renderLiveChannels(liveChannels); }
         if (tabName === 'movies') { dom.movieSearchInput.value = ''; renderVodGrid('movies', movies); }
         if (tabName === 'series') { dom.seriesSearchInput.value = ''; renderVodGrid('series', series); }
     }
@@ -435,6 +437,7 @@
             seriesDetailContent.querySelector(`#season-${seasonTab.dataset.season}-episodes`).classList.remove('hidden');
         }
     });
+    dom.liveSearchInput.addEventListener('input', handleSearch);
     dom.movieSearchInput.addEventListener('input', handleSearch);
     dom.seriesSearchInput.addEventListener('input', handleSearch);
     document.addEventListener('DOMContentLoaded', loadAndPlayFromStorage);
