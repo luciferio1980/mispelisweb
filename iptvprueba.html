@@ -15,23 +15,23 @@
         .video-player-container { position: relative; width: 100%; padding-top: 56.25%; background-color: #000; }
         .video-player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; background-color: #000; }
         
-        /* --- MODIFICADO: Estilos para la superposición de EPG --- */
         #epgOverlay {
             position: absolute;
-            bottom: 60px; /* Ajusta esta distancia para que no choque con la barra de progreso */
+            bottom: 60px; 
             left: 10px;
             right: 10px;
-            background-color: rgba(0, 0, 0, 0.6);
+            background-color: rgba(0, 0, 0, 0.7);
             color: white;
             padding: 8px 12px;
             border-radius: 6px;
             font-size: 0.9rem;
-            opacity: 0; /* Por defecto oculto */
+            opacity: 0;
             transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* Para poder hacer clic a través del elemento */
+            pointer-events: none;
             text-shadow: 1px 1px 2px black;
+            text-align: center; /* --- NUEVO: Centra el texto del EPG --- */
         }
-        /* La visibilidad ahora depende de una clase en el contenedor */
+        
         #videoContainer.controls-visible #epgOverlay {
             opacity: 1;
         }
@@ -89,16 +89,17 @@
     
     <div id="seriesDetailModal" class="modal"><div class="modal-content"><button class="absolute top-4 right-4 text-2xl" data-action="hide-series-detail">&times;</button><div id="seriesDetailContent" class="flex flex-col md:flex-row gap-8 h-full"></div></div></div>
 
+
 <script type="module">
     // --- VARIABLES GLOBALES ---
     let liveChannels = [], movies = [], series = [], hls, currentContentType = 'live';
-    let controlsTimer; // --- NUEVO: Temporizador para ocultar el EPG
+    let controlsTimer;
 
     // --- DOM REFERENCES ---
     const dom = {
         mainApp: document.getElementById('mainApp'), initialMenu: document.getElementById('initialMenu'), initialStatus: document.getElementById('initialStatus'),
         videoPlayer: document.getElementById('videoPlayer'), videoLoader: document.getElementById('videoLoader'), mediaTitle: document.getElementById('mediaTitle'),
-        videoContainer: document.getElementById('videoContainer'), // --- NUEVO: Referencia al contenedor del video
+        videoContainer: document.getElementById('videoContainer'),
         controlsContainer: document.getElementById('controlsContainer'), contentListModal: document.getElementById('contentListModal'),
         settingsModal: document.getElementById('settingsModal'), messageBox: document.getElementById('messageBox'),
         movieDetailModal: document.getElementById('movieDetailModal'), movieDetailContent: document.getElementById('movieDetailContent'),
@@ -119,7 +120,7 @@
         else if (type === 'xtremio') { localStorage.setItem('iptv_xtremio_creds', JSON.stringify(data)); localStorage.setItem('iptv_last_source', 'xtremio'); }
     }
     
-    // --- OPTIMIZACIÓN: CARGA DESDE LA CACHÉ LOCAL ---
+    // --- CARGA DESDE LA CACHÉ LOCAL ---
     function loadAndPlayFromStorage() {
         const lastSource = localStorage.getItem('iptv_last_source');
         const cachedChannels = localStorage.getItem('iptv_channels');
@@ -165,19 +166,14 @@
         dom.controlsContainer.classList.remove('hidden');
         dom.videoLoader.classList.remove('hidden');
         
-        // --- CAMBIO CLAVE ---
-        // Primero, limpiamos y establecemos un estado por defecto para CUALQUIER canal en vivo.
         if (type === 'live') {
             dom.epgOverlay.innerHTML = '<em>Cargando EPG...</em>';
-            // Si es un canal con streamId (Xtream), intentamos buscar la información real.
             if (streamId) {
                 fetchEpgData(streamId);
             } else {
-                // Si no tiene streamId (es de una lista M3U), mostramos el mensaje directamente.
                 dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG (canal M3U)</em>';
             }
         } else {
-            // Si no es un canal en vivo (película/serie), vaciamos el EPG.
             dom.epgOverlay.innerHTML = '';
         }
 
@@ -197,7 +193,7 @@
         }
     }
 
-    // --- Función para obtener y mostrar datos EPG ---
+    // --- Función para obtener y mostrar datos EPG (VERSIÓN FINAL CON ANTI 'Invalid Date') ---
     async function fetchEpgData(streamId) {
         const creds = JSON.parse(localStorage.getItem('iptv_xtremio_creds'));
         if (!creds || !streamId) return;
@@ -208,7 +204,6 @@
             const res = await fetch(proxyUrl);
             const data = await res.json();
             
-            // Si la respuesta es válida y contiene programación
             if (data && data.epg_listings && data.epg_listings.length > 0) {
                 const currentProgram = data.epg_listings[0];
                 let programTitle = currentProgram.title;
@@ -219,13 +214,24 @@
                 }
 
                 const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
-                const startTime = new Date(currentProgram.start_timestamp * 1000).toLocaleTimeString('es-ES', options);
-                const endTime = new Date(currentProgram.end_timestamp * 1000).toLocaleTimeString('es-ES', options);
+                
+                // --- CAMBIO CLAVE: Verificación para evitar 'Invalid Date' ---
+                let startTime = '--:--';
+                let endTime = '--:--';
 
+                // Verificamos que el timestamp de inicio sea un número válido
+                if (currentProgram.start_timestamp && !isNaN(currentProgram.start_timestamp)) {
+                    startTime = new Date(currentProgram.start_timestamp * 1000).toLocaleTimeString('es-ES', options);
+                }
+
+                // Verificamos que el timestamp de fin sea un número válido
+                if (currentProgram.end_timestamp && !isNaN(currentProgram.end_timestamp)) {
+                    endTime = new Date(currentProgram.end_timestamp * 1000).toLocaleTimeString('es-ES', options);
+                }
+                
                 dom.epgOverlay.innerHTML = `<strong>Ahora:</strong> ${programTitle} <span class="ml-4 opacity-80">${startTime} - ${endTime}</span>`;
+
             } else {
-                // --- CAMBIO CLAVE ---
-                // Si la respuesta no contiene programación, muestra el mensaje solicitado.
                 dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
             }
         } catch (error) {
@@ -233,7 +239,6 @@
             dom.epgOverlay.innerHTML = '<em>Error al cargar EPG. Verifique la consola (F12).</em>';
         }
     }
-    
 
 
     dom.videoPlayer.oncanplay = () => dom.videoLoader.classList.add('hidden');
@@ -386,13 +391,13 @@
         if (tabName === 'live') { dom.liveSearchInput.value = ''; renderLiveChannels(); }
     }
     
-    // --- NUEVO: Lógica de visibilidad del EPG ---
+    // --- Lógica de visibilidad del EPG ---
     dom.videoContainer.addEventListener('mousemove', () => {
         dom.videoContainer.classList.add('controls-visible');
         clearTimeout(controlsTimer);
         controlsTimer = setTimeout(() => {
             dom.videoContainer.classList.remove('controls-visible');
-        }, 3000); // Los controles se ocultan después de 3 segundos de inactividad
+        }, 3000);
     });
 
     dom.videoContainer.addEventListener('mouseleave', () => {
