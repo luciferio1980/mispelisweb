@@ -81,8 +81,25 @@
         if (type === 'm3u') { localStorage.setItem('iptv_m3u_url', data.url); localStorage.setItem('iptv_last_source', 'm3u'); } 
         else if (type === 'xtremio') { localStorage.setItem('iptv_xtremio_creds', JSON.stringify(data)); localStorage.setItem('iptv_last_source', 'xtremio'); }
     }
+    
+    // --- OPTIMIZACIÓN: CARGA DESDE LA CACHÉ LOCAL Y PRECARGA DE IMÁGENES ---
     function loadAndPlayFromStorage() {
         const lastSource = localStorage.getItem('iptv_last_source');
+        const cachedChannels = localStorage.getItem('iptv_channels');
+        const cachedMovies = localStorage.getItem('iptv_movies');
+        const cachedSeries = localStorage.getItem('iptv_series');
+
+        if (cachedChannels && cachedMovies && cachedSeries) {
+            liveChannels = JSON.parse(cachedChannels);
+            movies = JSON.parse(cachedMovies);
+            series = JSON.parse(cachedSeries);
+            dom.initialStatus.textContent = 'Cargando datos desde la caché...';
+            renderAllContent();
+            setTimeout(() => { showContentListModal('live'); }, 500);
+            preloadImages([...movies, ...series]);
+            return;
+        }
+
         if (lastSource === 'm3u') {
             const url = localStorage.getItem('iptv_m3u_url');
             if (url) { document.getElementById('m3uUrlInput').value = url; dom.initialStatus.textContent = 'Cargando lista M3U guardada...'; loadM3uList(true); }
@@ -91,16 +108,29 @@
             if (creds) { document.getElementById('xtremioServer').value = creds.server; document.getElementById('xtremioUsername').value = creds.username; document.getElementById('xtremioPassword').value = creds.password; dom.initialStatus.textContent = 'Cargando credenciales Xtream guardadas...'; loadXtremioData(true); }
         }
     }
+
     function clearCredentials(type) {
         if (type === 'm3u') {
             localStorage.removeItem('iptv_m3u_url'); document.getElementById('m3uUrlInput').value = '';
+            localStorage.removeItem('iptv_channels'); localStorage.removeItem('iptv_movies'); localStorage.removeItem('iptv_series');
             if (localStorage.getItem('iptv_last_source') === 'm3u') localStorage.removeItem('iptv_last_source');
             showMessage('Éxito', 'URL M3U guardada ha sido borrada.');
         } else if (type === 'xtremio') {
             localStorage.removeItem('iptv_xtremio_creds'); document.getElementById('xtremioServer').value = ''; document.getElementById('xtremioUsername').value = ''; document.getElementById('xtremioPassword').value = '';
+            localStorage.removeItem('iptv_channels'); localStorage.removeItem('iptv_movies'); localStorage.removeItem('iptv_series');
             if (localStorage.getItem('iptv_last_source') === 'xtremio') localStorage.removeItem('iptv_last_source');
             showMessage('Éxito', 'Credenciales Xtream guardadas han sido borradas.');
         }
+    }
+    
+    function preloadImages(contentArray) {
+        if (!contentArray || contentArray.length === 0) return;
+        const imagesToPreload = contentArray.map(item => item.stream_icon || item.cover).filter(Boolean);
+        console.log(`Pre-cargando ${imagesToPreload.length} imágenes...`);
+        imagesToPreload.forEach(imageUrl => {
+            const img = new Image();
+            img.src = imageUrl;
+        });
     }
 
     // --- REPRODUCTOR DE VIDEO ---
@@ -186,6 +216,12 @@
             }
             series = Object.values(seriesGroups);
             updateProgress(100, '¡Completo!'); saveCredentials('m3u', { url });
+            // Almacenar datos en localStorage y precargar imágenes
+            localStorage.setItem('iptv_channels', JSON.stringify(liveChannels));
+            localStorage.setItem('iptv_movies', JSON.stringify(movies));
+            localStorage.setItem('iptv_series', JSON.stringify(series));
+            preloadImages([...movies, ...series]);
+
             setTimeout(() => { 
                 if (!isAutoLoad) dom.settingsModal.classList.remove('show'); 
                 renderAllContent(); 
@@ -218,6 +254,12 @@
             
             updateProgress(100, '¡Completo!');
             saveCredentials('xtremio', creds);
+            // Almacenar datos en localStorage y precargar imágenes
+            localStorage.setItem('iptv_channels', JSON.stringify(liveChannels));
+            localStorage.setItem('iptv_movies', JSON.stringify(movies));
+            localStorage.setItem('iptv_series', JSON.stringify(series));
+            preloadImages([...movies, ...series]);
+
             setTimeout(() => { if (!isAutoLoad) dom.settingsModal.classList.remove('show'); renderAllContent(); showContentListModal('live'); }, 500);
         } catch (e) { updateProgress(100, 'Error.'); progress.bar.style.backgroundColor = 'red'; showMessage('Error', `Fallo al conectar con Xtream. ${e.message}`); }
     }
