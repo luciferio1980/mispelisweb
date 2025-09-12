@@ -29,7 +29,7 @@
             transition: opacity 0.3s ease-in-out;
             pointer-events: none;
             text-shadow: 1px 1px 2px black;
-            text-align: center; /* --- NUEVO: Centra el texto del EPG --- */
+            text-align: center;
         }
         
         #videoContainer.controls-visible #epgOverlay {
@@ -106,7 +106,10 @@
         seriesDetailModal: document.getElementById('seriesDetailModal'), seriesDetailContent: document.getElementById('seriesDetailContent'),
         liveSearchInput: document.getElementById('liveSearchInput'), movieSearchInput: document.getElementById('movieSearchInput'), seriesSearchInput: document.getElementById('seriesSearchInput'),
         movieGrid: document.getElementById('movieGrid'), seriesGrid: document.getElementById('seriesGrid'),
-        epgOverlay: document.getElementById('epgOverlay')
+        epgOverlay: document.getElementById('epgOverlay'),
+        // --- NUEVAS REFERENCIAS A LOS PANELES ---
+        moviesPanel: document.getElementById('moviesPanel'),
+        seriesPanel: document.getElementById('seriesPanel')
     };
 
     // --- VARIABLES DE VIRTUALIZACIÓN ---
@@ -477,22 +480,16 @@
             seriesDetailContent.querySelector(`#season-${seasonTab.dataset.season}-episodes`).classList.remove('hidden');
         }
     });
+    // --- CORRECCIÓN: Detector de scroll para la carga infinita ---
+    dom.moviesPanel.addEventListener('scroll', () => {
+        if (dom.moviesPanel.scrollHeight - dom.moviesPanel.scrollTop <= dom.moviesPanel.clientHeight + 50) {
+            loadMore('movies');
+        }
+    });
 
-    // --- NUEVO: Detector de scroll para la carga infinita ---
-    dom.contentListModal.addEventListener('scroll', (e) => {
-        // Obtenemos el panel de contenido visible (películas o series)
-        const activePanel = document.querySelector('#contentListModal .content-panel:not(.hidden)');
-        if (!activePanel) return;
-
-        // Comprobamos si el usuario ha llegado al final del scroll dentro del panel
-        const isAtBottom = activePanel.scrollHeight - activePanel.scrollTop <= activePanel.clientHeight + 50;
-
-        if (isAtBottom) {
-            if (currentContentType === 'movies') {
-                loadMore('movies');
-            } else if (currentContentType === 'series') {
-                loadMore('series');
-            }
+    dom.seriesPanel.addEventListener('scroll', () => {
+        if (dom.seriesPanel.scrollHeight - dom.seriesPanel.scrollTop <= dom.seriesPanel.clientHeight + 50) {
+            loadMore('series');
         }
     });
 
