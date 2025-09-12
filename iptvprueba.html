@@ -164,10 +164,21 @@
         dom.mediaTitle.textContent = title;
         dom.controlsContainer.classList.remove('hidden');
         dom.videoLoader.classList.remove('hidden');
-        dom.epgOverlay.innerHTML = ''; // Limpiar EPG anterior
         
-        if (type === 'live' && streamId) {
-            fetchEpgData(streamId);
+        // --- CAMBIO CLAVE ---
+        // Primero, limpiamos y establecemos un estado por defecto para CUALQUIER canal en vivo.
+        if (type === 'live') {
+            dom.epgOverlay.innerHTML = '<em>Cargando EPG...</em>';
+            // Si es un canal con streamId (Xtream), intentamos buscar la información real.
+            if (streamId) {
+                fetchEpgData(streamId);
+            } else {
+                // Si no tiene streamId (es de una lista M3U), mostramos el mensaje directamente.
+                dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG (canal M3U)</em>';
+            }
+        } else {
+            // Si no es un canal en vivo (película/serie), vaciamos el EPG.
+            dom.epgOverlay.innerHTML = '';
         }
 
         if (hls) hls.destroy();
@@ -194,23 +205,17 @@
         try {
             const epgUrl = `${creds.server}/player_api.php?username=${creds.username}&password=${creds.password}&action=get_short_epg&stream_id=${streamId}`;
             const proxyUrl = `https://miproxyiptv.onrender.com/${epgUrl}`;
-            
-            console.log("Solicitando EPG desde:", proxyUrl); // Log para depurar
-            
             const res = await fetch(proxyUrl);
             const data = await res.json();
             
-            console.log("Datos EPG recibidos:", data); // Log para ver la respuesta completa
-
+            // Si la respuesta es válida y contiene programación
             if (data && data.epg_listings && data.epg_listings.length > 0) {
                 const currentProgram = data.epg_listings[0];
-                
                 let programTitle = currentProgram.title;
                 try {
-                    // Intenta decodificar. Si falla, usa el título original.
                     programTitle = atob(currentProgram.title);
                 } catch (e) {
-                    console.warn("El título del EPG no está en Base64. Usando título original.", e);
+                    console.warn("Título EPG no está en Base64, usando original.");
                 }
 
                 const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
@@ -219,11 +224,13 @@
 
                 dom.epgOverlay.innerHTML = `<strong>Ahora:</strong> ${programTitle} <span class="ml-4 opacity-80">${startTime} - ${endTime}</span>`;
             } else {
-                 dom.epgOverlay.innerHTML = '<em>No hay información de EPG disponible para este canal.</em>';
+                // --- CAMBIO CLAVE ---
+                // Si la respuesta no contiene programación, muestra el mensaje solicitado.
+                dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
             }
         } catch (error) {
             console.error('Error al obtener EPG:', error);
-            dom.epgOverlay.innerHTML = '<em>No se pudo cargar el EPG.</em>';
+            dom.epgOverlay.innerHTML = '<em>Error al cargar EPG. Verifique la consola (F12).</em>';
         }
     }
     
