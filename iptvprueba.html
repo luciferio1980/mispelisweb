@@ -76,6 +76,21 @@
     <div id="mainApp" class="container hidden"><header class="flex justify-between items-center p-4 border-b border-gray-700"><h1 class="text-2xl font-bold text-white">Reproductor</h1><div class="flex items-center space-x-2"><button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-initial-menu"><i class="fas fa-arrow-left"></i></button><button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-content-list-modal"><i class="fas fa-bars"></i></button></div></header>
     <div id="videoContainer" class="video-player-container">
         <video id="videoPlayer" class="video-player" controls autoplay></video>
+        <!-- Botón "Ver desde el inicio" -->
+        <button id="restartButton" 
+            class="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg z-20 hidden"
+            data-action="restart-stream">
+            <i class="fas fa-undo mr-2"></i> Ver desde el inicio
+        </button>
+        <!-- Botones retroceder/adelantar -->
+        <div id="seekControls" class="absolute bottom-4 left-4 flex space-x-2 z-20 hidden">
+            <button id="rewindButton" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-2 rounded-lg shadow" data-action="rewind-30">
+                <i class="fas fa-undo"></i> -30s
+            </button>
+            <button id="forwardButton" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-2 rounded-lg shadow" data-action="forward-30">
+                +30s <i class="fas fa-redo"></i>
+            </button>
+        </div>
         <div id="videoLoader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 hidden"><div class="spinner"></div></div>
         <div id="epgOverlay"></div>
     </div>
@@ -165,6 +180,8 @@
     
     // --- REPRODUCTOR DE VIDEO Y EPG ---
     function playStream(url, title, type, streamId) {
+        // Guardamos info del stream actual
+        window.currentStream = { url, title, type, streamId };
         dom.mediaTitle.textContent = title;
         dom.controlsContainer.classList.remove('hidden');
         dom.videoLoader.classList.remove('hidden');
@@ -190,6 +207,16 @@
                 } else if (dom.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) { dom.videoPlayer.src = url; }
             } else { dom.videoPlayer.src = url; }
             dom.videoPlayer.play().catch(e => console.warn('Reproducción necesita interacción del usuario.'));
+        // Mostrar u ocultar botones según tipo de stream
+        try {
+            if (type === 'live' && streamId) {
+                const rb = document.getElementById('restartButton'); if (rb) rb.classList.remove('hidden');
+                const sc = document.getElementById('seekControls'); if (sc) sc.classList.remove('hidden');
+            } else {
+                const rb = document.getElementById('restartButton'); if (rb) rb.classList.add('hidden');
+                const sc = document.getElementById('seekControls'); if (sc) sc.classList.add('hidden');
+            }
+        } catch(e) { console.warn('Buttons show/hide error', e); }
         } catch (error) {
             showMessage('Error', 'La URL del contenido no es válida.');
             dom.videoLoader.classList.add('hidden');
@@ -206,19 +233,23 @@
             const proxyUrl = `https://miproxyiptv.onrender.com/${epgUrl}`;
             const res = await fetch(proxyUrl);
             const data = await res.json();
-            
+
             if (data && data.epg_listings && data.epg_listings.length > 0) {
                 const currentProgram = data.epg_listings[0];
                 let programTitle = currentProgram.title;
-                try { programTitle = atob(currentProgram.title); } catch (e) {}
+                try { programTitle = atob(currentProgram.title); } catch (e) { /* no base64 */ }
 
-                // Guardamos EPG en window.currentStream
-                window.currentStream = window.currentStream || {};
-                window.currentStream.epg = {
-                    start_timestamp: currentProgram.start_timestamp,
-                    end_timestamp: currentProgram.end_timestamp,
-                    title: programTitle
-                };
+                // Guardamos EPG en window.currentStream para uso posterior
+                try {
+                    window.currentStream = window.currentStream || {};
+                    window.currentStream.epg = {
+                        start_timestamp: currentProgram.start_timestamp,
+                        end_timestamp: currentProgram.end_timestamp,
+                        title: programTitle
+                    };
+                } catch(e) {
+                    console.warn('No se pudo guardar EPG en currentStream', e);
+                }
 
                 const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
                 let startTime = '--:--';
@@ -233,35 +264,6 @@
             } else {
                 dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
                 if (window.currentStream) { delete window.currentStream.epg; }
-            }
-        } catch (error) {
-            console.error('Error al obtener EPG:', error);
-            dom.epgOverlay.innerHTML = '<em>Error al cargar EPG. Verifique la consola (F12).</em>';
-        }
-    } catch (e) {
-                    console.warn("Título EPG no está en Base64, usando original.");
-                }
-
-                const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
-                
-                // --- CAMBIO CLAVE: Verificación para evitar 'Invalid Date' ---
-                let startTime = '--:--';
-                let endTime = '--:--';
-
-                // Verificamos que el timestamp de inicio sea un número válido
-                if (currentProgram.start_timestamp && !isNaN(currentProgram.start_timestamp)) {
-                    startTime = new Date(currentProgram.start_timestamp * 1000).toLocaleTimeString('es-ES', options);
-                }
-
-                // Verificamos que el timestamp de fin sea un número válido
-                if (currentProgram.end_timestamp && !isNaN(currentProgram.end_timestamp)) {
-                    endTime = new Date(currentProgram.end_timestamp * 1000).toLocaleTimeString('es-ES', options);
-                }
-                
-                dom.epgOverlay.innerHTML = `<strong>Ahora:</strong> ${programTitle} <span class="ml-4 opacity-80">${startTime} - ${endTime}</span>`;
-
-            } else {
-                dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
             }
         } catch (error) {
             console.error('Error al obtener EPG:', error);
@@ -503,7 +505,48 @@
                 case 'show-movie-detail': (actionTarget.dataset.isM3u === 'true') ? {} : showXtremioMovieDetail(actionTarget.dataset.vodId); break;
                 case 'show-series-detail': (actionTarget.dataset.isM3u === 'true') ? {} : showXtremioSeriesDetail(actionTarget.dataset.seriesId); break;
                 case 'toggle-collapse': actionTarget.classList.toggle('active'); actionTarget.nextElementSibling.classList.toggle('show'); break;
-            }
+            
+                case 'restart-stream':
+                    if (window.currentStream && window.currentStream.type === 'live' && window.currentStream.streamId) {
+                        const creds = JSON.parse(localStorage.getItem('iptv_xtremio_creds'));
+                        if (creds) {
+                            const epg = window.currentStream.epg;
+                            if (epg && epg.start_timestamp && epg.end_timestamp) {
+                                const startTs = Number(epg.start_timestamp);
+                                const endTs = Number(epg.end_timestamp);
+                                const nowTs = Math.floor(Date.now() / 1000);
+                                let secondsAgo = Math.floor(nowTs - startTs);
+                                if (secondsAgo < 0) secondsAgo = 0;
+                                const programDuration = endTs - startTs;
+                                // Pedimos al servidor el programa completo desde su inicio (start = segundos desde ahora hasta inicio)
+                                const restartUrl = `${creds.server}/timeshift/${creds.username}/${creds.password}/${window.currentStream.streamId}.ts?start=${secondsAgo}&duration=${programDuration}`;
+                                console.log('Reproduciendo desde inicio:', restartUrl);
+                                playStream(restartUrl, window.currentStream.title + ' (Desde inicio)', 'live', window.currentStream.streamId);
+                            } else {
+                                showMessage('Error', 'No se pudo calcular duración del programa desde EPG.');
+                            }
+                        } else {
+                            showMessage('Error', 'No hay credenciales Xtream cargadas.');
+                        }
+                    } else {
+                        showMessage('Info', 'Solo disponible para canales Xtream.');
+                    }
+                    break;
+                case 'rewind-30':
+                    try {
+                        if (!isNaN(dom.videoPlayer.currentTime)) {
+                            dom.videoPlayer.currentTime = Math.max(0, dom.videoPlayer.currentTime - 30);
+                        }
+                    } catch(e){ console.warn('rewind failed', e); }
+                    break;
+                case 'forward-30':
+                    try {
+                        if (!isNaN(dom.videoPlayer.currentTime) && !isNaN(dom.videoPlayer.duration)) {
+                            dom.videoPlayer.currentTime = Math.min(dom.videoPlayer.duration, dom.videoPlayer.currentTime + 30);
+                        }
+                    } catch(e){ console.warn('forward failed', e); }
+                    break;
+    }
         }
         
         const playableItem = e.target.closest('.playable-item');
