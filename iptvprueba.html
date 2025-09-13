@@ -76,12 +76,6 @@
     <div id="mainApp" class="container hidden"><header class="flex justify-between items-center p-4 border-b border-gray-700"><h1 class="text-2xl font-bold text-white">Reproductor</h1><div class="flex items-center space-x-2"><button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-initial-menu"><i class="fas fa-arrow-left"></i></button><button class="text-white text-xl p-2 rounded-full hover:bg-gray-700" data-action="show-content-list-modal"><i class="fas fa-bars"></i></button></div></header>
     <div id="videoContainer" class="video-player-container">
         <video id="videoPlayer" class="video-player" controls autoplay></video>
-<!-- Botón "Ver desde el inicio" -->
-<button id="restartButton" 
-    class="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg z-20 hidden"
-    data-action="restart-stream">
-    <i class="fas fa-undo mr-2"></i> Ver desde el inicio
-</button>
         <div id="videoLoader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 hidden"><div class="spinner"></div></div>
         <div id="epgOverlay"></div>
     </div>
@@ -171,8 +165,6 @@
     
     // --- REPRODUCTOR DE VIDEO Y EPG ---
     function playStream(url, title, type, streamId) {
-        // Guardamos info del stream actual
-        window.currentStream = { url, title, type, streamId };
         dom.mediaTitle.textContent = title;
         dom.controlsContainer.classList.remove('hidden');
         dom.videoLoader.classList.remove('hidden');
@@ -198,11 +190,6 @@
                 } else if (dom.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) { dom.videoPlayer.src = url; }
             } else { dom.videoPlayer.src = url; }
             dom.videoPlayer.play().catch(e => console.warn('Reproducción necesita interacción del usuario.'));
-        if (type === 'live' && streamId) {
-            document.getElementById('restartButton').classList.remove('hidden');
-        } else {
-            document.getElementById('restartButton').classList.add('hidden');
-        }
         } catch (error) {
             showMessage('Error', 'La URL del contenido no es válida.');
             dom.videoLoader.classList.add('hidden');
@@ -223,22 +210,36 @@
             if (data && data.epg_listings && data.epg_listings.length > 0) {
                 const currentProgram = data.epg_listings[0];
                 let programTitle = currentProgram.title;
-                try {
-                    programTitle = atob(currentProgram.title);
-                } catch (e) {
-                    console.warn("Título EPG no está en Base64, usando original.");
-                }
+                try { programTitle = atob(currentProgram.title); } catch (e) {}
 
-                // Guardamos EPG en window.currentStream para la funcionalidad de 'ver desde el inicio'
-                try {
-                    window.currentStream = window.currentStream || {};
-                    window.currentStream.epg = {
-                        start_timestamp: currentProgram.start_timestamp,
-                        end_timestamp: currentProgram.end_timestamp,
-                        title: programTitle
-                    };
-                } catch (e) {
-                    console.warn('No se pudo guardar EPG en currentStream', e);
+                // Guardamos EPG en window.currentStream
+                window.currentStream = window.currentStream || {};
+                window.currentStream.epg = {
+                    start_timestamp: currentProgram.start_timestamp,
+                    end_timestamp: currentProgram.end_timestamp,
+                    title: programTitle
+                };
+
+                const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
+                let startTime = '--:--';
+                let endTime = '--:--';
+                if (currentProgram.start_timestamp && !isNaN(currentProgram.start_timestamp)) {
+                    startTime = new Date(currentProgram.start_timestamp * 1000).toLocaleTimeString('es-ES', options);
+                }
+                if (currentProgram.end_timestamp && !isNaN(currentProgram.end_timestamp)) {
+                    endTime = new Date(currentProgram.end_timestamp * 1000).toLocaleTimeString('es-ES', options);
+                }
+                dom.epgOverlay.innerHTML = `<strong>Ahora:</strong> ${programTitle} <span class="ml-4 opacity-80">${startTime} - ${endTime}</span>`;
+            } else {
+                dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
+                if (window.currentStream) { delete window.currentStream.epg; }
+            }
+        } catch (error) {
+            console.error('Error al obtener EPG:', error);
+            dom.epgOverlay.innerHTML = '<em>Error al cargar EPG. Verifique la consola (F12).</em>';
+        }
+    } catch (e) {
+                    console.warn("Título EPG no está en Base64, usando original.");
                 }
 
                 const options = { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false };
@@ -261,14 +262,13 @@
 
             } else {
                 dom.epgOverlay.innerHTML = '<em>SIN INFORMACION EPG PARA MOSTRAR</em>';
-                // eliminamos epg si no hay info
-                if (window.currentStream) { delete window.currentStream.epg; }
             }
         } catch (error) {
             console.error('Error al obtener EPG:', error);
             dom.epgOverlay.innerHTML = '<em>Error al cargar EPG. Verifique la consola (F12).</em>';
         }
     }
+
 
     dom.videoPlayer.oncanplay = () => dom.videoLoader.classList.add('hidden');
     dom.videoPlayer.onerror = () => {
@@ -503,32 +503,6 @@
                 case 'show-movie-detail': (actionTarget.dataset.isM3u === 'true') ? {} : showXtremioMovieDetail(actionTarget.dataset.vodId); break;
                 case 'show-series-detail': (actionTarget.dataset.isM3u === 'true') ? {} : showXtremioSeriesDetail(actionTarget.dataset.seriesId); break;
                 case 'toggle-collapse': actionTarget.classList.toggle('active'); actionTarget.nextElementSibling.classList.toggle('show'); break;
-                case 'restart-stream':
-                    if (window.currentStream && window.currentStream.type === 'live' && window.currentStream.streamId) {
-                        const creds = JSON.parse(localStorage.getItem('iptv_xtremio_creds'));
-                        if (creds) {
-                            const epg = window.currentStream.epg;
-                            if (epg && epg.start_timestamp && !isNaN(epg.start_timestamp)) {
-                                const startMs = Number(epg.start_timestamp) * 1000;
-                                const nowMs = Date.now();
-                                let secondsAgo = Math.floor((nowMs - startMs) / 1000);
-                                if (secondsAgo < 0) secondsAgo = 0;
-                                // limitar a un máximo razonable (24h) para evitar números enormes
-                                const maxSeconds = 24 * 3600;
-                                if (secondsAgo > maxSeconds) secondsAgo = maxSeconds;
-                                // Duración por defecto: 3 horas (10800s)
-                                const restartUrl = `${creds.server}/timeshift/${creds.username}/${creds.password}/${window.currentStream.streamId}.ts?start=${secondsAgo}&duration=10800`;
-                                playStream(restartUrl, window.currentStream.title + ' (Desde inicio)', 'live', window.currentStream.streamId);
-                            } else {
-                                showMessage('Error', 'No se encontró EPG válido para calcular el inicio.');
-                            }
-                        } else {
-                            showMessage('Error', 'No hay credenciales Xtream cargadas.');
-                        }
-                    } else {
-                        showMessage('Info', 'Solo disponible para canales Xtream.');
-                    }
-                    break;
             }
         }
         
