@@ -54,6 +54,18 @@
       margin-bottom: 40px;
     }
 
+    /* Estilos para el buscador */
+    #buscador {
+      width: 50%;
+      max-width: 600px;
+      margin: 0 auto 40px auto;
+      display: block;
+      background-color: #222;
+      color: #fff;
+      border: 1px solid #FFD700;
+      text-align: center;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -97,7 +109,6 @@
 </head>
 <body>
 
-  <!-- LOGIN -->
   <div id="login">
     <h2>Acceso restringido 🔐</h2>
     <input type="text" id="usuario" placeholder="Usuario">
@@ -112,10 +123,11 @@
     <p id="mensaje" style="color:red;"></p>
   </div>
 
-  <!-- CONTENIDO PROTEGIDO -->
   <div id="contenido">
     <h1>🎬 Películas en Línea</h1>
     
+    <input type="text" id="buscador" onkeyup="buscarPeliculas()" placeholder="Buscar películas por título...">
+
     <div class="grid">
        <div class="movie-container">
       <a href="https://filemoon.to/e/00cpdum3fv2i" target="_blank">
@@ -1259,6 +1271,26 @@
         document.getElementById("contenido").style.display = "block";
       } else {
         document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos.";
+      }
+    }
+
+    // FUNCIÓN PARA BUSCAR PELÍCULAS AÑADIDA
+    function buscarPeliculas() {
+      const input = document.getElementById('buscador');
+      const filtro = input.value.toLowerCase();
+      const grid = document.querySelector('.grid');
+      const peliculas = grid.getElementsByClassName('movie-container');
+
+      for (let i = 0; i < peliculas.length; i++) {
+        const tituloDiv = peliculas[i].getElementsByClassName('movie-title')[0];
+        if (tituloDiv) {
+          const titulo = tituloDiv.textContent || tituloDiv.innerText;
+          if (titulo.toLowerCase().indexOf(filtro) > -1) {
+            peliculas[i].style.display = ""; // Muestra la película
+          } else {
+            peliculas[i].style.display = "none"; // Oculta la película
+          }
+        }
       }
     }
   </script>
