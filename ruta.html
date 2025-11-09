@@ -13,12 +13,11 @@
       position: relative;
     }
 
-    /* Botón volver mejorado */
     .back-button {
       position: absolute;
       top: 20px;
       left: 20px;
-      background-color: #ff0066; /* Color fuerte y llamativo */
+      background-color: #ff0066;
       color: #fff;
       border: none;
       padding: 15px 25px;
@@ -44,15 +43,28 @@
     }
 
     .link-list {
-      max-width: 600px;
+      max-width: 700px;
       margin: 0 auto;
       text-align: left;
     }
 
-    .link-list a {
-      display: block;
+    .link-item {
+      display: flex;
+      align-items: center;
       margin: 15px 0;
       font-size: 20px;
+    }
+
+    .check {
+      cursor: pointer;
+      margin-right: 10px;
+      font-size: 22px;
+      color: green;
+      user-select: none;
+      display: none;
+    }
+
+    .link-list a {
       color: #00ff88;
       text-decoration: none;
       transition: color 0.3s;
@@ -62,28 +74,87 @@
       color: #ffffff;
       text-decoration: underline;
     }
+
+    .seen .check {
+      display: inline;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Botón de volver -->
   <a href="index.html" class="back-button">← Volver</a>
+  <h1>🌐 TEMPORADA 1</h1>
 
-  <!-- Título -->
-  <h1>🌐 La Ruta</h1>
-
-  <!-- Lista de enlaces -->
   <div class="link-list">
-    <a href="https://filemoon.to/e/l38vi522o2e1" target="_blank">La Ruta - Temporada 1 - 1x01</a>
-    <a href="https://filemoon.to/e/uedx85r096jy" target="_blank">La Ruta - Temporada 1 - 1x02</a>
-    <a href="https://filemoon.to/e/uv6qhfemh386" target="_blank">La Ruta - Temporada 1 - 1x03</a>
-	<a href="https://filemoon.to/e/emrtq94uh6ea" target="_blank">La Ruta - Temporada 1 - 1x04</a>
-	<a href="https://filemoon.to/e/3q5p5acg0ipu" target="_blank">La Ruta - Temporada 1 - 1x05</a>
-	<a href="https://filemoon.to/e/6yhu5dwo5mo5" target="_blank">La Ruta - Temporada 1 - 1x06</a>
-	<a href="https://filemoon.to/e/wptv3ojog8n4" target="_blank">La Ruta - Temporada 1 - 1x07</a>
-	<a href="https://filemoon.to/e/smcga3wtyqcs" target="_blank">La Ruta - Temporada 1 - 1x08</a>
-		
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/l38vi522o2e1" target="_blank">La Ruta - Temporada 1 - 1x01</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/uedx85r096jy" target="_blank">La Ruta - Temporada 1 - 1x02</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/uv6qhfemh386" target="_blank">La Ruta - Temporada 1 - 1x03</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/emrtq94uh6ea" target="_blank">La Ruta - Temporada 1 - 1x04</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/3q5p5acg0ipu" target="_blank">La Ruta - Temporada 1 - 1x05</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/6yhu5dwo5mo5" target="_blank">La Ruta - Temporada 1 - 1x06</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/wptv3ojog8n4" target="_blank">La Ruta - Temporada 1 - 1x07</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/smcga3wtyqcs" target="_blank">La Ruta - Temporada 1 - 1x08</a></div>
+    
   </div>
+  
+  <a href="index.html" class="back-button">← Volver</a>
+  <h1>🌐 TEMPORADA 2</h1>
+
+  <div class="link-list">
+
+<div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/x2lpvvw2v9iz" target="_blank">La Ruta - Temporada 2 - 2x01</a></div>
+<div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/b4n3a0cqg06q" target="_blank">La Ruta - Temporada 2 - 2x02</a></div>
+
+
+  </div>
+  
+
+  
+  <script>
+    // **AQUÍ EMPIEZA LA MODIFICACIÓN**
+
+    // Crear una clave única para esta página específica.
+    // Usamos 'videoStates_' seguido del nombre del archivo de la página.
+    const storageKey = 'videoStates_' + window.location.pathname;
+
+    document.querySelectorAll('.link-item a').forEach(link => {
+      link.addEventListener('click', function() {
+        let item = this.parentElement;
+        item.classList.add('seen');
+        saveState();
+      });
+    });
+
+    document.querySelectorAll('.check').forEach(check => {
+      check.addEventListener('click', function() {
+        let item = this.parentElement;
+        item.classList.toggle('seen');
+        saveState();
+      });
+    });
+
+    function saveState() {
+      let states = [];
+      document.querySelectorAll('.link-item').forEach(item => {
+        states.push(item.classList.contains('seen'));
+      });
+      // Guardar el estado usando la clave única de esta página.
+      localStorage.setItem(storageKey, JSON.stringify(states));
+    }
+
+    function loadState() {
+      // Cargar el estado usando la clave única de esta página.
+      let states = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      document.querySelectorAll('.link-item').forEach((item, index) => {
+        if (states[index]) {
+          item.classList.add('seen');
+        }
+      });
+    }
+
+    // Cargar el estado guardado cuando la página se abre.
+    loadState();
+  </script>
 
 </body>
 </html>
