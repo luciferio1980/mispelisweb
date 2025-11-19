@@ -1355,7 +1355,7 @@
                 } else if (urlInput) {
                     // Carga por URL a través del proxy.
                     // --- RUTA RELATIVA CORREGIDA ---
-                    const proxyUrl = 'proxy.php?url=' + encodeURIComponent(urlInput);
+                    const proxyUrl = '/proxy.php?url=' + encodeURIComponent(urlInput);
                     
                     // Fetch a nuestro propio servidor (mismo origen)
                     const response = await fetch(proxyUrl);
@@ -1421,7 +1421,7 @@
 
                 // USANDO PROXY para evitar CORS
                 // --- RUTA RELATIVA CORREGIDA ---
-                const proxyUrl = `proxy.php?url=${encodeURIComponent(apiUrl)}`;
+                const proxyUrl = `/proxy.php?url=${encodeURIComponent(apiUrl)}`;
                 
                 const response = await fetch(proxyUrl);
                 
