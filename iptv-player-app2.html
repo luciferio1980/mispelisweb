@@ -993,6 +993,8 @@
                     <button class="upload-tab" onclick="switchUploadTab('xtream')">🔌 Xtream Codes</button>
                 </div>
 
+                <p id="uploadStatusMessage" style="color: #E50914; margin-bottom: 15px; font-weight: bold;"></p>
+
                 <div class="upload-content active" id="m3uUpload">
                     <div class="form-group">
                         <label>Nombre de la lista:</label>
@@ -1254,6 +1256,14 @@
             }
         }
 
+        // STATUS MESSAGE (BARRA DE PROGRESO TEXTUAL)
+        window.updateStatus = function(message) {
+            const statusEl = document.getElementById('uploadStatusMessage');
+            if (statusEl) {
+                statusEl.textContent = message;
+            }
+        }
+
         // UPLOAD TABS
         window.switchUploadTab = function(tab) {
             document.querySelectorAll('.upload-tab').forEach(t => t.classList.remove('active'));
@@ -1274,6 +1284,7 @@
             }
             
             document.getElementById(tab + 'Upload').classList.add('active');
+            updateStatus(''); // Limpiar mensaje de estado al cambiar de tab
         }
 
         // M3U PARSING
@@ -1329,38 +1340,41 @@
             const listName = document.getElementById('listName').value || 'Lista sin nombre';
             
             showLoading(true);
+            updateStatus('Iniciando carga...');
 
             try {
                 let content = '';
 
                 if (fileInput.files.length > 0) {
                     // Lee el archivo local (sin proxy)
+                    updateStatus('Leyendo archivo local...');
                     content = await fileInput.files[0].text();
                 } else if (urlInput) {
                     // Carga por URL a través del proxy.
+                    updateStatus('Conectando con el servidor proxy...');
                     // *** RUTA ABSOLUTA CORREGIDA: /proxy.php ***
                     const proxyUrl = '/proxy.php?url=' + encodeURIComponent(urlInput);
                     
                     // Fetch a nuestro propio servidor (mismo origen)
+                    updateStatus('Solicitando lista externa. Esperando respuesta...');
                     const response = await fetch(proxyUrl);
                     
                     if (!response.ok) {
-                        throw new Error(`Error de red o proxy: ${response.status} ${response.statusText}. Por favor revisa el archivo '/proxy.php'`);
+                        // Aquí es donde obtendríamos un 404, 500, etc.
+                        throw new Error(`Error de red/proxy: ${response.status} ${response.statusText}. Revise la pestaña 'Network' de F12.`);
                     }
                     
+                    updateStatus('Lista recibida. Procesando canales...');
                     content = await response.text();
                 } else {
                     alert('Por favor, selecciona un archivo o introduce una URL');
-                    showLoading(false);
-                    return;
+                    return; // Retorna antes del finally para no limpiar si hay alerta
                 }
 
                 const channels = parseM3U(content);
                 
                 if (channels.length === 0) {
-                    alert('No se encontraron canales en la lista. El archivo o la respuesta del proxy podría estar vacío.');
-                    showLoading(false);
-                    return;
+                    throw new Error('No se encontraron canales en la lista. El archivo o la respuesta del proxy está vacío.');
                 }
 
                 const newList = {
@@ -1375,14 +1389,16 @@
                 saveToStorage();
                 loadList(newList);
                 
+                updateStatus(`✅ Lista cargada con éxito: ${channels.length} canales.`);
                 alert(`✅ Lista cargada: ${channels.length} canales`);
                 showSection('home');
 
             } catch (error) {
+                updateStatus('❌ Error crítico: ' + error.message);
                 alert('❌ Error al cargar la lista. Fallo del proxy o del archivo M3U: ' + error.message);
+            } finally {
+                showLoading(false);
             }
-
-            showLoading(false);
         }
 
         // LOAD XTREAM (PROXIED - RUTA ABSOLUTA CORREGIDA)
@@ -1398,21 +1414,26 @@
             }
 
             showLoading(true);
+            updateStatus('Iniciando conexión Xtream...');
 
             try {
                 // Construir la URL API de Xtream
                 const apiUrl = `${server}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
 
                 // USANDO PROXY para evitar CORS
+                updateStatus('Conectando con el servidor Xtream a través del proxy...');
                 // *** RUTA ABSOLUTA CORREGIDA: /proxy.php ***
                 const proxyUrl = `/proxy.php?url=${encodeURIComponent(apiUrl)}`;
                 
+                updateStatus('Solicitando datos de Xtream. Esperando respuesta...');
                 const response = await fetch(proxyUrl);
                 
                 if (!response.ok) {
-                    throw new Error(`Error de red o proxy Xtream: ${response.status} ${response.statusText}. Revisa los datos de acceso o el archivo '/proxy.php'.`);
+                    // Aquí es donde obtendríamos un 404, 500, etc.
+                    throw new Error(`Error de red/proxy Xtream: ${response.status} ${response.statusText}. Revise la pestaña 'Network' de F12.`);
                 }
                 
+                updateStatus('Datos de Xtream recibidos. Procesando canales...');
                 // El proxy debe devolver el JSON de la API
                 const data = await response.json(); 
 
@@ -1450,14 +1471,16 @@
                 saveToStorage();
                 loadList(newList);
                 
+                updateStatus(`✅ Xtream conectado: ${channels.length} canales.`);
                 alert(`✅ Xtream conectado: ${channels.length} canales`);
                 showSection('home');
 
             } catch (error) {
+                updateStatus('❌ Error crítico: ' + error.message);
                 alert('❌ Error al conectar con Xtream: ' + error.message);
+            } finally {
+                showLoading(false);
             }
-
-            showLoading(false);
         }
 
         // LOAD LIST POR OBJETO
