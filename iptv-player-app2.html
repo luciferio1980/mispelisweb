@@ -859,69 +859,7 @@
     </style>
 </head>
 <body>
-    <script>
-        // =======================================================
-        // FUNCIONES GLOBALES INMEDIATAS (CORRECCIÓN showSection)
-        // Estas funciones se cargan primero para que el HTML 
-        // pueda llamarlas desde los botones del menú.
-        // =======================================================
-        
-        // Variables globales necesarias para las funciones inmediatas
-        let deviceType = localStorage.getItem('streamflix_device') || 'pc';
-
-        // DEVICE SELECTION
-        window.selectDevice = function(type) {
-            localStorage.setItem('streamflix_device', type);
-            document.getElementById('deviceModal').classList.add('hidden');
-            deviceType = type; // Actualizar global
-            applyDeviceSettings(type);
-            updateDeviceDisplay(type);
-        };
-
-        // SIDEBAR TOGGLE (Llamado por el botón Hamburguesa)
-        window.toggleSidebar = function() {
-            const sidebar = document.getElementById('sidebar');
-            if (deviceType === 'mobile') {
-                sidebar.classList.toggle('active');
-            }
-        };
-
-        // NAVIGATION (Llamado por los botones del menú)
-        window.showSection = function(section) {
-            // Se puede llamar a esta función incluso si el script principal no ha terminado, 
-            // pero el script principal se encargará de las dependencias.
-
-            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-            
-            const sectionMap = {
-                home: 'homeSection',
-                favorites: 'favoritesSection',
-                lists: 'listsSection',
-                settings: 'settingsSection',
-                parental: 'parentalSection',
-                upload: 'uploadSection'
-            };
-            
-            // Activar la sección
-            const targetSection = document.getElementById(sectionMap[section]);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            }
-            
-            // Activar el elemento del menú (se deja la lógica completa en el script principal)
-            
-            if (deviceType === 'mobile') {
-                toggleSidebar();
-            }
-            
-            // Si la función completa existe (al final del body), se ejecuta.
-            if (window.fullShowSection) {
-                window.fullShowSection(section);
-            }
-        };
-    </script>
-
+    
     <div class="device-modal" id="deviceModal">
         <div class="device-content">
             <h2>🎬 Bienvenido a StreamFlix</h2>
@@ -929,15 +867,15 @@
                 Selecciona tu dispositivo para optimizar la experiencia
             </p>
             <div class="device-options">
-                <div class="device-option" onclick="window.selectDevice('pc')">
+                <div class="device-option" onclick="selectDevice('pc')">
                     <div class="icon">💻</div>
                     <div>PC / Laptop</div>
                 </div>
-                <div class="device-option" onclick="window.selectDevice('mobile')">
+                <div class="device-option" onclick="selectDevice('mobile')">
                     <div class="icon">📱</div>
                     <div>Móvil / Tablet</div>
                 </div>
-                <div class="device-option" onclick="window.selectDevice('tv')">
+                <div class="device-option" onclick="selectDevice('tv')">
                     <div class="icon">📺</div>
                     <div>Smart TV</div>
                 </div>
@@ -1179,7 +1117,7 @@
         let currentPage = 1;
         let itemsPerPage = 8;
         let currentViewMode = 'grid';
-        // deviceType ya está definida y cargada arriba
+        let deviceType = localStorage.getItem('streamflix_device') || 'pc'; // deviceType ya está definida y cargada arriba
         let blockedCategories = new Set();
         let currentLanguage = 'es';
         let recordingPath = '';
@@ -1204,11 +1142,19 @@
         };
 
         // ==========================================
-        // FUNCIONES DE UTILIDAD (DEBEN ESTAR DISPONIBLES)
+        // FUNCIONES GLOBALES (ACCESIBLES DESDE EL HTML Y EL RESTO DEL SCRIPT)
         // ==========================================
         
         // DEVICE
-        function applyDeviceSettings(type) {
+        window.selectDevice = function(type) {
+            localStorage.setItem('streamflix_device', type);
+            document.getElementById('deviceModal').classList.add('hidden');
+            deviceType = type; // Actualizar global
+            applyDeviceSettings(type);
+            updateDeviceDisplay(type);
+        };
+
+        window.applyDeviceSettings = function(type) {
             document.body.classList.remove('tv-mode', 'mobile-mode', 'pc-mode');
             
             if (type === 'tv') {
@@ -1221,9 +1167,10 @@
                 document.body.classList.add('pc-mode');
                 window.itemsPerPage = 8;
             }
+            if(currentChannels.length > 0) displayChannels(); // Refrescar si hay canales cargados
         }
 
-        function updateDeviceDisplay(type) {
+        window.updateDeviceDisplay = function(type) {
             const deviceNames = {
                 pc: '💻 PC / Laptop',
                 mobile: '📱 Móvil / Tablet',
@@ -1235,13 +1182,13 @@
             }
         }
 
-        function changeDevice() {
-            localStorage.removeItem('streamflix_device');
+        window.changeDevice = function() {
+            localStorage.removeItem(STORAGE.DEVICE);
             location.reload();
         }
 
-        function checkDevice() {
-            const savedDevice = localStorage.getItem('streamflix_device');
+        window.checkDevice = function() {
+            const savedDevice = localStorage.getItem(STORAGE.DEVICE);
             if (!savedDevice) {
                 document.getElementById('deviceModal').style.display = 'flex';
             } else {
@@ -1250,9 +1197,55 @@
                 updateDeviceDisplay(savedDevice);
             }
         }
-        
+
+        // SIDEBAR TOGGLE
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
+        };
+
+        // NAVIGATION
+        window.showSection = function(section) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            
+            const sectionMap = {
+                home: 'homeSection',
+                favorites: 'favoritesSection',
+                lists: 'listsSection',
+                settings: 'settingsSection',
+                parental: 'parentalSection',
+                upload: 'uploadSection'
+            };
+            
+            const targetSection = document.getElementById(sectionMap[section]);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Manage active menu item
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(item => {
+                if (item.getAttribute('onclick')?.includes(`showSection('${section}')`)) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Execute section-specific logic
+            if (section === 'favorites') {
+                displayFavorites();
+            } else if (section === 'lists') {
+                displayLists();
+            } else if (section === 'parental') {
+                displayParentalControls();
+            }
+
+            if (deviceType === 'mobile') {
+                toggleSidebar();
+            }
+        };
+
         // LOADING
-        function showLoading(show) {
+        window.showLoading = function(show) {
             const loader = document.getElementById('loadingContainer');
             if (show) {
                 loader.classList.add('active');
@@ -1261,39 +1254,30 @@
             }
         }
 
-        // NAVIGATION (Redefinición completa, ahora con dependencias)
-        window.fullShowSection = function(section) {
-             // Activar el elemento del menú, buscando el correcto
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => {
-                if (item.getAttribute('onclick')?.includes(`showSection('${section}')`)) {
-                    item.classList.add('active');
-                }
-            });
-            
-            if (section === 'favorites') {
-                displayFavorites();
-            } else if (section === 'lists') {
-                displayLists();
-            } else if (section === 'parental') {
-                displayParentalControls();
-            }
-        };
-        // Se asegura que la navegación principal también se beneficie de la redefinición
-        window.showSection = window.fullShowSection;
-
-
         // UPLOAD TABS
-        function switchUploadTab(tab) {
+        window.switchUploadTab = function(tab) {
             document.querySelectorAll('.upload-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.upload-content').forEach(c => c.classList.remove('active'));
             
-            event.target.classList.add('active');
+            // Encontrar el botón que fue clickeado (si es llamado por evento)
+            let clickedButton = event.target;
+            if (!clickedButton.classList.contains('upload-tab')) {
+                // Si el evento viene de un hijo del botón
+                clickedButton = clickedButton.closest('.upload-tab');
+            }
+
+            if (clickedButton) {
+                 clickedButton.classList.add('active');
+            } else {
+                // Si la función es llamada programáticamente, busca el botón
+                document.querySelector(`.upload-tab[onclick*="switchUploadTab('${tab}')"]`).classList.add('active');
+            }
+            
             document.getElementById(tab + 'Upload').classList.add('active');
         }
 
         // M3U PARSING
-        function parseM3U(content) {
+        window.parseM3U = function(content) {
             const lines = content.split('\n');
             const channels = [];
             let currentChannel = {};
@@ -1338,8 +1322,8 @@
             return channels;
         }
 
-        // LOAD M3U (PROXIED - RUTA RELATIVA CORREGIDA)
-        async function loadM3U() {
+        // LOAD M3U (PROXIED - RUTA ABSOLUTA CORREGIDA)
+        window.loadM3U = async function() {
             const fileInput = document.getElementById('fileInput');
             const urlInput = document.getElementById('urlInput').value;
             const listName = document.getElementById('listName').value || 'Lista sin nombre';
@@ -1354,14 +1338,14 @@
                     content = await fileInput.files[0].text();
                 } else if (urlInput) {
                     // Carga por URL a través del proxy.
-                    // --- RUTA RELATIVA CORREGIDA ---
+                    // *** RUTA ABSOLUTA CORREGIDA: /proxy.php ***
                     const proxyUrl = '/proxy.php?url=' + encodeURIComponent(urlInput);
                     
                     // Fetch a nuestro propio servidor (mismo origen)
                     const response = await fetch(proxyUrl);
                     
                     if (!response.ok) {
-                        throw new Error(`Error de red o proxy: ${response.status} ${response.statusText}. Por favor revisa el archivo 'proxy.php'`);
+                        throw new Error(`Error de red o proxy: ${response.status} ${response.statusText}. Por favor revisa el archivo '/proxy.php'`);
                     }
                     
                     content = await response.text();
@@ -1401,8 +1385,8 @@
             showLoading(false);
         }
 
-        // LOAD XTREAM (PROXIED - RUTA RELATIVA CORREGIDA)
-        async function loadXtream() {
+        // LOAD XTREAM (PROXIED - RUTA ABSOLUTA CORREGIDA)
+        window.loadXtream = async function() {
             const server = document.getElementById('xtreamServer').value;
             const user = document.getElementById('xtreamUser').value;
             const pass = document.getElementById('xtreamPass').value;
@@ -1420,13 +1404,13 @@
                 const apiUrl = `${server}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
 
                 // USANDO PROXY para evitar CORS
-                // --- RUTA RELATIVA CORREGIDA ---
+                // *** RUTA ABSOLUTA CORREGIDA: /proxy.php ***
                 const proxyUrl = `/proxy.php?url=${encodeURIComponent(apiUrl)}`;
                 
                 const response = await fetch(proxyUrl);
                 
                 if (!response.ok) {
-                    throw new Error(`Error de red o proxy Xtream: ${response.status} ${response.statusText}. Por favor revisa el archivo 'proxy.php'`);
+                    throw new Error(`Error de red o proxy Xtream: ${response.status} ${response.statusText}. Revisa los datos de acceso o el archivo '/proxy.php'.`);
                 }
                 
                 // El proxy debe devolver el JSON de la API
@@ -1436,7 +1420,7 @@
                     const channelUrl = `${server}/live/${user}/${pass}/${stream.stream_id}.m3u8`;
                     
                     // CLAVE: La URL del canal también DEBE ser proxied para la reproducción.
-                    const proxiedChannelUrl = `proxy.php?url=${encodeURIComponent(channelUrl)}`;
+                    const proxiedChannelUrl = `/proxy.php?url=${encodeURIComponent(channelUrl)}`;
 
                     return {
                         id: stream.stream_id,
@@ -1477,7 +1461,7 @@
         }
 
         // LOAD LIST POR OBJETO
-        function loadList(list) {
+        window.loadList = function(list) {
             currentList = list;
             allChannels = list.channels;
             categorizeChannels();
@@ -1488,7 +1472,7 @@
         }
         
         // LOAD LIST POR ID
-        function loadListById(listId) {
+        window.loadListById = function(listId) {
             const list = savedLists.find(l => l.id === listId);
             if (list) {
                 loadList(list);
@@ -1497,7 +1481,7 @@
 
 
         // CATEGORIZE
-        function categorizeChannels() {
+        window.categorizeChannels = function() {
             categories = {};
             allChannels.forEach(channel => {
                 const cat = channel.category || 'Sin Categoría';
@@ -1509,13 +1493,13 @@
         }
         
         // TOGGLE CATEGORIES
-        function toggleCategories() {
+        window.toggleCategories = function() {
             const list = document.getElementById('categoriesList');
             list.classList.toggle('expanded');
         }
 
         // DISPLAY CATEGORIES IN SIDEBAR
-        function displayCategories() {
+        window.displayCategories = function() {
             const list = document.getElementById('categoriesList');
             list.innerHTML = '';
 
@@ -1534,7 +1518,7 @@
         }
 
         // FILTER BY CATEGORY
-        function filterByCategory(category) {
+        window.filterByCategory = function(category) {
             currentChannels = categories[category] || [];
             currentPage = 1;
             displayChannels();
@@ -1542,7 +1526,7 @@
         }
 
         // APPLY FILTERS
-        function applyFilters() {
+        window.applyFilters = function() {
             const lang = document.getElementById('languageFilter').value;
             const country = document.getElementById('countryFilter').value;
             const quality = document.getElementById('qualityFilter').value;
@@ -1555,10 +1539,10 @@
                 if (lang && channel.language !== lang) return false;
                 if (country && channel.country !== country) return false;
                 if (quality) {
-                    if (quality === '4k' && !['4K', 'UHD'].includes(channel.quality)) return false;
-                    if (quality === 'fhd' && channel.quality !== 'FHD') return false;
-                    if (quality === 'hd' && channel.quality !== 'HD') return false;
-                    if (quality === 'sd' && channel.quality !== 'SD') return false;
+                    if (quality === '4k' && !['4K', 'UHD'].includes(channel.quality.toUpperCase())) return false;
+                    if (quality === 'fhd' && channel.quality.toUpperCase() !== 'FHD') return false;
+                    if (quality === 'hd' && channel.quality.toUpperCase() !== 'HD') return false;
+                    if (quality === 'sd' && channel.quality.toUpperCase() !== 'SD') return false;
                 }
                 return true;
             });
@@ -1569,7 +1553,7 @@
         }
 
         // POPULATE COUNTRY FILTER
-        function populateCountryFilter() {
+        window.populateCountryFilter = function() {
             const countries = [...new Set(allChannels.map(c => c.country).filter(Boolean))];
             const select = document.getElementById('countryFilter');
             const currentValue = select.value;
@@ -1586,7 +1570,7 @@
         }
 
         // DISPLAY CHANNELS
-        function displayChannels() {
+        window.displayChannels = function() {
             const container = document.getElementById('channelsContainer');
             container.innerHTML = '';
             container.className = `channels-container ${currentViewMode}-view`;
@@ -1604,13 +1588,13 @@
         }
 
         // CREATE CHANNEL CARD
-        function createChannelCard(channel) {
+        window.createChannelCard = function(channel) {
             const card = document.createElement('div');
             card.className = `channel-card ${currentViewMode}-view`;
             
             const isFavorite = favorites.has(channel.id);
             const logo = channel.logo ? 
-                `<img src="${channel.logo}" alt="${channel.name}" style="width: 100%; height: 100%; object-fit: cover;">` : 
+                `<img src="${channel.logo}" alt="${channel.name}" onerror="this.src=''" style="width: 100%; height: 100%; object-fit: cover;">` : 
                 '📺';
 
             card.innerHTML = `
@@ -1638,7 +1622,7 @@
         }
 
         // PAGINATION
-        function displayPagination() {
+        window.displayPagination = function() {
             const totalPages = Math.ceil(currentChannels.length / itemsPerPage);
             const container = document.getElementById('pagination');
             container.innerHTML = '';
@@ -1678,30 +1662,24 @@
             container.appendChild(nextBtn);
         }
 
-        function changePage(page) {
+        window.changePage = function(page) {
             currentPage = page;
             displayChannels();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // VIEW MODE
-        function setViewMode(mode) {
+        window.setViewMode = function(mode) {
             currentViewMode = mode;
-            // No usamos event.target aquí, buscamos los elementos
             document.querySelectorAll('.view-mode').forEach(m => m.classList.remove('active'));
-            // Usamos event.target si la función es llamada por el click
-            if (event.target.classList.contains('view-mode')) {
-                event.target.classList.add('active');
-            } else {
-                // Si es llamada programáticamente, activamos el correcto
-                document.querySelector(`.view-mode[title="Vista ${mode === 'grid' ? 'Grid' : 'Lista'}"]`).classList.add('active');
-            }
+            // Usamos querySelector para activar el modo visual correcto
+            document.querySelector(`.view-modes .view-mode[title*="${mode === 'grid' ? 'Grid' : 'Lista'}"]`).classList.add('active');
             displayChannels();
         }
 
         // SEARCH
         let searchTimeout;
-        function handleSearch() {
+        window.handleSearch = function() {
             clearTimeout(searchTimeout);
             const query = document.getElementById('searchInput').value.toLowerCase();
             
@@ -1729,7 +1707,7 @@
             }, 300);
         }
 
-        function displaySuggestions(suggestions) {
+        window.displaySuggestions = function(suggestions) {
             const container = document.getElementById('searchSuggestions');
             
             if (suggestions.length === 0) {
@@ -1754,7 +1732,7 @@
         }
 
         // FAVORITES
-        function toggleFavorite(event, channelId) {
+        window.toggleFavorite = function(event, channelId) {
             event.stopPropagation();
             
             if (favorites.has(channelId)) {
@@ -1768,11 +1746,11 @@
             updateFavCount();
         }
 
-        function updateFavCount() {
+        window.updateFavCount = function() {
             document.getElementById('favCount').textContent = favorites.size;
         }
 
-        function displayFavorites() {
+        window.displayFavorites = function() {
             const container = document.getElementById('favoritesContainer');
             container.innerHTML = '';
 
@@ -1795,11 +1773,12 @@
         }
 
         // PLAY CHANNEL
-        function playChannel(channelId) {
+        window.playChannel = function(channelId) {
             const channel = allChannels.find(ch => ch.id === channelId);
             if (!channel) return;
 
             const playerWindow = window.open('', '_blank', 'width=1200,height=800');
+            // *** CORRECCIÓN DE LA FUGA DE TEXTO: Asegurar que el template literal (`) se cierre correctamente ***
             playerWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
@@ -1911,6 +1890,7 @@
                             <video id="player" controls autoplay>
                                 <source src="${channel.url}" type="application/x-mpegURL">
                                 <source src="${channel.url}" type="video/mp4">
+                                <p>Tu navegador no soporta el tag de video.</p>
                             </video>
                             <div class="custom-controls">
                                 <button class="icon-btn" onclick="togglePlay()">⏸</button>
@@ -1960,7 +1940,7 @@
         }
 
         // RECORD CHANNEL
-        function recordChannel(channelId) {
+        window.recordChannel = function(channelId) {
             if (!recordingPath) {
                 alert('⚠️ Por favor configura la ruta de grabación en Configuración primero');
                 showSection('settings');
@@ -1977,7 +1957,7 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
         }
 
         // LISTS MANAGEMENT
-        function displayLists() {
+        window.displayLists = function() {
             const container = document.getElementById('listsContainer');
             container.innerHTML = '';
 
@@ -2018,7 +1998,7 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
             });
         }
 
-        function deleteList(listId) {
+        window.deleteList = function(listId) {
             if (!confirm('¿Estás seguro de eliminar esta lista?')) return;
             
             savedLists = savedLists.filter(l => l.id !== listId);
@@ -2039,7 +2019,7 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
         }
 
         // PARENTAL CONTROL
-        function displayParentalControls() {
+        window.displayParentalControls = function() {
             const container = document.getElementById('parentalCategories');
             container.innerHTML = '';
 
@@ -2066,7 +2046,7 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
             });
         }
 
-        function toggleBlock(category) {
+        window.toggleBlock = function(category) {
             if (blockedCategories.has(category)) {
                 blockedCategories.delete(category);
             } else {
@@ -2080,7 +2060,7 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
         }
 
         // RECORDING PATH
-        function saveRecordingPath() {
+        window.saveRecordingPath = function() {
             const path = document.getElementById('recordingPath').value;
             if (!path) {
                 alert('⚠️ Por favor introduce una ruta válida');
@@ -2094,21 +2074,21 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
         }
 
         // LANGUAGE
-        function changeLanguage() {
+        window.changeLanguage = function() {
             currentLanguage = document.getElementById('languageSelect').value;
             localStorage.setItem(STORAGE.LANGUAGE, currentLanguage);
             alert('✅ Idioma cambiado (requiere recargar para aplicar todos los cambios)');
         }
 
         // STORAGE
-        function saveToStorage() {
+        window.saveToStorage = function() {
             localStorage.setItem(STORAGE.FAVORITES, JSON.stringify([...favorites]));
             localStorage.setItem(STORAGE.LISTS, JSON.stringify(savedLists));
             localStorage.setItem(STORAGE.BLOCKED_CATS, JSON.stringify([...blockedCategories]));
             updateFavCount();
         }
 
-        function loadFromStorage() {
+        window.loadFromStorage = function() {
             // Load favorites
             const savedFavs = localStorage.getItem(STORAGE.FAVORITES);
             if (savedFavs) {

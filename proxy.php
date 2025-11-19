@@ -21,6 +21,7 @@ if (function_exists('curl_init')) {
     curl_setopt($ch, CURLOPT_HEADER, 0); // No incluimos las cabeceras en el output
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Seguimos redirecciones
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // NECESARIO para URLs HTTPS de listas que usan certificados autogenerados
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'); // Añadir User-Agent para evitar bloqueo
 
     $content = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -29,7 +30,10 @@ if (function_exists('curl_init')) {
     curl_close($ch);
 } else {
     // Fallback: usar file_get_contents (puede tener problemas con URLs grandes o redirecciones)
-    $content = @file_get_contents($target_url);
+    $context = stream_context_create([
+        "http" => ["header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"]
+    ]);
+    $content = @file_get_contents($target_url, false, $context);
     $http_code = ($content !== FALSE) ? 200 : 502;
     // Intentamos determinar el tipo de contenido si file_get_contents funcionó
     if ($content !== FALSE) {
@@ -46,7 +50,8 @@ if ($content === FALSE || $http_code >= 400) {
     exit;
 }
 
-// 5. Devolver el contenido con la cabecera correcta
+// 5. Devolver el contenido con la cabecera correcta (CRÍTICO para evitar que el navegador lo bloquee)
 header('Content-Type: ' . $mime_type);
+header('Access-Control-Allow-Origin: *'); // CRÍTICO: Permitir acceso CORS
 echo $content;
 ?>
