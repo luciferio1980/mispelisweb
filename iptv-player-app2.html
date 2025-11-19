@@ -282,6 +282,7 @@
             padding-left: 20px;
         }
 
+        /* ACTION BUTTONS */
         .top-actions {
             display: flex;
             gap: 10px;
@@ -859,36 +860,65 @@
 </head>
 <body>
     <script>
-        // ==========================================
-        // DEFINIR FUNCIONES CRÍTICAS INMEDIATAMENTE
-        // ==========================================
+        // =======================================================
+        // FUNCIONES GLOBALES INMEDIATAS (CORRECCIÓN showSection)
+        // Estas funciones se cargan primero para que el HTML 
+        // pueda llamarlas desde los botones del menú.
+        // =======================================================
         
+        // Variables globales necesarias para las funciones inmediatas
+        let deviceType = localStorage.getItem('streamflix_device') || 'pc';
+
+        // DEVICE SELECTION
         window.selectDevice = function(type) {
             localStorage.setItem('streamflix_device', type);
             document.getElementById('deviceModal').classList.add('hidden');
-            
-            document.body.classList.remove('tv-mode', 'mobile-mode', 'pc-mode');
-            
-            if (type === 'tv') {
-                document.body.classList.add('tv-mode');
-            } else if (type === 'mobile') {
-                document.body.classList.add('mobile-mode');
-            } else {
-                document.body.classList.add('pc-mode');
+            deviceType = type; // Actualizar global
+            applyDeviceSettings(type);
+            updateDeviceDisplay(type);
+        };
+
+        // SIDEBAR TOGGLE (Llamado por el botón Hamburguesa)
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            if (deviceType === 'mobile') {
+                sidebar.classList.toggle('active');
             }
+        };
+
+        // NAVIGATION (Llamado por los botones del menú)
+        window.showSection = function(section) {
+            // Se puede llamar a esta función incluso si el script principal no ha terminado, 
+            // pero el script principal se encargará de las dependencias.
+
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
             
-            const deviceNames = {
-                pc: '💻 PC / Laptop',
-                mobile: '📱 Móvil / Tablet',
-                tv: '📺 Smart TV'
+            const sectionMap = {
+                home: 'homeSection',
+                favorites: 'favoritesSection',
+                lists: 'listsSection',
+                settings: 'settingsSection',
+                parental: 'parentalSection',
+                upload: 'uploadSection'
             };
             
-            setTimeout(function() {
-                const display = document.getElementById('deviceDisplay');
-                if (display) {
-                    display.textContent = 'Dispositivo actual: ' + deviceNames[type];
-                }
-            }, 100);
+            // Activar la sección
+            const targetSection = document.getElementById(sectionMap[section]);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+            
+            // Activar el elemento del menú (se deja la lógica completa en el script principal)
+            
+            if (deviceType === 'mobile') {
+                toggleSidebar();
+            }
+            
+            // Si la función completa existe (al final del body), se ejecuta.
+            if (window.fullShowSection) {
+                window.fullShowSection(section);
+            }
         };
     </script>
 
@@ -1138,17 +1168,46 @@
 
     <script>
         // ==========================================
-        // FUNCIONES GLOBALES - DEFINIR PRIMERO
+        // VARIABLES GLOBALES
         // ==========================================
-        
-        // DEVICE SELECTION
-        window.selectDevice = function(type) {
-            localStorage.setItem('streamflix_device', type);
-            document.getElementById('deviceModal').classList.add('hidden');
-            applyDeviceSettings(type);
-            updateDeviceDisplay(type);
+        let allChannels = [];
+        let currentChannels = [];
+        let categories = {};
+        let favorites = new Set();
+        let savedLists = [];
+        let currentList = null;
+        let currentPage = 1;
+        let itemsPerPage = 8;
+        let currentViewMode = 'grid';
+        // deviceType ya está definida y cargada arriba
+        let blockedCategories = new Set();
+        let currentLanguage = 'es';
+        let recordingPath = '';
+
+        // STORAGE KEYS
+        const STORAGE = {
+            DEVICE: 'streamflix_device',
+            FAVORITES: 'streamflix_favorites',
+            LISTS: 'streamflix_lists',
+            CURRENT_LIST: 'streamflix_current_list',
+            BLOCKED_CATS: 'streamflix_blocked',
+            LANGUAGE: 'streamflix_language',
+            REC_PATH: 'streamflix_recording_path'
         };
 
+        // ==========================================
+        // INIT - CARGAR AL INICIAR
+        // ==========================================
+        window.onload = function() {
+            loadFromStorage();
+            checkDevice();
+        };
+
+        // ==========================================
+        // FUNCIONES DE UTILIDAD (DEBEN ESTAR DISPONIBLES)
+        // ==========================================
+        
+        // DEVICE
         function applyDeviceSettings(type) {
             document.body.classList.remove('tv-mode', 'mobile-mode', 'pc-mode');
             
@@ -1191,96 +1250,20 @@
                 updateDeviceDisplay(savedDevice);
             }
         }
-
-        // ==========================================
-        // VARIABLES GLOBALES
-        // ==========================================
-        let allChannels = [];
-        let currentChannels = [];
-        let categories = {};
-        let favorites = new Set();
-        let savedLists = [];
-        let currentList = null;
-        let currentPage = 1;
-        let itemsPerPage = 8;
-        let currentViewMode = 'grid';
-        let deviceType = '';
-        let blockedCategories = new Set();
-        let currentLanguage = 'es';
-        let recordingPath = '';
-
-        // STORAGE KEYS
-        const STORAGE = {
-            DEVICE: 'streamflix_device',
-            FAVORITES: 'streamflix_favorites',
-            LISTS: 'streamflix_lists',
-            CURRENT_LIST: 'streamflix_current_list',
-            BLOCKED_CATS: 'streamflix_blocked',
-            LANGUAGE: 'streamflix_language',
-            REC_PATH: 'streamflix_recording_path'
-        };
-
-        // TRANSLATIONS
-        const translations = {
-            es: {
-                welcome: 'Bienvenido a StreamFlix',
-                selectDevice: 'Selecciona tu dispositivo para optimizar la experiencia',
-                allChannels: 'Todos los Canales',
-                favorites: 'Mis Favoritos',
-                noFavorites: 'No tienes canales favoritos aún',
-                search: 'Buscar canales, películas, series...'
-            },
-            en: {
-                welcome: 'Welcome to StreamFlix',
-                selectDevice: 'Select your device to optimize the experience',
-                allChannels: 'All Channels',
-                favorites: 'My Favorites',
-                noFavorites: 'You have no favorite channels yet',
-                search: 'Search channels, movies, series...'
-            }
-        };
-
-        // ==========================================
-        // INIT - CARGAR AL INICIAR
-        // ==========================================
-        window.onload = function() {
-            loadFromStorage();
-            checkDevice();
-        };
-
-        // SIDEBAR
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            
-            if (deviceType === 'mobile') {
-                sidebar.classList.toggle('active');
+        
+        // LOADING
+        function showLoading(show) {
+            const loader = document.getElementById('loadingContainer');
+            if (show) {
+                loader.classList.add('active');
+            } else {
+                loader.classList.remove('active');
             }
         }
 
-        function toggleCategories() {
-            const list = document.getElementById('categoriesList');
-            list.classList.toggle('expanded');
-        }
-
-        // NAVIGATION
-        function showSection(section) {
-            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-            
-            const sectionMap = {
-                home: 'homeSection',
-                favorites: 'favoritesSection',
-                lists: 'listsSection',
-                settings: 'settingsSection',
-                parental: 'parentalSection',
-                upload: 'uploadSection'
-            };
-            
-            // Activar la sección
-            document.getElementById(sectionMap[section]).classList.add('active');
-            
-            // Activar el elemento del menú, buscando el correcto (corrección de robustez)
+        // NAVIGATION (Redefinición completa, ahora con dependencias)
+        window.fullShowSection = function(section) {
+             // Activar el elemento del menú, buscando el correcto
             const menuItems = document.querySelectorAll('.menu-item');
             menuItems.forEach(item => {
                 if (item.getAttribute('onclick')?.includes(`showSection('${section}')`)) {
@@ -1295,11 +1278,10 @@
             } else if (section === 'parental') {
                 displayParentalControls();
             }
-            
-            if (deviceType === 'mobile') {
-                toggleSidebar();
-            }
-        }
+        };
+        // Se asegura que la navegación principal también se beneficie de la redefinición
+        window.showSection = window.fullShowSection;
+
 
         // UPLOAD TABS
         function switchUploadTab(tab) {
@@ -1356,7 +1338,7 @@
             return channels;
         }
 
-        // LOAD M3U (MODIFICADO PARA USAR PROXY)
+        // LOAD M3U (PROXIED - RUTA RELATIVA CORREGIDA)
         async function loadM3U() {
             const fileInput = document.getElementById('fileInput');
             const urlInput = document.getElementById('urlInput').value;
@@ -1372,7 +1354,8 @@
                     content = await fileInput.files[0].text();
                 } else if (urlInput) {
                     // Carga por URL a través del proxy.
-                    const proxyUrl = '/proxy.php?url=' + encodeURIComponent(urlInput);
+                    // --- RUTA RELATIVA CORREGIDA ---
+                    const proxyUrl = 'proxy.php?url=' + encodeURIComponent(urlInput);
                     
                     // Fetch a nuestro propio servidor (mismo origen)
                     const response = await fetch(proxyUrl);
@@ -1418,7 +1401,7 @@
             showLoading(false);
         }
 
-        // LOAD XTREAM (MODIFICADO PARA USAR PROXY)
+        // LOAD XTREAM (PROXIED - RUTA RELATIVA CORREGIDA)
         async function loadXtream() {
             const server = document.getElementById('xtreamServer').value;
             const user = document.getElementById('xtreamUser').value;
@@ -1437,7 +1420,8 @@
                 const apiUrl = `${server}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
 
                 // USANDO PROXY para evitar CORS
-                const proxyUrl = `/proxy.php?url=${encodeURIComponent(apiUrl)}`;
+                // --- RUTA RELATIVA CORREGIDA ---
+                const proxyUrl = `proxy.php?url=${encodeURIComponent(apiUrl)}`;
                 
                 const response = await fetch(proxyUrl);
                 
@@ -1451,9 +1435,8 @@
                 const channels = data.map(stream => {
                     const channelUrl = `${server}/live/${user}/${pass}/${stream.stream_id}.m3u8`;
                     
-                    // NOTA: Para resolver CORS también en el streaming, el URL del canal debe usar el proxy.
-                    // ESTO ES CLAVE para reproducir los canales Xtream
-                    const proxiedChannelUrl = `/proxy.php?url=${encodeURIComponent(channelUrl)}`;
+                    // CLAVE: La URL del canal también DEBE ser proxied para la reproducción.
+                    const proxiedChannelUrl = `proxy.php?url=${encodeURIComponent(channelUrl)}`;
 
                     return {
                         id: stream.stream_id,
@@ -1504,7 +1487,7 @@
             displayLists(); // Refresca la vista de listas
         }
         
-        // LOAD LIST POR ID (Corrección implementada)
+        // LOAD LIST POR ID
         function loadListById(listId) {
             const list = savedLists.find(l => l.id === listId);
             if (list) {
@@ -1523,6 +1506,12 @@
                 }
                 categories[cat].push(channel);
             });
+        }
+        
+        // TOGGLE CATEGORIES
+        function toggleCategories() {
+            const list = document.getElementById('categoriesList');
+            list.classList.toggle('expanded');
         }
 
         // DISPLAY CATEGORIES IN SIDEBAR
@@ -2164,16 +2153,6 @@ Nota: Esta es una función simulada. Para grabar realmente necesitarías un back
             }
 
             updateFavCount();
-        }
-
-        // LOADING
-        function showLoading(show) {
-            const loader = document.getElementById('loadingContainer');
-            if (show) {
-                loader.classList.add('active');
-            } else {
-                loader.classList.remove('active');
-            }
         }
 
         // Close suggestions when clicking outside

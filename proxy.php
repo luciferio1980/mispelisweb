@@ -20,6 +20,7 @@ if (function_exists('curl_init')) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_HEADER, 0); // No incluimos las cabeceras en el output
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Seguimos redirecciones
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // NECESARIO para URLs HTTPS de listas que usan certificados autogenerados
 
     $content = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -39,8 +40,9 @@ if (function_exists('curl_init')) {
 
 // 4. Manejo de errores
 if ($content === FALSE || $http_code >= 400) {
+    // Para depuración, podríamos enviar el código de error HTTP que obtuvimos del servidor externo
     http_response_code(502); // Bad Gateway
-    echo "Error: No se pudo obtener el contenido de la URL de destino o el servidor respondió con un código de error ({$http_code}).";
+    echo "Error: No se pudo obtener el contenido de la URL de destino. Código de estado del servidor externo: {$http_code}.";
     exit;
 }
 
