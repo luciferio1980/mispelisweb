@@ -1018,6 +1018,30 @@
         }
 
         // ==========================================
+        // HELPERS
+        // ==========================================
+        function detectCountry(name, category) {
+            // Intenta detectar país por prefijo en nombre (ej: "ES: Telecinco", "[US] CNN")
+            const nameUpper = name.toUpperCase();
+            // Patrones comunes de país al inicio: "ES:", "ES|", "[ES]", "(ES)"
+            const regex = /^([A-Z]{2})[:|]|^\[([A-Z]{2})\]|^\(([A-Z]{2})\)/;
+            const match = nameUpper.match(regex);
+            if(match) {
+                return (match[1] || match[2] || match[3]).trim();
+            }
+            
+            // Fallback: Usar primera palabra de la categoría si parece un código de país o nombre
+            if(category && category !== 'Otros' && category !== 'General') {
+                const catParts = category.split(/[:|]/);
+                const firstWord = catParts[0].trim();
+                // Si es corto, asumimos que es un código de país o región
+                if (firstWord.length > 1 && firstWord.length < 15) return firstWord;
+            }
+
+            return null;
+        }
+
+        // ==========================================
         // LOGICA DE CARGA M3U & XTREAM
         // ==========================================
         
@@ -1104,6 +1128,9 @@
                     if(current.name.toUpperCase().includes('FHD')) current.quality = 'FHD';
                     if(current.name.toUpperCase().includes('4K')) current.quality = '4K';
 
+                    // Detectar país
+                    current.country = detectCountry(current.name, current.category);
+
                 } else if (line && !line.startsWith('#') && current) {
                     current.url = line;
                     channels.push(current);
@@ -1128,8 +1155,27 @@
             updateStatus('Conectando API...');
 
             try {
+                // 1. OBTENER CATEGORÍAS PRIMERO (Corrección para que no salga "General")
+                updateStatus('Obteniendo Categorías...');
+                const catUrl = `${server}/player_api.php?username=${user}&password=${pass}&action=get_live_categories`;
+                const catProxy = 'https://corsproxy.io/?' + encodeURIComponent(catUrl);
+                
+                let categoriesMap = {};
+                try {
+                    const catRes = await fetch(catProxy);
+                    const catData = await catRes.json();
+                    if(Array.isArray(catData)) {
+                        catData.forEach(c => {
+                            categoriesMap[c.category_id] = c.category_name;
+                        });
+                    }
+                } catch(e) {
+                    console.warn("No se pudieron cargar categorías Xtream, usando ID por defecto");
+                }
+
+                // 2. OBTENER CANALES
+                updateStatus('Obteniendo Canales...');
                 const apiUrl = `${server}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
-                // Usar Proxy para la API también
                 const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(apiUrl);
                 
                 const resp = await fetch(proxyUrl);
@@ -1138,14 +1184,21 @@
                 const data = await resp.json();
                 if(!Array.isArray(data)) throw new Error('Respuesta inválida del servidor');
 
-                const channels = data.map(c => ({
-                    id: c.stream_id,
-                    name: c.name,
-                    category: c.category_name || 'General',
-                    logo: c.stream_icon,
-                    url: `${server}/live/${user}/${pass}/${c.stream_id}.m3u8`, // Construir URL directa
-                    quality: 'HD' // Asumir HD por defecto
-                }));
+                const channels = data.map(c => {
+                    // Usar el mapa de categorías o el nombre que venga
+                    const categoryName = categoriesMap[c.category_id] || c.category_name || 'General';
+                    
+                    return {
+                        id: c.stream_id,
+                        name: c.name,
+                        category: categoryName,
+                        logo: c.stream_icon,
+                        url: `${server}/live/${user}/${pass}/${c.stream_id}.m3u8`,
+                        quality: 'HD',
+                        // Detectar país automáticamente
+                        country: detectCountry(c.name, categoryName)
+                    };
+                });
 
                 const newList = {
                     id: Date.now(),
@@ -1235,6 +1288,7 @@
         }
 
         function populateFilters() {
+            // 1. Categorías
             const catSelect = document.getElementById('categoryFilter');
             catSelect.innerHTML = '<option value="">Todas las categorías</option>';
             Object.keys(categories).sort().forEach(cat => {
@@ -1242,15 +1296,50 @@
                     catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
                 }
             });
+
+            // 2. Países (Corrección: Llenar el filtro de países)
+            const countrySelect = document.getElementById('countryFilter');
+            countrySelect.innerHTML = '<option value="">Todos los países</option>';
+            
+            // Extraer países únicos
+            const countries = new Set();
+            allChannels.forEach(c => {
+                if(c.country) countries.add(c.country);
+            });
+
+            // Si hay países detectados, mostrarlos
+            if (countries.size > 0) {
+                Array.from(countries).sort().forEach(ctry => {
+                     countrySelect.innerHTML += `<option value="${ctry}">${ctry}</option>`;
+                });
+            } else {
+                // Si no se detectaron países, usar categorías principales como "país" opcional
+                // para que el filtro no esté vacío
+                Object.keys(categories).sort().forEach(cat => {
+                     countrySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+                });
+            }
         }
 
         function applyFilters() {
             const cat = document.getElementById('categoryFilter').value;
+            const country = document.getElementById('countryFilter').value;
             const search = document.getElementById('searchInput').value.toLowerCase();
 
             currentChannels = allChannels.filter(c => {
                 if (blockedCategories.has(c.category)) return false;
                 if (cat && c.category !== cat) return false;
+                // Filtro de país (Corregido)
+                if (country) {
+                    // Si el canal tiene propiedad country, comparar
+                    if (c.country) {
+                        if (c.country !== country) return false;
+                    } else {
+                        // Fallback: Si no tiene país detectado, comparar con categoría (por si el usuario usa el filtro fallback)
+                        if (c.category !== country) return false;
+                    }
+                }
+                
                 if (search && !c.name.toLowerCase().includes(search)) return false;
                 return true;
             });
