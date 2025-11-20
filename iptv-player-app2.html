@@ -893,21 +893,74 @@
         let currentViewMode = 'grid';
         let deviceType = localStorage.getItem('streamflix_device') || 'pc';
         let blockedCategories = new Set();
+        let db; // Variable para IndexedDB
         
         const STORAGE = {
             DEVICE: 'streamflix_device',
             FAVORITES: 'streamflix_favorites',
-            LISTS: 'streamflix_lists',
+            LISTS: 'streamflix_lists', // Se usará solo para referencia antigua o limpieza
             CURRENT_LIST: 'streamflix_current_list',
             BLOCKED_CATS: 'streamflix_blocked'
         };
 
         // ==========================================
+        // INDEXEDDB HELPERS (SOLUCION QUOTA EXCEEDED)
+        // ==========================================
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('StreamFlixDB', 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('lists')) {
+                        db.createObjectStore('lists', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        function dbAddList(list) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('lists', 'readwrite');
+                const store = tx.objectStore('lists');
+                const req = store.put(list);
+                req.onsuccess = () => resolve();
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function dbGetLists() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('lists', 'readonly');
+                const store = tx.objectStore('lists');
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function dbDeleteList(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('lists', 'readwrite');
+                const store = tx.objectStore('lists');
+                const req = store.delete(id);
+                req.onsuccess = () => resolve();
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        // ==========================================
         // INIT
         // ==========================================
-        window.onload = function() {
-            loadFromStorage();
-            checkDevice();
+        window.onload = async function() {
+            try {
+                db = await initDB();
+                await loadFromStorage();
+                checkDevice();
+            } catch (e) {
+                console.error("Error inicializando DB", e);
+            }
         };
 
         // ==========================================
@@ -1082,8 +1135,12 @@
                     date: new Date().toISOString()
                 };
 
+                // CAMBIO: GUARDAR EN INDEXEDDB
+                await dbAddList(newList);
                 savedLists.push(newList);
-                saveToStorage();
+                
+                // saveToStorage ya no guarda las listas pesadas en localStorage
+                saveToStorage(); 
                 loadList(newList);
                 
                 updateStatus(`✅ Cargados ${channels.length} canales.`);
@@ -1155,7 +1212,7 @@
             updateStatus('Conectando API...');
 
             try {
-                // 1. OBTENER CATEGORÍAS PRIMERO (Corrección para que no salga "General")
+                // 1. OBTENER CATEGORÍAS PRIMERO
                 updateStatus('Obteniendo Categorías...');
                 const catUrl = `${server}/player_api.php?username=${user}&password=${pass}&action=get_live_categories`;
                 const catProxy = 'https://corsproxy.io/?' + encodeURIComponent(catUrl);
@@ -1208,7 +1265,10 @@
                     date: new Date().toISOString()
                 };
 
+                // CAMBIO: GUARDAR EN INDEXEDDB
+                await dbAddList(newList);
                 savedLists.push(newList);
+                
                 saveToStorage();
                 loadList(newList);
                 showSection('home');
@@ -1233,7 +1293,12 @@
                 categories[cat].push(c);
             });
 
-            localStorage.setItem(STORAGE.CURRENT_LIST, JSON.stringify(list));
+            // No guardar CURRENT_LIST completo en localStorage si es gigante, solo ID
+            // Pero para mantener compatibilidad con el código original, intentamos guardarlo, 
+            // si falla, lo ignoramos para que no rompa la app.
+            try {
+                 localStorage.setItem(STORAGE.CURRENT_LIST, JSON.stringify(list));
+            } catch(e) { console.log("Lista actual muy grande para caché rápido, se cargará desde DB al inicio."); }
             
             displayCategories();
             populateFilters();
@@ -1245,9 +1310,13 @@
             if(list) loadList(list);
         }
 
-        function deleteList(id) {
+        async function deleteList(id) {
             if(!confirm('¿Borrar lista?')) return;
+            
+            // CAMBIO: BORRAR DE INDEXEDDB
+            await dbDeleteList(id);
             savedLists = savedLists.filter(l => l.id !== id);
+
             if(currentList && currentList.id === id) {
                 currentList = null;
                 allChannels = [];
@@ -1646,10 +1715,8 @@
             alert("La ruta se ha restablecido a la carpeta 'Descargas' predeterminada del navegador.");
         }
 
-        function loadFromStorage() {
-            const lsLists = localStorage.getItem(STORAGE.LISTS);
-            if(lsLists) savedLists = JSON.parse(lsLists);
-            
+        async function loadFromStorage() {
+            // Cargar favoritos y settings desde localStorage
             const lsFavs = localStorage.getItem(STORAGE.FAVORITES);
             if(lsFavs) favorites = new Set(JSON.parse(lsFavs));
             document.getElementById('favCount').innerText = favorites.size;
@@ -1657,11 +1724,22 @@
             const lsBlocked = localStorage.getItem(STORAGE.BLOCKED_CATS);
             if(lsBlocked) blockedCategories = new Set(JSON.parse(lsBlocked));
 
+            // Cargar listas desde IndexedDB (para evitar Quota Exceeded)
+            try {
+                const dbLists = await dbGetLists();
+                if (dbLists && dbLists.length > 0) {
+                    savedLists = dbLists;
+                }
+            } catch (e) {
+                console.error("Error cargando listas de DB", e);
+            }
+
+            // Intentar cargar lista actual
             const lsCurrent = localStorage.getItem(STORAGE.CURRENT_LIST);
             if(lsCurrent) {
                 try {
                     const parsed = JSON.parse(lsCurrent);
-                    // Verificar si existe aun
+                    // Verificar si existe aun en las listas cargadas
                     if(savedLists.find(l => l.id === parsed.id)) {
                         loadList(parsed);
                     }
@@ -1670,7 +1748,9 @@
         }
 
         function saveToStorage() {
-            localStorage.setItem(STORAGE.LISTS, JSON.stringify(savedLists));
+            // IMPORTANTE: YA NO GUARDAMOS LISTAS EN LOCALSTORAGE PARA EVITAR ERROR DE QUOTA
+            // localStorage.setItem(STORAGE.LISTS, JSON.stringify(savedLists)); 
+            
             localStorage.setItem(STORAGE.FAVORITES, JSON.stringify([...favorites]));
             localStorage.setItem(STORAGE.BLOCKED_CATS, JSON.stringify([...blockedCategories]));
         }
