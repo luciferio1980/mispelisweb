@@ -3,130 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFlix Player - Optimized UI</title>
+    <title>StreamFlix Player - Cloud Recording</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
         
-        :root {
-            --bg-main: #141414;
-            --accent: #e50914; /* Netflix Red */
-            --text-main: #ffffff;
-            --text-secondary: #b3b3b3;
-        }
-
-        body { 
-            font-family: 'Montserrat', sans-serif; 
-            background-color: #000; 
-            color: var(--text-main); 
-            overflow: hidden; 
-            margin: 0; padding: 0; 
-        }
+        :root { --bg-main: #141414; --accent: #e50914; --text-main: #ffffff; --text-secondary: #b3b3b3; }
+        body { font-family: 'Montserrat', sans-serif; background-color: #000; color: var(--text-main); overflow: hidden; margin: 0; padding: 0; }
         
-        /* Fondo Global Fijo */
-        #globalBackground {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg');
-            background-size: cover;
-            background-position: center;
-        }
-        #globalOverlay {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: rgba(0,0,0,0.85); /* Oscurece el fondo para que se lea el texto */
-            backdrop-filter: blur(5px);
-        }
+        #globalBackground { position: fixed; inset: 0; z-index: -1; background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg'); background-size: cover; background-position: center; }
+        #globalOverlay { position: fixed; inset: 0; z-index: -1; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
 
-        /* Scrollbar Personalizado */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #666; }
 
-        /* --- NUEVA LÓGICA DE CARÁTULAS (Sin Parpadeo) --- */
-        .poster-card { 
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), z-index 0.3s; 
-            position: relative; 
-            z-index: 1; 
-            aspect-ratio: 2/3; 
-            cursor: pointer; 
-            border-radius: 6px; 
-            overflow: hidden; 
-            background-color: #1f1f1f; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        
-        /* Texto de respaldo (detrás de la imagen) */
-        .poster-fallback {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            text-align: center;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-            z-index: 0;
-        }
-        .poster-fallback span {
-            font-size: 11px;
-            font-weight: 600;
-            color: #555;
-            text-transform: uppercase;
-            line-height: 1.2;
-            max-height: 100%;
-            overflow: hidden;
-        }
-
-        /* Imagen (cubre el texto si carga) */
-        .poster-img { 
-            width: 100%; 
-            height: 100%; 
-            position: relative; 
-            z-index: 10; 
-            transition: opacity 0.3s ease;
-            background: transparent;
-        }
-        .poster-img.img-error { opacity: 0 !important; } /* Se oculta suavemente si falla */
-
+        .poster-card { transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), z-index 0.3s; position: relative; z-index: 1; aspect-ratio: 2/3; cursor: pointer; border-radius: 6px; overflow: hidden; background-color: #1f1f1f; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .poster-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 8px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); z-index: 0; }
+        .poster-fallback span { font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; line-height: 1.2; max-height: 100%; overflow: hidden; }
+        .poster-img { width: 100%; height: 100%; position: relative; z-index: 10; transition: opacity 0.3s ease; background: transparent; }
+        .poster-img.img-error { opacity: 0 !important; } 
         .poster-card:hover { transform: scale(1.1); z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.9); outline: 2px solid white; }
-        
-        .poster-overlay { 
-            position: absolute; 
-            inset: 0; 
-            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 60%); 
-            opacity: 0; 
-            transition: opacity 0.3s; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-end; 
-            padding: 10px; 
-            z-index: 20; 
-        }
+        .poster-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 60%); opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; z-index: 20; }
         .poster-card:hover .poster-overlay { opacity: 1; }
         
-        /* LIST VIEW STYLES */
         .list-item { display: flex; align-items: center; padding: 10px; background-color: rgba(30,30,30,0.8); border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin-bottom: 4px; }
         .list-item:hover { background-color: rgba(255,255,255,0.1); }
         .list-item img { width: 45px; height: 45px; object-fit: contain; border-radius: 4px; margin-right: 15px; background: #000; }
         
-        /* Category Chips */
         .cat-chip { white-space: nowrap; padding: 6px 14px; background-color: rgba(50,50,50,0.7); border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; user-select: none; border: 1px solid transparent; backdrop-filter: blur(4px); }
         .cat-chip:hover { background-color: rgba(80,80,80,0.9); }
         .cat-chip.active { background-color: var(--accent); color: white; font-weight: bold; border-color: var(--accent); }
         .hide-scroll::-webkit-scrollbar { display: none; }
         
-        /* Sidebar Activo */
         .nav-item.active { color: white; border-right: 3px solid var(--accent); font-weight: bold; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05)); }
         .nav-item { color: var(--text-secondary); transition: color 0.2s; }
         .nav-item:hover { color: white; }
 
-        /* Reproductor */
         .custom-controls { pointer-events: none; overflow: hidden; }
         .player-wrapper.active-ui .custom-controls { pointer-events: auto; }
         .osd-panel { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease; opacity: 1; transform: translateY(0); }
@@ -139,53 +56,42 @@
         
         .rec-dot { display: inline-block; width: 10px; height: 10px; background-color: red; border-radius: 50%; margin-right: 5px; animation: pulse-red 1s infinite; }
         @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        
         .loader { border: 4px solid rgba(255,255,255,0.1); width: 50px; height: 50px; border-radius: 50%; border-left-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* GRID RESPONSIVE (REDUCIDO UN 20% APROX) */
-        /* Móvil: antes 140px -> ahora 110px */
-        /* PC: antes 180px -> ahora 145px */
         .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.8rem; padding-bottom: 50px; }
         @media (min-width: 1024px) { .content-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 1.2rem; } }
         .content-grid.list-layout { display: flex; flex-direction: column; gap: 0; }
 
-        /* Modales */
         .detail-modal { background-color: #181818; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
         .settings-modal { background-color: #222; border: 1px solid #444; }
     </style>
 </head>
 <body class="flex h-screen w-screen bg-black">
-    
     <div id="globalBackground"></div>
     <div id="globalOverlay"></div>
 
     <div id="loginScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black" style="background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg'); background-size: cover; background-blend-mode: multiply;">
         <div class="bg-black bg-opacity-80 p-10 rounded-lg max-w-md w-full shadow-2xl border border-gray-800">
             <h1 class="text-4xl font-bold text-red-600 mb-8 text-center uppercase tracking-widest">StreamFlix</h1>
-            
             <div class="flex space-x-2 mb-6 border-b border-gray-700">
                 <button id="tabM3u" class="flex-1 pb-2 text-white border-b-2 border-red-600 font-medium transition">M3U URL</button>
                 <button id="tabXtream" class="flex-1 pb-2 text-gray-400 hover:text-white transition">Xtream Codes</button>
             </div>
-
             <div id="panelM3u" class="space-y-4">
                 <input type="text" id="m3uInput" placeholder="Pega tu enlace M3U aquí..." class="w-full bg-[#333] text-white p-3 rounded outline-none focus:bg-[#444]">
                 <button onclick="app.loadSource('m3u')" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded transition">Entrar</button>
             </div>
-
             <div id="panelXtream" class="space-y-4 hidden">
                 <input type="text" id="xServer" placeholder="http://dominio.com:port" class="w-full bg-[#333] text-white p-3 rounded outline-none focus:bg-[#444]">
                 <input type="text" id="xUser" placeholder="Usuario" class="w-full bg-[#333] text-white p-3 rounded outline-none focus:bg-[#444]">
                 <input type="password" id="xPass" placeholder="Contraseña" class="w-full bg-[#333] text-white p-3 rounded outline-none focus:bg-[#444]">
                 <button onclick="app.loadSource('xtream')" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded transition">Entrar</button>
             </div>
-            
             <div id="loginStatus" class="mt-4 text-sm text-center text-gray-400 min-h-[20px]"></div>
-            
             <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
                 <button onclick="app.clearData()" class="hover:text-white underline">Borrar Datos</button>
-                <span>v4.5 UI Fixes</span>
+                <span>v5.0 CloudRec</span>
             </div>
         </div>
     </div>
@@ -195,44 +101,20 @@
             <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6">
                 <span class="text-red-600 font-bold text-2xl lg:text-3xl tracking-tighter">FLIX</span>
             </div>
-            
             <div class="flex flex-col space-y-2 mt-4 px-2">
-                <button onclick="app.nav('home')" id="nav-home" class="nav-item active flex items-center p-3 rounded-md hover:bg-white/10">
-                    <i class="fas fa-home text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">Inicio</span>
-                </button>
-                <button onclick="app.nav('live')" id="nav-live" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
-                    <i class="fas fa-broadcast-tower text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">TV en Vivo</span>
-                </button>
-                <button onclick="app.nav('movies')" id="nav-movies" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
-                    <i class="fas fa-film text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">Películas</span>
-                </button>
-                <button onclick="app.nav('series')" id="nav-series" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
-                    <i class="fas fa-tv text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">Series</span>
-                </button>
-                <button onclick="app.nav('favorites')" id="nav-favorites" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
-                    <i class="fas fa-heart text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">Favoritos</span>
-                </button>
-                <button onclick="app.openSettings()" id="nav-settings" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
-                    <i class="fas fa-cog text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">Ajustes</span>
-                </button>
+                <button onclick="app.nav('home')" id="nav-home" class="nav-item active flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-home text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Inicio</span></button>
+                <button onclick="app.nav('live')" id="nav-live" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-broadcast-tower text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">TV en Vivo</span></button>
+                <button onclick="app.nav('movies')" id="nav-movies" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-film text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Películas</span></button>
+                <button onclick="app.nav('series')" id="nav-series" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-tv text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Series</span></button>
+                <button onclick="app.nav('favorites')" id="nav-favorites" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-heart text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Favoritos</span></button>
+                <button onclick="app.openSettings()" id="nav-settings" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-cog text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Ajustes</span></button>
             </div>
-
             <div class="mt-auto mb-6 px-2">
-                <button onclick="location.reload()" class="nav-item flex items-center p-3 w-full rounded-md hover:bg-white/10">
-                    <i class="fas fa-sign-out-alt text-xl w-8 text-center"></i>
-                    <span class="hidden lg:block ml-3">Salir</span>
-                </button>
+                <button onclick="location.reload()" class="nav-item flex items-center p-3 w-full rounded-md hover:bg-white/10"><i class="fas fa-sign-out-alt text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Salir</span></button>
             </div>
         </nav>
 
         <main class="flex-grow relative overflow-hidden flex flex-col bg-transparent">
-            
             <header class="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black to-transparent z-10 flex items-center justify-between px-8">
                 <div class="flex items-center bg-black bg-opacity-60 border border-gray-700 rounded-full px-3 py-1">
                     <i class="fas fa-search text-gray-400"></i>
@@ -242,17 +124,12 @@
             </header>
 
             <div id="contentArea" class="flex-grow overflow-y-auto overflow-x-hidden relative pt-20">
-                
                 <div id="liveToolbar" class="hidden px-6 lg:px-10 mb-4 flex flex-col space-y-4">
                     <div class="flex items-center justify-between">
                         <h2 class="text-xl font-bold text-white">Categorías</h2>
-                        <button onclick="app.toggleLayout()" class="text-gray-400 hover:text-white p-2 rounded bg-black/50 flex items-center" title="Cambiar Vista">
-                            <i class="fas fa-th-large mr-2" id="layoutIcon"></i>
-                            <span class="text-sm" id="layoutText">Grid</span>
-                        </button>
+                        <button onclick="app.toggleLayout()" class="text-gray-400 hover:text-white p-2 rounded bg-black/50 flex items-center"><i class="fas fa-th-large mr-2" id="layoutIcon"></i><span class="text-sm" id="layoutText">Grid</span></button>
                     </div>
-                    <div id="categoryList" class="flex overflow-x-auto space-x-3 pb-2 hide-scroll">
-                        </div>
+                    <div id="categoryList" class="flex overflow-x-auto space-x-3 pb-2 hide-scroll"></div>
                 </div>
 
                 <div id="heroSection" class="relative w-full h-[60vh] hidden -mt-20">
@@ -260,11 +137,9 @@
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black"></div>
                     <div class="absolute bottom-0 left-0 p-8 lg:p-16 max-w-2xl">
                         <h1 id="heroTitle" class="text-4xl lg:text-6xl font-extrabold mb-4 text-shadow drop-shadow-lg">Título Destacado</h1>
-                        <p id="heroDesc" class="text-gray-300 mb-6 line-clamp-3 text-sm lg:text-base">Descripción de la película o serie destacada para dar ambiente de cine.</p>
+                        <p id="heroDesc" class="text-gray-300 mb-6 line-clamp-3 text-sm lg:text-base">Descripción...</p>
                         <div class="flex space-x-4">
-                            <button id="heroPlayBtn" class="bg-white text-black font-bold py-2 px-6 rounded flex items-center hover:bg-opacity-80 transition">
-                                <i class="fas fa-play mr-2"></i> Reproducir
-                            </button>
+                            <button id="heroPlayBtn" class="bg-white text-black font-bold py-2 px-6 rounded flex items-center hover:bg-opacity-80 transition"><i class="fas fa-play mr-2"></i> Reproducir</button>
                         </div>
                     </div>
                 </div>
@@ -272,10 +147,7 @@
                 <div class="p-6 lg:p-10">
                     <h2 id="sectionTitle" class="text-xl font-bold mb-4 text-white">Tendencias</h2>
                     <div id="gridContainer" class="content-grid"></div>
-                    
-                    <div id="loadMoreTrigger" class="h-20 w-full flex items-center justify-center text-gray-500 text-sm">
-                        Cargando más contenido...
-                    </div>
+                    <div id="loadMoreTrigger" class="h-20 w-full flex items-center justify-center text-gray-500 text-sm">Cargando más contenido...</div>
                 </div>
             </div>
         </main>
@@ -283,7 +155,6 @@
 
     <div id="videoOverlay" class="fixed inset-0 bg-black z-50 hidden flex items-center justify-center player-wrapper active-ui">
         <video id="mainVideo" class="w-full h-full object-contain bg-black" crossorigin="anonymous"></video>
-        
         <div id="bufferingSpinner" class="absolute pointer-events-none hidden"><div class="loader"></div></div>
 
         <div class="custom-controls absolute inset-0 flex flex-col justify-between p-4 lg:p-8">
@@ -296,15 +167,13 @@
                     </button>
                 </div>
                 <div class="text-right">
-                    <h3 id="playerTitle" class="text-lg font-bold text-shadow">Título del Video</h3>
+                    <h3 id="playerTitle" class="text-lg font-bold text-shadow">Título</h3>
                     <div id="playerEpg" class="text-sm text-gray-400"></div>
                 </div>
             </div>
-
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <i id="centerPlayIcon" class="fas fa-play text-6xl opacity-0 transition-opacity duration-500"></i>
             </div>
-
             <div class="bg-gradient-to-t from-black to-transparent pb-2 pt-10 px-2 rounded-b-lg osd-panel osd-bottom">
                 <div class="relative group h-2 bg-gray-600 rounded cursor-pointer mb-4" id="progressBarContainer">
                     <div id="progressBarFill" class="absolute top-0 left-0 h-full bg-red-600 rounded z-10" style="width: 0%"></div>
@@ -318,7 +187,7 @@
                             <button id="btnMute" class="text-white hover:text-gray-300 text-xl"><i class="fas fa-volume-up"></i></button>
                             <input type="range" min="0" max="1" step="0.1" id="volSlider" class="w-20 ml-2 h-1 accent-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         </div>
-                        <span id="timeDisplay" class="text-xs text-gray-400 font-mono">00:00 / 00:00</span>
+                        <span id="timeDisplay" class="text-xs text-gray-400 font-mono">00:00</span>
                     </div>
                     <div class="flex items-center space-x-4">
                         <button onclick="player.toggleFullscreen()" class="text-white hover:text-gray-300 text-xl"><i class="fas fa-expand"></i></button>
@@ -342,11 +211,24 @@
             
             <div class="space-y-6">
                 <div>
-                    <h3 class="text-gray-300 font-medium mb-2">Ruta de Grabaciones</h3>
-                    <p class="text-xs text-gray-500 mb-3">Selecciona una carpeta para guardar las grabaciones directamente sin descargarlas al final. (Solo PC Chrome/Edge)</p>
+                    <h3 class="text-gray-300 font-medium mb-2"><i class="fab fa-google-drive mr-2 text-blue-500"></i>Grabación en Nube</h3>
+                    <p class="text-xs text-gray-500 mb-3">Conecta tu cuenta de Google para guardar las grabaciones en Drive automáticamente al terminar.</p>
+                    <div class="flex flex-col space-y-2">
+                        <div id="driveStatus" class="text-sm text-gray-500 bg-[#333] p-2 rounded">
+                            <i class="fas fa-circle-notch mr-2"></i> No conectado
+                        </div>
+                        <button onclick="drive.login()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition flex items-center justify-center">
+                            <i class="fab fa-google mr-2"></i> Conectar Drive
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-700 pt-4">
+                    <h3 class="text-gray-300 font-medium mb-2">Ruta Local (PC)</h3>
+                    <p class="text-xs text-gray-500 mb-3">Opción alternativa para guardar en disco local.</p>
                     <div class="flex flex-col space-y-2">
                         <div id="folderStatus" class="text-sm text-yellow-500 bg-[#333] p-2 rounded">
-                            <i class="fas fa-folder mr-2"></i> Usando carpeta Descargas (Por defecto)
+                            <i class="fas fa-folder mr-2"></i> Por defecto (Descargas)
                         </div>
                         <button onclick="recorder.pickFolder()" class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded transition flex items-center justify-center">
                             <i class="fas fa-folder-open mr-2"></i> Cambiar Ruta
@@ -357,13 +239,23 @@
         </div>
     </div>
 
+    <div id="uploadProgressModal" class="fixed inset-0 z-[80] bg-black bg-opacity-95 hidden items-center justify-center flex-col">
+        <div class="loader mb-4"></div>
+        <h2 class="text-xl font-bold text-white mb-2">Subiendo a Google Drive...</h2>
+        <p class="text-gray-400 text-sm">Por favor, no cierres la ventana.</p>
+    </div>
+
     <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded shadow-lg z-[70] hidden transition-opacity">Mensaje</div>
 
 <script>
 /**
  * STREAMFLIX CORE ENGINE
- * V4.5 - Optimized UI & No-Flicker Images
+ * V5.0 - Cloud Recording Enabled
  */
+
+// --- CONFIGURACIÓN DE GOOGLE (IMPORTANTE: RELLENAR ESTO) ---
+const GOOGLE_CLIENT_ID = 'TU_CLIENT_ID_DE_GOOGLE_CLOUD_AQUI'; 
+// Si no pones el Client ID, la función de Drive dará error.
 
 const DOM = {
     login: document.getElementById('loginScreen'),
@@ -376,12 +268,10 @@ const DOM = {
     heroPlay: document.getElementById('heroPlayBtn'),
     search: document.getElementById('searchInput'),
     title: document.getElementById('sectionTitle'),
-    // Live TV
     liveToolbar: document.getElementById('liveToolbar'),
     catList: document.getElementById('categoryList'),
     layoutIcon: document.getElementById('layoutIcon'),
     layoutText: document.getElementById('layoutText'),
-    // Player
     overlay: document.getElementById('videoOverlay'),
     video: document.getElementById('mainVideo'),
     pTitle: document.getElementById('playerTitle'),
@@ -396,11 +286,12 @@ const DOM = {
     btnRecord: document.getElementById('btnRecord'),
     recDot: document.getElementById('recDot'),
     recText: document.getElementById('recText'),
-    // Modals
     detailModal: document.getElementById('detailModal'),
     detailContent: document.getElementById('detailContent'),
     settingsModal: document.getElementById('settingsModal'),
     folderStatus: document.getElementById('folderStatus'),
+    driveStatus: document.getElementById('driveStatus'),
+    uploadModal: document.getElementById('uploadProgressModal'),
 };
 
 const STATE = {
@@ -415,6 +306,92 @@ const STATE = {
     page: 1,
     perPage: 50,
     hls: null,
+    driveToken: null
+};
+
+// --- GOOGLE DRIVE MODULE ---
+const drive = {
+    tokenClient: null,
+    
+    init: () => {
+        if(typeof google === 'undefined' || !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')) return;
+        
+        drive.tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: (tokenResponse) => {
+                if (tokenResponse && tokenResponse.access_token) {
+                    STATE.driveToken = tokenResponse.access_token;
+                    DOM.driveStatus.innerHTML = `<i class="fas fa-check-circle mr-2 text-green-500"></i> Conectado`;
+                    DOM.driveStatus.classList.replace('text-gray-500', 'text-white');
+                    app.showToast("Google Drive Conectado");
+                    // Guardar preferencia, aunque el token caduca
+                    localStorage.setItem('sf_drive_connected', 'true');
+                }
+            },
+        });
+        
+        // Auto-conectar si estaba conectado antes (pedirá permiso si token caducó)
+        if(localStorage.getItem('sf_drive_connected') === 'true') {
+            // No forzamos login automático invasivo, usuario debe dar click
+        }
+    },
+
+    login: () => {
+        if(!drive.tokenClient) {
+            if(!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')) {
+                alert("ERROR: Debes configurar el CLIENT_ID de Google en el código fuente (línea 363) para usar esta función.");
+                return;
+            }
+            drive.init();
+        }
+        drive.tokenClient.requestAccessToken();
+    },
+
+    upload: async (blob, filename) => {
+        if (!STATE.driveToken) {
+            app.showToast("Error: No autenticado en Drive");
+            return false;
+        }
+
+        DOM.uploadModal.classList.remove('hidden');
+        DOM.uploadModal.classList.add('flex');
+
+        const metadata = {
+            name: filename,
+            mimeType: 'video/webm'
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', blob);
+
+        try {
+            const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: new Headers({ 'Authorization': 'Bearer ' + STATE.driveToken }),
+                body: form
+            });
+            const data = await res.json();
+            if(data.id) {
+                app.showToast("¡Grabación guardada en Drive!");
+            } else {
+                throw new Error("Error en respuesta de Drive");
+            }
+        } catch(e) {
+            console.error(e);
+            app.showToast("Error subiendo a Drive. Se descargará localmente.");
+            // Fallback descarga normal
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        } finally {
+            DOM.uploadModal.classList.add('hidden');
+            DOM.uploadModal.classList.remove('flex');
+        }
+    }
 };
 
 // --- RECORDER MODULE ---
@@ -432,10 +409,7 @@ const recorder = {
             DOM.folderStatus.innerHTML = `<i class="fas fa-check-circle mr-2 text-green-500"></i> Carpeta: ${recorder.dirHandle.name}`;
             DOM.folderStatus.classList.replace('text-yellow-500', 'text-white');
             app.showToast(`Guardando en: ${recorder.dirHandle.name}`);
-        } catch (err) {
-            console.error(err);
-            if(err.name !== 'AbortError') app.showToast("Tu navegador no soporta esta función.");
-        }
+        } catch (err) { console.error(err); }
     },
 
     start: async (stream) => {
@@ -445,54 +419,56 @@ const recorder = {
         
         recorder.mediaRecorder = new MediaRecorder(stream, options);
 
-        if (recorder.dirHandle) {
+        // Si hay carpeta local y NO estamos usando Drive (o Drive no está conectado)
+        if (recorder.dirHandle && !STATE.driveToken) {
             try {
                 const fileName = `streamflix_${Date.now()}.webm`;
                 recorder.fileHandle = await recorder.dirHandle.getFileHandle(fileName, { create: true });
                 recorder.writable = await recorder.fileHandle.createWritable();
                 
                 recorder.mediaRecorder.ondataavailable = async (event) => {
-                    if (event.data.size > 0 && recorder.writable) {
-                        await recorder.writable.write(event.data);
-                    }
+                    if (event.data.size > 0 && recorder.writable) await recorder.writable.write(event.data);
                 };
-                
-                recorder.mediaRecorder.onstop = async () => {
-                    if(recorder.writable) await recorder.writable.close();
-                    app.showToast("Grabación guardada correctamente.");
-                };
-
+                recorder.mediaRecorder.onstop = async () => { if(recorder.writable) await recorder.writable.close(); app.showToast("Grabado en disco local."); };
             } catch(e) {
-                console.error("Error escritura directa", e);
-                app.showToast("Error escribiendo archivo. Usando modo descarga.");
+                console.error("Fallo local", e);
                 recorder.dirHandle = null;
                 recorder.startFallback(stream, options);
                 return;
             }
-        } 
-        else {
+        } else {
+            // Modo Memoria (Para descarga o Drive)
             recorder.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) recorder.chunks.push(event.data);
             };
+            
             recorder.mediaRecorder.onstop = () => {
                 const blob = new Blob(recorder.chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `grabacion_${Date.now()}.webm`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                app.showToast("Grabación descargada");
+                const fileName = `streamflix_cloud_${Date.now()}.webm`;
+
+                // Prioridad: Si hay token de Drive, subimos. Si no, descargamos.
+                if (STATE.driveToken) {
+                    drive.upload(blob, fileName);
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    app.showToast("Grabación descargada");
+                }
             };
         }
 
         recorder.mediaRecorder.start(1000); 
         recorder.isRecording = true;
         DOM.recDot.classList.add('rec-dot');
-        DOM.recText.innerText = recorder.dirHandle ? "Grabando en Disco..." : "Grabando...";
-        app.showToast(recorder.dirHandle ? "Grabando Directamente en Carpeta" : "Grabación Iniciada (Memoria)");
+        const mode = STATE.driveToken ? "NUBE (Drive)" : (recorder.dirHandle ? "DISCO LOCAL" : "MEMORIA");
+        DOM.recText.innerText = `GRABANDO (${mode})`;
+        app.showToast(`Grabando en: ${mode}`);
     },
 
     stop: () => {
@@ -511,10 +487,8 @@ const recorder = {
             const blob = new Blob(recorder.chunks, { type: 'video/webm' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.style.display = 'none';
             a.href = url;
             a.download = `grabacion_fallback_${Date.now()}.webm`;
-            document.body.appendChild(a);
             a.click();
         };
         recorder.mediaRecorder.start();
@@ -522,7 +496,6 @@ const recorder = {
 };
 
 // --- APP LOGIC ---
-
 const app = {
     init: () => {
         document.getElementById('tabM3u').onclick = () => app.toggleLoginTab('m3u');
@@ -541,31 +514,27 @@ const app = {
                 app.loadSource('xtream', true);
             }
         }
+        // Inicializar Google Drive al cargar página
+        window.onload = () => {
+             // Pequeño delay para asegurar que script de google cargó
+             setTimeout(() => drive.init(), 1000);
+        };
 
         DOM.search.addEventListener('input', (e) => {
             if(e.target.value.length > 2) app.filterContent(e.target.value);
             else if(e.target.value.length === 0) app.nav(STATE.view);
         });
-
         document.getElementById('contentArea').addEventListener('scroll', (e) => {
-            const el = e.target;
-            if (el.scrollHeight - el.scrollTop <= el.clientHeight + 200) {
-                app.renderMore();
-            }
+            if (e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 200) app.renderMore();
         });
-        
         setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }, 1000);
     },
 
     toggleLoginTab: (tab) => {
-        const m3uP = document.getElementById('panelM3u');
-        const xtP = document.getElementById('panelXtream');
-        const m3uT = document.getElementById('tabM3u');
-        const xtT = document.getElementById('tabXtream');
-        
+        const m3uP = document.getElementById('panelM3u'); const xtP = document.getElementById('panelXtream');
+        const m3uT = document.getElementById('tabM3u'); const xtT = document.getElementById('tabXtream');
         if (tab === 'm3u') {
             m3uP.classList.remove('hidden'); xtP.classList.add('hidden');
             m3uT.classList.add('border-red-600', 'text-white'); m3uT.classList.remove('text-gray-400');
@@ -581,18 +550,15 @@ const app = {
         const status = document.getElementById('loginStatus');
         status.innerText = "Conectando al servidor...";
         status.className = "mt-4 text-sm text-center text-yellow-500 animate-pulse";
-        
         try {
             if (type === 'm3u') {
                 const url = document.getElementById('m3uInput').value.trim();
                 if (!url) throw new Error("URL vacía");
-                
                 const proxy = `https://miproxyiptv.onrender.com/${url}`;
                 const res = await fetch(proxy);
                 if (!res.ok) throw new Error("Error descargando lista");
                 const text = await res.text();
                 app.parseM3U(text);
-                
                 localStorage.setItem('sf_creds', JSON.stringify({ type: 'm3u', url }));
                 STATE.sourceType = 'm3u';
             } else {
@@ -600,66 +566,32 @@ const app = {
                 const u = document.getElementById('xUser').value.trim();
                 const p = document.getElementById('xPass').value.trim();
                 if(!s || !u || !p) throw new Error("Faltan datos");
-                
                 const baseUrl = `${s}/player_api.php?username=${u}&password=${p}`;
                 STATE.creds = { s, u, p };
-
-                status.innerText = "Descargando Categorías...";
-                let liveCats = [];
+                status.innerText = "Descargando Datos...";
+                
+                // Carga optimizada (paralela si es posible, aquí secuencial por simplicidad de errores)
                 try {
-                    liveCats = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_categories`)).json();
-                } catch(e) { console.warn("Error fetching cats", e); }
-                
-                const catMap = {};
-                if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
+                    const [live, vod, ser, liveCats] = await Promise.all([
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_streams`).then(r=>r.json()),
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_vod_streams`).then(r=>r.json()),
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_series`).then(r=>r.json()),
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_categories`).then(r=>r.json()).catch(()=>[])
+                    ]);
 
-                status.innerText = "Descargando Canales...";
-                const live = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_streams`)).json();
-                
-                status.innerText = "Descargando Películas...";
-                const vod = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_vod_streams`)).json();
-                
-                status.innerText = "Descargando Series...";
-                const ser = await (await fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_series`)).json();
+                    const catMap = {};
+                    if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
 
-                STATE.data.live = live.map(x => ({ 
-                    id: x.stream_id, 
-                    name: x.name, 
-                    img: x.stream_icon, 
-                    url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, 
-                    type: 'live', 
-                    cat: catMap[x.category_id] || 'Otras' 
-                }));
-                
-                STATE.data.movie = vod.map(x => ({ 
-                    id: x.stream_id, 
-                    name: x.name, 
-                    img: x.stream_icon || x.cover, 
-                    url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, 
-                    type: 'movie', 
-                    rating: x.rating 
-                }));
-                
-                STATE.data.series = ser.map(x => ({ 
-                    id: x.series_id, 
-                    name: x.name, 
-                    img: x.cover || x.stream_icon, 
-                    url: null, 
-                    type: 'series', 
-                    plot: x.plot 
-                }));
-
-                localStorage.setItem('sf_creds', JSON.stringify({ type: 'xtream', server:s, username:u, password:p }));
-                STATE.sourceType = 'xtream';
+                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon, url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
+                    STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon || x.cover, url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
+                    STATE.data.series = ser.map(x => ({ id: x.series_id, name: x.name, img: x.cover || x.stream_icon, url: null, type: 'series', plot: x.plot }));
+                    
+                    localStorage.setItem('sf_creds', JSON.stringify({ type: 'xtream', server:s, username:u, password:p }));
+                    STATE.sourceType = 'xtream';
+                } catch(err) { throw new Error("Fallo en API Xtream: " + err.message); }
             }
-            
             status.innerText = "¡Listo!";
-            setTimeout(() => {
-                DOM.login.classList.add('hidden');
-                DOM.main.classList.remove('hidden');
-                app.nav('home');
-            }, 500);
-
+            setTimeout(() => { DOM.login.classList.add('hidden'); DOM.main.classList.remove('hidden'); app.nav('home'); }, 500);
         } catch (e) {
             console.error(e);
             status.innerText = "Error: " + e.message;
@@ -670,7 +602,6 @@ const app = {
     parseM3U: (text) => {
         const lines = text.split('\n');
         STATE.data = { live: [], movie: [], series: [] };
-        
         for(let i=0; i<lines.length; i++) {
             const line = lines[i].trim();
             if(line.startsWith('#EXTINF:')) {
@@ -680,45 +611,27 @@ const app = {
                     const img = line.match(/tvg-logo="([^"]*)"/)?.[1] || '';
                     const group = line.match(/group-title="([^"]*)"/)?.[1] || 'General';
                     const groupUpper = group.toUpperCase();
-                    
-                    const isMovie = url.includes('/movie/') || groupUpper.includes('MOVIE') || groupUpper.includes('VOD') || groupUpper.includes('CINE') || groupUpper.includes('PELICULA') || url.match(/\.(mp4|mkv|avi|mov)$/i);
-                    const isSeries = url.includes('/series/') || groupUpper.includes('SERIES') || groupUpper.includes('SEASON');
+                    const isMovie = url.includes('/movie/') || groupUpper.includes('MOVIE') || url.match(/\.(mp4|mkv|avi)$/i);
+                    const isSeries = url.includes('/series/') || groupUpper.includes('SERIES');
 
-                    if(isSeries) {
-                        STATE.data.series.push({ name, img, url, type: 'series', group });
-                    } else if(isMovie) {
-                        STATE.data.movie.push({ name, img, url, type: 'movie', group });
-                    } else {
-                        STATE.data.live.push({ name, img, url, type: 'live', cat: group }); 
-                    }
+                    if(isSeries) STATE.data.series.push({ name, img, url, type: 'series', group });
+                    else if(isMovie) STATE.data.movie.push({ name, img, url, type: 'movie', group });
+                    else STATE.data.live.push({ name, img, url, type: 'live', cat: group }); 
                 }
             }
         }
     },
-
-    clearData: () => {
-        localStorage.removeItem('sf_creds');
-        localStorage.removeItem('sf_favorites');
-        location.reload();
-    },
-
+    clearData: () => { localStorage.clear(); location.reload(); },
+    
     nav: (view) => {
         STATE.view = view;
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        const activeNav = document.getElementById(`nav-${view}`);
-        if(activeNav) activeNav.classList.add('active');
-
-        DOM.hero.classList.add('hidden');
-        DOM.liveToolbar.classList.add('hidden'); 
-        DOM.grid.innerHTML = '';
-        DOM.grid.className = 'content-grid'; 
-        STATE.page = 1;
-        document.getElementById('contentArea').scrollTop = 0;
+        document.getElementById(`nav-${view}`)?.classList.add('active');
+        DOM.hero.classList.add('hidden'); DOM.liveToolbar.classList.add('hidden'); 
+        DOM.grid.innerHTML = ''; DOM.grid.className = 'content-grid'; 
+        STATE.page = 1; document.getElementById('contentArea').scrollTop = 0;
         
-        if(view === 'live') DOM.search.placeholder = "Buscar Canales...";
-        else if(view === 'movies') DOM.search.placeholder = "Buscar Películas...";
-        else if(view === 'series') DOM.search.placeholder = "Buscar Series...";
-        else DOM.search.placeholder = "Buscar en Todo...";
+        DOM.search.placeholder = view === 'live' ? "Buscar Canales..." : (view === 'movies' ? "Buscar Películas..." : "Buscar...");
 
         if (view === 'home') {
             DOM.title.innerText = "Tendencias & Recomendados";
@@ -732,18 +645,14 @@ const app = {
             }
             STATE.renderList = [...STATE.data.movie.slice(0,40), ...STATE.data.series.slice(0,40), ...STATE.data.live.slice(0,20)].sort(() => 0.5 - Math.random());
             app.renderMore();
-            
         } else if (view === 'live') {
             DOM.title.innerText = "TV en Vivo";
             DOM.liveToolbar.classList.remove('hidden');
             app.renderCategories();
             if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout');
             app.filterByCategory(STATE.activeCat);
-            
         } else if (view === 'favorites') {
-            DOM.title.innerText = "Mi Lista";
-            STATE.renderList = STATE.favorites;
-            app.renderMore();
+            DOM.title.innerText = "Mi Lista"; STATE.renderList = STATE.favorites; app.renderMore();
         } else {
             DOM.title.innerText = view === 'movies' ? "Películas" : "Series";
             STATE.renderList = STATE.data[view === 'movies' ? 'movie' : 'series'];
@@ -753,70 +662,37 @@ const app = {
 
     renderCategories: () => {
         const uniqueCats = ['Todas', ...new Set(STATE.data.live.map(c => c.cat))].sort();
-        DOM.catList.innerHTML = uniqueCats.map(cat => 
-            `<button onclick="app.setCategory('${cat}')" class="cat-chip ${STATE.activeCat === cat ? 'active' : ''}">${cat}</button>`
-        ).join('');
+        DOM.catList.innerHTML = uniqueCats.map(cat => `<button onclick="app.setCategory('${cat}')" class="cat-chip ${STATE.activeCat === cat ? 'active' : ''}">${cat}</button>`).join('');
     },
-
-    setCategory: (cat) => {
-        STATE.activeCat = cat;
-        app.renderCategories();
-        app.filterByCategory(cat);
-    },
-
+    setCategory: (cat) => { STATE.activeCat = cat; app.renderCategories(); app.filterByCategory(cat); },
     filterByCategory: (cat) => {
-        STATE.page = 1;
-        DOM.grid.innerHTML = '';
-        if(cat === 'Todas') {
-            STATE.renderList = STATE.data.live;
-        } else {
-            STATE.renderList = STATE.data.live.filter(c => c.cat === cat);
-        }
+        STATE.page = 1; DOM.grid.innerHTML = '';
+        STATE.renderList = cat === 'Todas' ? STATE.data.live : STATE.data.live.filter(c => c.cat === cat);
         app.renderMore();
     },
-
     toggleLayout: () => {
         STATE.viewMode = STATE.viewMode === 'grid' ? 'list' : 'grid';
         DOM.layoutText.innerText = STATE.viewMode === 'grid' ? 'Grid' : 'Lista';
         DOM.layoutIcon.className = STATE.viewMode === 'grid' ? 'fas fa-th-large mr-2' : 'fas fa-list mr-2';
-        DOM.grid.innerHTML = '';
-        STATE.page = 1;
-        if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout');
-        else DOM.grid.classList.remove('list-layout');
+        DOM.grid.innerHTML = ''; STATE.page = 1;
+        if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout'); else DOM.grid.classList.remove('list-layout');
         app.renderMore();
     },
-
     filterContent: (term) => {
         term = term.toLowerCase();
-        let pool = [];
-        switch(STATE.view) {
-            case 'live': pool = STATE.data.live; break;
-            case 'movies': pool = STATE.data.movie; break;
-            case 'series': pool = STATE.data.series; break;
-            case 'favorites': pool = STATE.favorites; break;
-            default: pool = [...STATE.data.movie, ...STATE.data.series, ...STATE.data.live]; 
-        }
+        let pool = [...STATE.data.live, ...STATE.data.movie, ...STATE.data.series];
+        if(STATE.view !== 'home' && STATE.view !== 'favorites') pool = STATE.data[STATE.view === 'live' ? 'live' : (STATE.view === 'movies' ? 'movie' : 'series')];
+        if(STATE.view === 'favorites') pool = STATE.favorites;
         STATE.renderList = pool.filter(x => x.name.toLowerCase().includes(term));
-        STATE.page = 1;
-        DOM.grid.innerHTML = '';
-        DOM.hero.classList.add('hidden');
-        DOM.title.innerText = `Resultados: "${term}"`;
-        app.renderMore();
+        STATE.page = 1; DOM.grid.innerHTML = ''; DOM.hero.classList.add('hidden');
+        DOM.title.innerText = `Resultados: "${term}"`; app.renderMore();
     },
-
     renderMore: () => {
         const start = (STATE.page - 1) * STATE.perPage;
-        const end = start + STATE.perPage;
-        const items = STATE.renderList.slice(start, end);
-        
-        if (items.length === 0 && STATE.page === 1) {
-            DOM.grid.innerHTML = '<div class="text-gray-500 col-span-full text-center mt-10">No hay contenido disponible.</div>';
-            return;
-        }
-
+        const items = STATE.renderList.slice(start, start + STATE.perPage);
+        if (items.length === 0 && STATE.page === 1) { DOM.grid.innerHTML = '<div class="text-gray-500 col-span-full text-center mt-10">No hay contenido.</div>'; return; }
         const fragment = document.createDocumentFragment();
-        const isLive = STATE.view === 'live';
-        const isListMode = isLive && STATE.viewMode === 'list';
+        const isListMode = STATE.view === 'live' && STATE.viewMode === 'list';
 
         items.forEach(item => {
             const el = document.createElement('div');
@@ -825,304 +701,129 @@ const app = {
             const imgUrl = hasImg ? item.img : '';
 
             if (isListMode) {
-                const listPlaceholder = 'https://via.placeholder.com/100?text=TV';
+                const placeholder = 'https://via.placeholder.com/100?text=TV';
                 el.className = 'list-item group animate-fade-in';
                 el.innerHTML = `
-                    <img src="${hasImg ? imgUrl : listPlaceholder}" loading="lazy" onerror="this.src='${listPlaceholder}'">
-                    <div class="flex-grow">
-                        <div class="font-bold text-white text-sm md:text-base">${item.name}</div>
-                        <div class="text-xs text-gray-400">${item.cat || ''}</div>
-                    </div>
+                    <img src="${hasImg ? imgUrl : placeholder}" loading="lazy" onerror="this.src='${placeholder}'">
+                    <div class="flex-grow"><div class="font-bold text-white text-sm md:text-base">${item.name}</div><div class="text-xs text-gray-400">${item.cat || ''}</div></div>
                     <div class="flex items-center space-x-3 mr-2">
                         <button class="text-gray-400 hover:text-red-500 fav-trigger"><i class="${isFav ? 'fas' : 'far'} fa-heart"></i></button>
                         <button class="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 play-trigger"><i class="fas fa-play"></i></button>
-                    </div>
-                `;
+                    </div>`;
             } else {
-                // VISTA GRID SIN PARPADEO
                 el.className = 'poster-card group';
                 const objFitClass = item.type === 'live' ? 'object-contain p-2' : 'object-cover';
-                
-                // Si la imagen falla, la clase img-error la oculta y se ve el poster-fallback
                 el.innerHTML = `
-                    <div class="poster-fallback">
-                        <span>${item.name}</span>
-                    </div>
-                    ${hasImg ? 
-                        `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" onerror="this.classList.add('img-error')">` 
-                        : '' 
-                    }
+                    <div class="poster-fallback"><span>${item.name}</span></div>
+                    ${hasImg ? `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" onerror="this.classList.add('img-error')">` : ''}
                     <div class="poster-overlay">
                         <h4 class="font-bold text-white text-sm leading-tight mb-2 line-clamp-2">${item.name}</h4>
                         <div class="flex justify-between items-center">
-                            <button class="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center hover:scale-110 transition play-trigger">
-                                <i class="fas fa-play text-xs"></i>
-                            </button>
-                            <button class="text-white hover:text-red-500 transition fav-trigger">
-                                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
-                            </button>
+                            <button class="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center hover:scale-110 transition play-trigger"><i class="fas fa-play text-xs"></i></button>
+                            <button class="text-white hover:text-red-500 transition fav-trigger"><i class="${isFav ? 'fas' : 'far'} fa-heart"></i></button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
-            
-            const action = (e) => {
-                if(e) e.stopPropagation();
-                if(item.type === 'live') player.start(item.url, item.name, item.type, item.id);
-                else app.openDetail(item);
-            };
-
-            const playBtn = el.querySelector('.play-trigger');
-            if(playBtn) playBtn.onclick = action;
-            el.onclick = action;
-            
-            const favBtn = el.querySelector('.fav-trigger');
-            if(favBtn) favBtn.onclick = (e) => {
-                e.stopPropagation();
-                app.toggleFav(item, e.currentTarget.querySelector('i'));
-            };
-
+            const action = (e) => { if(e) e.stopPropagation(); if(item.type === 'live') player.start(item.url, item.name, item.type, item.id); else app.openDetail(item); };
+            el.querySelector('.play-trigger').onclick = action; el.onclick = action;
+            el.querySelector('.fav-trigger').onclick = (e) => { e.stopPropagation(); app.toggleFav(item, e.currentTarget.querySelector('i')); };
             fragment.appendChild(el);
         });
-
-        DOM.grid.appendChild(fragment);
-        STATE.page++;
+        DOM.grid.appendChild(fragment); STATE.page++;
     },
-
     toggleFav: (item, icon) => {
         const idx = STATE.favorites.findIndex(f => f.name === item.name);
-        if (idx > -1) {
-            STATE.favorites.splice(idx, 1);
-            icon.classList.replace('fas', 'far');
-            icon.parentElement.classList.remove('text-red-500');
-            app.showToast('Eliminado de Favoritos');
-        } else {
-            STATE.favorites.push(item);
-            icon.classList.replace('far', 'fas');
-            icon.parentElement.classList.add('text-red-500');
-            app.showToast('Añadido a Favoritos');
-        }
+        if (idx > -1) { STATE.favorites.splice(idx, 1); icon.classList.replace('fas', 'far'); icon.parentElement.classList.remove('text-red-500'); app.showToast('Eliminado de Favoritos'); }
+        else { STATE.favorites.push(item); icon.classList.replace('far', 'fas'); icon.parentElement.classList.add('text-red-500'); app.showToast('Añadido a Favoritos'); }
         localStorage.setItem('sf_favorites', JSON.stringify(STATE.favorites));
         if(STATE.view === 'favorites') app.nav('favorites');
     },
-
     showToast: (msg) => {
-        const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.classList.remove('hidden', 'opacity-0');
-        setTimeout(() => t.classList.add('opacity-0'), 2000);
-        setTimeout(() => t.classList.add('hidden'), 2300);
+        const t = document.getElementById('toast'); t.innerText = msg;
+        t.classList.remove('hidden', 'opacity-0'); setTimeout(() => t.classList.add('opacity-0'), 2000); setTimeout(() => t.classList.add('hidden'), 2300);
     },
-
     translate: async (text) => {
         if(!text || text.length < 5 || text.includes("Sin sinopsis")) return text;
         try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(text)}`;
-            const proxyUrl = `https://miproxyiptv.onrender.com/${url}`;
-            const res = await fetch(proxyUrl);
+            const res = await fetch(`https://miproxyiptv.onrender.com/https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(text)}`);
             const data = await res.json();
-            if(data && data[0]) {
-                return data[0].map(x => x[0]).join('');
-            }
-            return text;
-        } catch(e) {
-            console.warn("Translation failed", e);
-            return text;
-        }
+            return data && data[0] ? data[0].map(x => x[0]).join('') : text;
+        } catch(e) { return text; }
     },
-
     openDetail: async (item) => {
-        DOM.detailModal.classList.remove('hidden');
-        DOM.detailModal.classList.add('flex');
-        DOM.detailContent.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center space-y-4"><div class="loader"></div><p class="text-gray-400 text-sm">Cargando y Traduciendo...</p></div>';
-        
+        DOM.detailModal.classList.remove('hidden'); DOM.detailModal.classList.add('flex');
+        DOM.detailContent.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center space-y-4"><div class="loader"></div><p class="text-gray-400 text-sm">Cargando...</p></div>';
         try {
             let htmlContent = '';
-            
             if (STATE.sourceType === 'xtream') {
                 const { s, u, p } = STATE.creds;
-                
                 if (item.type === 'series') {
                     const info = await (await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${item.id}`)).json();
                     let episodesHtml = '';
-                    const seasons = info.episodes;
-                    for (const k in seasons) {
-                        episodesHtml += `<h3 class="text-lg font-bold mt-4 mb-2 text-gray-300">Temporada ${k}</h3><div class="space-y-1">`;
-                        seasons[k].forEach(ep => {
-                            const epUrl = `${s}/series/${u}/${p}/${ep.id}.${ep.container_extension}`;
-                            episodesHtml += `
-                                <div onclick="player.start('${epUrl}', '${ep.title}', 'series')" class="flex items-center p-3 hover:bg-[#333] rounded cursor-pointer transition group">
-                                    <span class="text-gray-400 mr-4 font-mono">${ep.episode_num}</span>
-                                    <div class="flex-grow">
-                                        <div class="font-medium group-hover:text-white text-gray-300">${ep.title}</div>
-                                    </div>
-                                    <i class="fas fa-play-circle text-2xl text-transparent group-hover:text-red-600"></i>
-                                </div>`;
+                    for (const k in info.episodes) {
+                        episodesHtml += `<h3 class="text-lg font-bold mt-4 mb-2 text-gray-300">T${k}</h3><div class="space-y-1">`;
+                        info.episodes[k].forEach(ep => {
+                            episodesHtml += `<div onclick="player.start('${s}/series/${u}/${p}/${ep.id}.${ep.container_extension}', '${ep.title}', 'series')" class="flex items-center p-3 hover:bg-[#333] rounded cursor-pointer transition group"><span class="text-gray-400 mr-4 font-mono">${ep.episode_num}</span><div class="flex-grow"><div class="font-medium group-hover:text-white text-gray-300">${ep.title}</div></div><i class="fas fa-play-circle text-2xl text-transparent group-hover:text-red-600"></i></div>`;
                         });
                         episodesHtml += `</div>`;
                     }
-                    
-                    let plot = info.info.plot || "Sin sinopsis disponible.";
-                    plot = await app.translate(plot);
-                    const detailImg = info.info.cover || info.info.cover_big || info.info.movie_image || item.img;
-                    htmlContent = app.buildDetailHtml(detailImg, info.info.name, plot, episodesHtml, null);
-                } 
-                else if (item.type === 'movie') {
+                    const plot = await app.translate(info.info.plot || "Sin sinopsis.");
+                    htmlContent = app.buildDetailHtml(info.info.cover || item.img, info.info.name, plot, episodesHtml, null);
+                } else {
                     const info = await (await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_vod_info&vod_id=${item.id}`)).json();
-                    const movieData = info.movie_data;
-                    const streamUrl = `${s}/movie/${u}/${p}/${movieData.stream_id}.${movieData.container_extension}`;
-                    
-                    let plot = info.info.plot || "Sin descripción disponible.";
-                    plot = await app.translate(plot);
-                    htmlContent = app.buildDetailHtml(info.info.movie_image, info.info.name, plot, '', streamUrl);
+                    const plot = await app.translate(info.info.plot || "Sin descripción.");
+                    htmlContent = app.buildDetailHtml(info.info.movie_image, info.info.name, plot, '', `${s}/movie/${u}/${p}/${info.movie_data.stream_id}.${info.movie_data.container_extension}`);
                 }
-
             } else {
-                htmlContent = app.buildDetailHtml(item.img, item.name, "Información detallada no disponible en listas M3U.", '', item.url);
+                htmlContent = app.buildDetailHtml(item.img, item.name, "Info no disponible en M3U.", '', item.url);
             }
-
             DOM.detailContent.innerHTML = htmlContent;
-
-        } catch (e) {
-            console.error(e);
-            DOM.detailContent.innerHTML = '<div class="p-10 w-full text-center text-red-500">Error cargando detalles. Intente de nuevo.</div>';
-        }
+        } catch (e) { DOM.detailContent.innerHTML = '<div class="p-10 w-full text-center text-red-500">Error cargando detalles.</div>'; }
     },
-
     buildDetailHtml: (img, title, desc, extraHtml, playUrl) => {
         const posterImg = img || 'https://via.placeholder.com/300x450/222/FFF?text=No+Poster';
-        
-        const playBtnHtml = playUrl ? 
-            `<button onclick="player.start('${playUrl}', '${title.replace(/'/g, "\\'")}', 'movie')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded flex items-center transition transform hover:scale-105">
-                <i class="fas fa-play mr-3"></i> REPRODUCIR
-             </button>` : '';
-
-        return `
-            <div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0">
-                <img src="${posterImg}" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div>
-            </div>
-            <div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col">
-                <h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1>
-                <p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p>
-                <div class="mb-6">${playBtnHtml}</div>
-                <div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div>
-            </div>
-        `;
+        const playBtnHtml = playUrl ? `<button onclick="player.start('${playUrl}', '${title.replace(/'/g, "\\'")}', 'movie')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded flex items-center transition transform hover:scale-105"><i class="fas fa-play mr-3"></i> REPRODUCIR</button>` : '';
+        return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col"><h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1><p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p><div class="mb-6">${playBtnHtml}</div><div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div></div>`;
     },
-
-    closeDetail: () => {
-        DOM.detailModal.classList.add('hidden');
-        DOM.detailModal.classList.remove('flex');
-    },
-
-    openSettings: () => {
-        DOM.settingsModal.classList.remove('hidden');
-        DOM.settingsModal.classList.add('flex');
-    },
-
-    closeSettings: () => {
-        DOM.settingsModal.classList.add('hidden');
-        DOM.settingsModal.classList.remove('flex');
-    }
+    closeDetail: () => { DOM.detailModal.classList.add('hidden'); DOM.detailModal.classList.remove('flex'); },
+    openSettings: () => { DOM.settingsModal.classList.remove('hidden'); DOM.settingsModal.classList.add('flex'); },
+    closeSettings: () => { DOM.settingsModal.classList.add('hidden'); DOM.settingsModal.classList.remove('flex'); }
 };
 
 const player = {
     start: (url, title, type, id = null) => {
-        app.closeDetail(); 
-        DOM.overlay.classList.remove('hidden');
-        DOM.pTitle.innerText = title;
-        DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
-        
-        if(type === 'live') DOM.btnRecord.classList.remove('hidden');
-        else DOM.btnRecord.classList.add('hidden');
-
+        app.closeDetail(); DOM.overlay.classList.remove('hidden');
+        DOM.pTitle.innerText = title; DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
+        if(type === 'live') DOM.btnRecord.classList.remove('hidden'); else DOM.btnRecord.classList.add('hidden');
         recorder.stop(); 
-
         if(STATE.hls) STATE.hls.destroy();
         DOM.video.src = '';
-
         if(Hls.isSupported() && url.includes('.m3u8')) {
             STATE.hls = new Hls({ xhrSetup: xhr => { xhr.withCredentials = false; } }); 
-            STATE.hls.loadSource(url);
-            STATE.hls.attachMedia(DOM.video);
-            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
-        } else {
-            DOM.video.src = url;
-            DOM.video.play();
-        }
-
+            STATE.hls.loadSource(url); STATE.hls.attachMedia(DOM.video); STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
+        } else { DOM.video.src = url; DOM.video.play(); }
         if (type === 'live' && id && STATE.creds) {
             fetch(`https://miproxyiptv.onrender.com/${STATE.creds.s}/player_api.php?username=${STATE.creds.u}&password=${STATE.creds.p}&action=get_short_epg&stream_id=${id}`)
-                .then(r=>r.json())
-                .then(d => {
-                    if(d.epg_listings && d.epg_listings.length) {
-                        const now = d.epg_listings[0];
-                        let decTitle = now.title;
-                        try { decTitle = atob(now.title); } catch(e){}
-                        DOM.pEpg.innerText = `AHORA: ${decTitle}`;
-                    } else {
-                        DOM.pEpg.innerText = "Sin información EPG";
-                    }
-                }).catch(()=>DOM.pEpg.innerText = "");
+                .then(r=>r.json()).then(d => { DOM.pEpg.innerText = d.epg_listings && d.epg_listings.length ? `AHORA: ${atob(d.epg_listings[0].title)}` : "Sin EPG"; }).catch(()=>DOM.pEpg.innerText = "");
         }
     },
-
-    close: () => {
-        if(recorder.isRecording) recorder.stop();
-        DOM.video.pause();
-        DOM.video.src = '';
-        if(STATE.hls) STATE.hls.destroy();
-        DOM.overlay.classList.add('hidden');
-    },
-
+    close: () => { if(recorder.isRecording) recorder.stop(); DOM.video.pause(); DOM.video.src = ''; if(STATE.hls) STATE.hls.destroy(); DOM.overlay.classList.add('hidden'); },
     toggleRecording: () => {
         if(!recorder.isRecording) {
-            try {
-                const stream = DOM.video.captureStream();
-                recorder.start(stream);
-            } catch (e) {
-                console.error(e);
-                app.showToast("Error: No se puede grabar este stream (CORS)");
-            }
-        } else {
-            recorder.stop();
-        }
+            try { recorder.start(DOM.video.captureStream()); } catch (e) { app.showToast("Error: CORS impide grabar este stream"); }
+        } else { recorder.stop(); }
     },
-
     togglePlay: () => {
-        if(DOM.video.paused) {
-            DOM.video.play();
-            DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            const center = document.getElementById('centerPlayIcon');
-            center.className = 'fas fa-play text-6xl animate-ping';
-            setTimeout(()=>center.className='fas fa-play text-6xl opacity-0 transition-opacity', 500);
-        } else {
-            DOM.video.pause();
-            DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>';
-            const center = document.getElementById('centerPlayIcon');
-            center.className = 'fas fa-pause text-6xl opacity-100';
-        }
+        if(DOM.video.paused) { DOM.video.play(); DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-play text-6xl animate-ping'; setTimeout(()=>document.getElementById('centerPlayIcon').className='fas fa-play text-6xl opacity-0 transition-opacity', 500); } 
+        else { DOM.video.pause(); DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-pause text-6xl opacity-100'; }
     },
-
     rewind: () => DOM.video.currentTime -= 10,
     forward: () => DOM.video.currentTime += 10,
-    
-    toggleFullscreen: () => {
-        if (!document.fullscreenElement) DOM.overlay.requestFullscreen();
-        else document.exitFullscreen();
-    },
-    
+    toggleFullscreen: () => { if (!document.fullscreenElement) DOM.overlay.requestFullscreen(); else document.exitFullscreen(); },
     updateProgress: () => {
         if(DOM.video.duration) {
-            const pct = (DOM.video.currentTime / DOM.video.duration) * 100;
-            DOM.progFill.style.width = `${pct}%`;
-            
-            const curM = Math.floor(DOM.video.currentTime / 60);
-            const curS = Math.floor(DOM.video.currentTime % 60);
-            const durM = Math.floor(DOM.video.duration / 60);
-            const durS = Math.floor(DOM.video.duration % 60);
-            DOM.timeDisp.innerText = `${curM}:${curS.toString().padStart(2,'0')} / ${durM}:${durS.toString().padStart(2,'0')}`;
+            const pct = (DOM.video.currentTime / DOM.video.duration) * 100; DOM.progFill.style.width = `${pct}%`;
+            DOM.timeDisp.innerText = `${Math.floor(DOM.video.currentTime/60)}:${Math.floor(DOM.video.currentTime%60).toString().padStart(2,'0')} / ${Math.floor(DOM.video.duration/60)}:${Math.floor(DOM.video.duration%60).toString().padStart(2,'0')}`;
         }
     }
 };
@@ -1132,38 +833,13 @@ DOM.video.addEventListener('waiting', () => DOM.spinner.classList.remove('hidden
 DOM.video.addEventListener('playing', () => DOM.spinner.classList.add('hidden'));
 DOM.playBtn.addEventListener('click', player.togglePlay);
 DOM.video.addEventListener('click', player.togglePlay);
-
-DOM.progCont.addEventListener('click', (e) => {
-    const rect = DOM.progCont.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
-    DOM.video.currentTime = pos * DOM.video.duration;
-});
-
-DOM.volSlider.addEventListener('input', (e) => {
-    DOM.video.volume = e.target.value;
-    DOM.muteBtn.innerHTML = e.target.value == 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-});
-DOM.muteBtn.addEventListener('click', () => {
-    DOM.video.muted = !DOM.video.muted;
-    DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-});
+DOM.progCont.addEventListener('click', (e) => { const rect = DOM.progCont.getBoundingClientRect(); DOM.video.currentTime = ((e.clientX - rect.left) / rect.width) * DOM.video.duration; });
+DOM.volSlider.addEventListener('input', (e) => { DOM.video.volume = e.target.value; DOM.muteBtn.innerHTML = e.target.value == 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; });
+DOM.muteBtn.addEventListener('click', () => { DOM.video.muted = !DOM.video.muted; DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; });
 
 let uiTimer;
-const resetUITimer = () => {
-    DOM.overlay.classList.add('active-ui');
-    DOM.overlay.style.cursor = 'default';
-    clearTimeout(uiTimer);
-    uiTimer = setTimeout(() => {
-        if(!DOM.video.paused) {
-            DOM.overlay.classList.remove('active-ui');
-            DOM.overlay.style.cursor = 'none';
-        }
-    }, 5000);
-};
-
-DOM.overlay.addEventListener('mousemove', resetUITimer);
-DOM.overlay.addEventListener('click', resetUITimer);
-DOM.overlay.addEventListener('touchstart', resetUITimer);
+const resetUITimer = () => { DOM.overlay.classList.add('active-ui'); DOM.overlay.style.cursor = 'default'; clearTimeout(uiTimer); uiTimer = setTimeout(() => { if(!DOM.video.paused) { DOM.overlay.classList.remove('active-ui'); DOM.overlay.style.cursor = 'none'; } }, 5000); };
+DOM.overlay.addEventListener('mousemove', resetUITimer); DOM.overlay.addEventListener('click', resetUITimer);
 DOM.video.addEventListener('pause', () => { DOM.overlay.classList.add('active-ui'); clearTimeout(uiTimer); });
 DOM.video.addEventListener('play', resetUITimer);
 
