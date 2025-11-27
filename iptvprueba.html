@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFlix Player - Fixed Series Covers</title>
+    <title>StreamFlix Player - Direct Recording</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -50,9 +50,13 @@
         .nav-item { color: var(--text-secondary); transition: color 0.2s; }
         .nav-item:hover { color: white; }
 
-        /* Reproductor Personalizado */
-        .custom-controls { background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-        .player-wrapper:hover .custom-controls, .player-wrapper.show-controls .custom-controls { opacity: 1; pointer-events: auto; }
+        /* --- Reproductor Personalizado - Lógica de Animación OSD --- */
+        .custom-controls { pointer-events: none; overflow: hidden; }
+        .player-wrapper.active-ui .custom-controls { pointer-events: auto; }
+        .osd-panel { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease; opacity: 1; transform: translateY(0); }
+        .player-wrapper:not(.active-ui) .osd-top { transform: translateY(-150%); opacity: 0; }
+        .player-wrapper:not(.active-ui) .osd-bottom { transform: translateY(150%); opacity: 0; }
+        
         input[type=range] { -webkit-appearance: none; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; margin-top: -6px; }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #555; border-radius: 2px; }
@@ -68,12 +72,11 @@
         /* Grid Responsive */
         .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; padding-bottom: 50px; }
         @media (min-width: 1024px) { .content-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; } }
-        
-        /* List Layout Override */
         .content-grid.list-layout { display: flex; flex-direction: column; gap: 0; }
 
-        /* Modal Detalles estilo Netflix */
+        /* Modales */
         .detail-modal { background-color: #181818; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
+        .settings-modal { background-color: #222; border: 1px solid #444; }
     </style>
 </head>
 <body class="flex h-screen w-screen bg-black">
@@ -103,7 +106,7 @@
             
             <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
                 <button onclick="app.clearData()" class="hover:text-white underline">Borrar Datos</button>
-                <span>v4.2 ImgFix</span>
+                <span>v4.4 DirectRec</span>
             </div>
         </div>
     </div>
@@ -134,6 +137,10 @@
                 <button onclick="app.nav('favorites')" id="nav-favorites" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
                     <i class="fas fa-heart text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Favoritos</span>
+                </button>
+                <button onclick="app.openSettings()" id="nav-settings" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                    <i class="fas fa-cog text-xl w-8 text-center"></i>
+                    <span class="hidden lg:block ml-3">Ajustes</span>
                 </button>
             </div>
 
@@ -195,13 +202,13 @@
         </main>
     </div>
 
-    <div id="videoOverlay" class="fixed inset-0 bg-black z-50 hidden flex items-center justify-center player-wrapper">
+    <div id="videoOverlay" class="fixed inset-0 bg-black z-50 hidden flex items-center justify-center player-wrapper active-ui">
         <video id="mainVideo" class="w-full h-full object-contain bg-black" crossorigin="anonymous"></video>
         
         <div id="bufferingSpinner" class="absolute pointer-events-none hidden"><div class="loader"></div></div>
 
         <div class="custom-controls absolute inset-0 flex flex-col justify-between p-4 lg:p-8">
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between items-start osd-panel osd-top">
                 <div class="flex items-center space-x-4">
                     <button onclick="player.close()" class="text-white text-2xl hover:text-gray-300"><i class="fas fa-arrow-left"></i></button>
                     <button id="btnRecord" onclick="player.toggleRecording()" class="hidden bg-gray-800 bg-opacity-70 hover:bg-gray-700 text-white px-4 py-1 rounded-full flex items-center space-x-2 border border-gray-600 transition">
@@ -219,7 +226,7 @@
                 <i id="centerPlayIcon" class="fas fa-play text-6xl opacity-0 transition-opacity duration-500"></i>
             </div>
 
-            <div class="bg-gradient-to-t from-black to-transparent pb-2 pt-10 px-2 rounded-b-lg">
+            <div class="bg-gradient-to-t from-black to-transparent pb-2 pt-10 px-2 rounded-b-lg osd-panel osd-bottom">
                 <div class="relative group h-2 bg-gray-600 rounded cursor-pointer mb-4" id="progressBarContainer">
                     <div id="progressBarFill" class="absolute top-0 left-0 h-full bg-red-600 rounded z-10" style="width: 0%"></div>
                 </div>
@@ -249,12 +256,34 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded shadow-lg z-[60] hidden transition-opacity">Mensaje</div>
+    <div id="settingsModal" class="fixed inset-0 z-[60] bg-black bg-opacity-90 hidden items-center justify-center p-4">
+        <div class="settings-modal w-full max-w-md p-6 rounded-lg relative">
+            <button onclick="app.closeSettings()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            <h2 class="text-2xl font-bold mb-6 text-white border-b border-gray-700 pb-2">Ajustes</h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-gray-300 font-medium mb-2">Ruta de Grabaciones</h3>
+                    <p class="text-xs text-gray-500 mb-3">Selecciona una carpeta para guardar las grabaciones directamente sin descargarlas al final. (Solo PC Chrome/Edge)</p>
+                    <div class="flex flex-col space-y-2">
+                        <div id="folderStatus" class="text-sm text-yellow-500 bg-[#333] p-2 rounded">
+                            <i class="fas fa-folder mr-2"></i> Usando carpeta Descargas (Por defecto)
+                        </div>
+                        <button onclick="recorder.pickFolder()" class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded transition flex items-center justify-center">
+                            <i class="fas fa-folder-open mr-2"></i> Cambiar Ruta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded shadow-lg z-[70] hidden transition-opacity">Mensaje</div>
 
 <script>
 /**
  * STREAMFLIX CORE ENGINE
- * V4.2 - Categories, Translations, Recording & Image Fix
+ * V4.4 - Direct File System Recording
  */
 
 const DOM = {
@@ -268,7 +297,7 @@ const DOM = {
     heroPlay: document.getElementById('heroPlayBtn'),
     search: document.getElementById('searchInput'),
     title: document.getElementById('sectionTitle'),
-    // Live TV Specific
+    // Live TV
     liveToolbar: document.getElementById('liveToolbar'),
     catList: document.getElementById('categoryList'),
     layoutIcon: document.getElementById('layoutIcon'),
@@ -288,9 +317,11 @@ const DOM = {
     btnRecord: document.getElementById('btnRecord'),
     recDot: document.getElementById('recDot'),
     recText: document.getElementById('recText'),
-    // Modal
+    // Modals
     detailModal: document.getElementById('detailModal'),
     detailContent: document.getElementById('detailContent'),
+    settingsModal: document.getElementById('settingsModal'),
+    folderStatus: document.getElementById('folderStatus'),
 };
 
 const STATE = {
@@ -305,13 +336,118 @@ const STATE = {
     page: 1,
     perPage: 50,
     hls: null,
-    // Recording state
-    isRecording: false,
-    mediaRecorder: null,
-    recordedChunks: []
 };
 
-// --- INIT & NAVIGATION ---
+// --- RECORDER MODULE (NEW) ---
+const recorder = {
+    isRecording: false,
+    mediaRecorder: null,
+    dirHandle: null,    // Carpeta seleccionada
+    fileHandle: null,   // Archivo actual
+    writable: null,     // Stream de escritura
+    chunks: [],         // Fallback para descarga normal
+
+    pickFolder: async () => {
+        try {
+            // Solicitar carpeta al usuario (API Chrome/Edge)
+            recorder.dirHandle = await window.showDirectoryPicker();
+            DOM.folderStatus.innerHTML = `<i class="fas fa-check-circle mr-2 text-green-500"></i> Carpeta: ${recorder.dirHandle.name}`;
+            DOM.folderStatus.classList.replace('text-yellow-500', 'text-white');
+            app.showToast(`Guardando en: ${recorder.dirHandle.name}`);
+        } catch (err) {
+            console.error(err);
+            if(err.name !== 'AbortError') app.showToast("Tu navegador no soporta esta función.");
+        }
+    },
+
+    start: async (stream) => {
+        recorder.chunks = []; // Reset chunks for fallback
+        
+        const options = { mimeType: 'video/webm; codecs=vp9' };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'video/webm';
+        
+        recorder.mediaRecorder = new MediaRecorder(stream, options);
+
+        // -- MODO DIRECTO (Si hay carpeta) --
+        if (recorder.dirHandle) {
+            try {
+                const fileName = `streamflix_${Date.now()}.webm`;
+                recorder.fileHandle = await recorder.dirHandle.getFileHandle(fileName, { create: true });
+                recorder.writable = await recorder.fileHandle.createWritable();
+                
+                recorder.mediaRecorder.ondataavailable = async (event) => {
+                    if (event.data.size > 0 && recorder.writable) {
+                        await recorder.writable.write(event.data);
+                    }
+                };
+                
+                recorder.mediaRecorder.onstop = async () => {
+                    if(recorder.writable) await recorder.writable.close();
+                    app.showToast("Grabación guardada correctamente.");
+                };
+
+            } catch(e) {
+                console.error("Error escritura directa", e);
+                app.showToast("Error escribiendo archivo. Usando modo descarga.");
+                recorder.dirHandle = null; // Volver a modo normal
+                recorder.startFallback(stream, options);
+                return;
+            }
+        } 
+        // -- MODO FALLBACK (Descarga normal) --
+        else {
+            recorder.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) recorder.chunks.push(event.data);
+            };
+            recorder.mediaRecorder.onstop = () => {
+                const blob = new Blob(recorder.chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `grabacion_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                app.showToast("Grabación descargada");
+            };
+        }
+
+        recorder.mediaRecorder.start(1000); // Escribir/Guardar cada 1 segundo
+        recorder.isRecording = true;
+        DOM.recDot.classList.add('rec-dot');
+        DOM.recText.innerText = recorder.dirHandle ? "Grabando en Disco..." : "Grabando...";
+        app.showToast(recorder.dirHandle ? "Grabando Directamente en Carpeta" : "Grabación Iniciada (Memoria)");
+    },
+
+    stop: () => {
+        if(recorder.mediaRecorder && recorder.mediaRecorder.state !== 'inactive') {
+            recorder.mediaRecorder.stop();
+        }
+        recorder.isRecording = false;
+        DOM.recDot.classList.remove('rec-dot');
+        DOM.recText.innerText = "Grabar";
+    },
+
+    startFallback: (stream, options) => {
+        // Reinicia en modo normal si falla el modo carpeta
+        recorder.mediaRecorder = new MediaRecorder(stream, options);
+        recorder.mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) recorder.chunks.push(e.data); };
+        recorder.mediaRecorder.onstop = () => {
+            const blob = new Blob(recorder.chunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `grabacion_fallback_${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+        };
+        recorder.mediaRecorder.start();
+    }
+};
+
+// --- APP LOGIC ---
 
 const app = {
     init: () => {
@@ -430,12 +566,10 @@ const app = {
                     rating: x.rating 
                 }));
                 
-                // --- FIX PARA LAS PORTADAS DE LAS SERIES ---
-                // Algunos proveedores usan 'cover', otros 'stream_icon', otros nada.
                 STATE.data.series = ser.map(x => ({ 
                     id: x.series_id, 
                     name: x.name, 
-                    img: x.cover || x.stream_icon, // Fallback para encontrar la imagen
+                    img: x.cover || x.stream_icon, 
                     url: null, 
                     type: 'series', 
                     plot: x.plot 
@@ -614,7 +748,6 @@ const app = {
             const el = document.createElement('div');
             const isFav = STATE.favorites.some(f => f.name === item.name);
             const placeholder = item.type === 'live' ? 'https://via.placeholder.com/300x450/000/FFF?text=TV' : 'https://via.placeholder.com/300x450/222/FFF?text=No+Poster';
-            // Validacion de longitud
             const imgUrl = item.img && item.img.length > 5 ? item.img : placeholder;
             
             if (isListMode) {
@@ -695,7 +828,6 @@ const app = {
         setTimeout(() => t.classList.add('hidden'), 2300);
     },
 
-    // --- LOGICA DE TRADUCCION Y DETALLES ---
     translate: async (text) => {
         if(!text || text.length < 5 || text.includes("Sin sinopsis")) return text;
         try {
@@ -746,10 +878,7 @@ const app = {
                     
                     let plot = info.info.plot || "Sin sinopsis disponible.";
                     plot = await app.translate(plot);
-                    
-                    // Fallback tambien aqui para la imagen de detalle
                     const detailImg = info.info.cover || info.info.cover_big || info.info.movie_image || item.img;
-
                     htmlContent = app.buildDetailHtml(detailImg, info.info.name, plot, episodesHtml, null);
                 } 
                 else if (item.type === 'movie') {
@@ -759,24 +888,11 @@ const app = {
                     
                     let plot = info.info.plot || "Sin descripción disponible.";
                     plot = await app.translate(plot);
-
-                    htmlContent = app.buildDetailHtml(
-                        info.info.movie_image, 
-                        info.info.name, 
-                        plot, 
-                        '', 
-                        streamUrl 
-                    );
+                    htmlContent = app.buildDetailHtml(info.info.movie_image, info.info.name, plot, '', streamUrl);
                 }
 
             } else {
-                htmlContent = app.buildDetailHtml(
-                    item.img, 
-                    item.name, 
-                    "Información detallada no disponible en listas M3U.", 
-                    '', 
-                    item.url
-                );
+                htmlContent = app.buildDetailHtml(item.img, item.name, "Información detallada no disponible en listas M3U.", '', item.url);
             }
 
             DOM.detailContent.innerHTML = htmlContent;
@@ -804,14 +920,8 @@ const app = {
             <div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col">
                 <h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1>
                 <p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p>
-                
-                <div class="mb-6">
-                    ${playBtnHtml}
-                </div>
-
-                <div class="border-t border-gray-700 pt-4 w-full">
-                    ${extraHtml}
-                </div>
+                <div class="mb-6">${playBtnHtml}</div>
+                <div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div>
             </div>
         `;
     },
@@ -819,10 +929,19 @@ const app = {
     closeDetail: () => {
         DOM.detailModal.classList.add('hidden');
         DOM.detailModal.classList.remove('flex');
+    },
+
+    // --- SETTINGS MODAL LOGIC ---
+    openSettings: () => {
+        DOM.settingsModal.classList.remove('hidden');
+        DOM.settingsModal.classList.add('flex');
+    },
+
+    closeSettings: () => {
+        DOM.settingsModal.classList.add('hidden');
+        DOM.settingsModal.classList.remove('flex');
     }
 };
-
-// --- CUSTOM PLAYER & RECORDING LOGIC ---
 
 const player = {
     start: (url, title, type, id = null) => {
@@ -831,14 +950,10 @@ const player = {
         DOM.pTitle.innerText = title;
         DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
         
-        // Mostrar boton Grabar SOLO si es LIVE
         if(type === 'live') DOM.btnRecord.classList.remove('hidden');
         else DOM.btnRecord.classList.add('hidden');
 
-        // Reset Grabacion
-        STATE.isRecording = false;
-        DOM.recDot.classList.remove('rec-dot');
-        DOM.recText.innerText = "Grabar";
+        recorder.stop(); // Stop previous recording
 
         if(STATE.hls) STATE.hls.destroy();
         DOM.video.src = '';
@@ -870,7 +985,7 @@ const player = {
     },
 
     close: () => {
-        if(STATE.isRecording) player.toggleRecording(); // Stop if recording
+        if(recorder.isRecording) recorder.stop();
         DOM.video.pause();
         DOM.video.src = '';
         if(STATE.hls) STATE.hls.destroy();
@@ -878,54 +993,17 @@ const player = {
     },
 
     toggleRecording: () => {
-        if(!STATE.isRecording) {
-            // INICIAR GRABACION
+        if(!recorder.isRecording) {
             try {
-                // Capturar el stream del elemento video
+                // Capturar stream
                 const stream = DOM.video.captureStream();
-                STATE.recordedChunks = [];
-                // Usar mimeType soportado comúnmente
-                const options = { mimeType: 'video/webm; codecs=vp9' };
-                
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                     options.mimeType = 'video/webm'; // Fallback
-                }
-                
-                STATE.mediaRecorder = new MediaRecorder(stream, options);
-
-                STATE.mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) STATE.recordedChunks.push(event.data);
-                };
-
-                STATE.mediaRecorder.onstop = () => {
-                    const blob = new Blob(STATE.recordedChunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = `grabacion_${Date.now()}.webm`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    app.showToast("Grabación guardada en Descargas");
-                };
-
-                STATE.mediaRecorder.start();
-                STATE.isRecording = true;
-                DOM.recDot.classList.add('rec-dot'); // Animacion roja
-                DOM.recText.innerText = "Grabando...";
-                app.showToast("Grabación Iniciada (Local)");
-                
+                recorder.start(stream);
             } catch (e) {
                 console.error(e);
-                app.showToast("Error: No se puede grabar este stream (posible bloqueo CORS)");
+                app.showToast("Error: No se puede grabar este stream (CORS)");
             }
         } else {
-            // PARAR GRABACION
-            if(STATE.mediaRecorder) STATE.mediaRecorder.stop();
-            STATE.isRecording = false;
-            DOM.recDot.classList.remove('rec-dot');
-            DOM.recText.innerText = "Grabar";
+            recorder.stop();
         }
     },
 
@@ -987,18 +1065,25 @@ DOM.muteBtn.addEventListener('click', () => {
     DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
 });
 
-let overlayTimer;
-DOM.overlay.addEventListener('mousemove', () => {
-    DOM.overlay.classList.add('show-controls');
+// UI TIMEOUT
+let uiTimer;
+const resetUITimer = () => {
+    DOM.overlay.classList.add('active-ui');
     DOM.overlay.style.cursor = 'default';
-    clearTimeout(overlayTimer);
-    overlayTimer = setTimeout(() => {
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(() => {
         if(!DOM.video.paused) {
-            DOM.overlay.classList.remove('show-controls');
+            DOM.overlay.classList.remove('active-ui');
             DOM.overlay.style.cursor = 'none';
         }
-    }, 3000);
-});
+    }, 5000);
+};
+
+DOM.overlay.addEventListener('mousemove', resetUITimer);
+DOM.overlay.addEventListener('click', resetUITimer);
+DOM.overlay.addEventListener('touchstart', resetUITimer);
+DOM.video.addEventListener('pause', () => { DOM.overlay.classList.add('active-ui'); clearTimeout(uiTimer); });
+DOM.video.addEventListener('play', resetUITimer);
 
 app.init();
 </script>
