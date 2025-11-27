@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFlix Player - Direct Recording</title>
+    <title>StreamFlix Player - Optimized UI</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,45 +12,121 @@
         
         :root {
             --bg-main: #141414;
-            --bg-sidebar: #000000;
             --accent: #e50914; /* Netflix Red */
             --text-main: #ffffff;
             --text-secondary: #b3b3b3;
-            --hover-card: #1f1f1f;
         }
 
-        body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background-color: #000; 
+            color: var(--text-main); 
+            overflow: hidden; 
+            margin: 0; padding: 0; 
+        }
         
+        /* Fondo Global Fijo */
+        #globalBackground {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+        #globalOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: rgba(0,0,0,0.85); /* Oscurece el fondo para que se lea el texto */
+            backdrop-filter: blur(5px);
+        }
+
         /* Scrollbar Personalizado */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #666; }
 
-        /* Animaciones y Efectos */
-        .poster-card { transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), z-index 0.3s; position: relative; z-index: 1; aspect-ratio: 2/3; cursor: pointer; border-radius: 4px; overflow: hidden; background-color: #222; }
-        .poster-card:hover { transform: scale(1.1); z-index: 10; box-shadow: 0 10px 20px rgba(0,0,0,0.8); outline: 2px solid white; }
-        .poster-card img { width: 100%; height: 100%; }
-        .poster-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%); opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; }
+        /* --- NUEVA LÓGICA DE CARÁTULAS (Sin Parpadeo) --- */
+        .poster-card { 
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), z-index 0.3s; 
+            position: relative; 
+            z-index: 1; 
+            aspect-ratio: 2/3; 
+            cursor: pointer; 
+            border-radius: 6px; 
+            overflow: hidden; 
+            background-color: #1f1f1f; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        
+        /* Texto de respaldo (detrás de la imagen) */
+        .poster-fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            z-index: 0;
+        }
+        .poster-fallback span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            line-height: 1.2;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        /* Imagen (cubre el texto si carga) */
+        .poster-img { 
+            width: 100%; 
+            height: 100%; 
+            position: relative; 
+            z-index: 10; 
+            transition: opacity 0.3s ease;
+            background: transparent;
+        }
+        .poster-img.img-error { opacity: 0 !important; } /* Se oculta suavemente si falla */
+
+        .poster-card:hover { transform: scale(1.1); z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.9); outline: 2px solid white; }
+        
+        .poster-overlay { 
+            position: absolute; 
+            inset: 0; 
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 60%); 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+            padding: 10px; 
+            z-index: 20; 
+        }
         .poster-card:hover .poster-overlay { opacity: 1; }
         
         /* LIST VIEW STYLES */
-        .list-item { display: flex; align-items: center; padding: 12px; background-color: #1a1a1a; border-bottom: 1px solid #333; cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin-bottom: 4px; }
-        .list-item:hover { background-color: #333; }
-        .list-item img { width: 50px; height: 50px; object-fit: contain; border-radius: 4px; margin-right: 15px; background: #000; }
+        .list-item { display: flex; align-items: center; padding: 10px; background-color: rgba(30,30,30,0.8); border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin-bottom: 4px; }
+        .list-item:hover { background-color: rgba(255,255,255,0.1); }
+        .list-item img { width: 45px; height: 45px; object-fit: contain; border-radius: 4px; margin-right: 15px; background: #000; }
         
         /* Category Chips */
-        .cat-chip { white-space: nowrap; padding: 8px 16px; background-color: #333; border-radius: 20px; font-size: 14px; cursor: pointer; transition: all 0.2s; user-select: none; border: 1px solid transparent; }
-        .cat-chip:hover { background-color: #444; }
+        .cat-chip { white-space: nowrap; padding: 6px 14px; background-color: rgba(50,50,50,0.7); border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; user-select: none; border: 1px solid transparent; backdrop-filter: blur(4px); }
+        .cat-chip:hover { background-color: rgba(80,80,80,0.9); }
         .cat-chip.active { background-color: var(--accent); color: white; font-weight: bold; border-color: var(--accent); }
         .hide-scroll::-webkit-scrollbar { display: none; }
         
         /* Sidebar Activo */
-        .nav-item.active { color: white; border-right: 3px solid var(--accent); font-weight: bold; }
+        .nav-item.active { color: white; border-right: 3px solid var(--accent); font-weight: bold; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05)); }
         .nav-item { color: var(--text-secondary); transition: color 0.2s; }
         .nav-item:hover { color: white; }
 
-        /* --- Reproductor Personalizado - Lógica de Animación OSD --- */
+        /* Reproductor */
         .custom-controls { pointer-events: none; overflow: hidden; }
         .player-wrapper.active-ui .custom-controls { pointer-events: auto; }
         .osd-panel { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease; opacity: 1; transform: translateY(0); }
@@ -61,17 +137,17 @@
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; margin-top: -6px; }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #555; border-radius: 2px; }
         
-        /* Recording Animation */
         .rec-dot { display: inline-block; width: 10px; height: 10px; background-color: red; border-radius: 50%; margin-right: 5px; animation: pulse-red 1s infinite; }
         @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         
-        /* Spinner */
         .loader { border: 4px solid rgba(255,255,255,0.1); width: 50px; height: 50px; border-radius: 50%; border-left-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Grid Responsive */
-        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; padding-bottom: 50px; }
-        @media (min-width: 1024px) { .content-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; } }
+        /* GRID RESPONSIVE (REDUCIDO UN 20% APROX) */
+        /* Móvil: antes 140px -> ahora 110px */
+        /* PC: antes 180px -> ahora 145px */
+        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.8rem; padding-bottom: 50px; }
+        @media (min-width: 1024px) { .content-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 1.2rem; } }
         .content-grid.list-layout { display: flex; flex-direction: column; gap: 0; }
 
         /* Modales */
@@ -80,8 +156,11 @@
     </style>
 </head>
 <body class="flex h-screen w-screen bg-black">
+    
+    <div id="globalBackground"></div>
+    <div id="globalOverlay"></div>
 
-    <div id="loginScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-95" style="background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg'); background-size: cover; background-blend-mode: multiply;">
+    <div id="loginScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black" style="background-image: url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg'); background-size: cover; background-blend-mode: multiply;">
         <div class="bg-black bg-opacity-80 p-10 rounded-lg max-w-md w-full shadow-2xl border border-gray-800">
             <h1 class="text-4xl font-bold text-red-600 mb-8 text-center uppercase tracking-widest">StreamFlix</h1>
             
@@ -106,56 +185,56 @@
             
             <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
                 <button onclick="app.clearData()" class="hover:text-white underline">Borrar Datos</button>
-                <span>v4.4 DirectRec</span>
+                <span>v4.5 UI Fixes</span>
             </div>
         </div>
     </div>
 
     <div id="mainInterface" class="flex w-full h-full hidden">
-        <nav class="w-20 lg:w-64 bg-black flex-shrink-0 flex flex-col border-r border-[#222] z-20">
+        <nav class="w-20 lg:w-64 bg-black bg-opacity-90 backdrop-blur flex-shrink-0 flex flex-col border-r border-[#222] z-20">
             <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6">
                 <span class="text-red-600 font-bold text-2xl lg:text-3xl tracking-tighter">FLIX</span>
             </div>
             
             <div class="flex flex-col space-y-2 mt-4 px-2">
-                <button onclick="app.nav('home')" id="nav-home" class="nav-item active flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="app.nav('home')" id="nav-home" class="nav-item active flex items-center p-3 rounded-md hover:bg-white/10">
                     <i class="fas fa-home text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Inicio</span>
                 </button>
-                <button onclick="app.nav('live')" id="nav-live" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="app.nav('live')" id="nav-live" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
                     <i class="fas fa-broadcast-tower text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">TV en Vivo</span>
                 </button>
-                <button onclick="app.nav('movies')" id="nav-movies" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="app.nav('movies')" id="nav-movies" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
                     <i class="fas fa-film text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Películas</span>
                 </button>
-                <button onclick="app.nav('series')" id="nav-series" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="app.nav('series')" id="nav-series" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
                     <i class="fas fa-tv text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Series</span>
                 </button>
-                <button onclick="app.nav('favorites')" id="nav-favorites" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="app.nav('favorites')" id="nav-favorites" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
                     <i class="fas fa-heart text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Favoritos</span>
                 </button>
-                <button onclick="app.openSettings()" id="nav-settings" class="nav-item flex items-center p-3 rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="app.openSettings()" id="nav-settings" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10">
                     <i class="fas fa-cog text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Ajustes</span>
                 </button>
             </div>
 
             <div class="mt-auto mb-6 px-2">
-                <button onclick="location.reload()" class="nav-item flex items-center p-3 w-full rounded-md hover:bg-[#1a1a1a]">
+                <button onclick="location.reload()" class="nav-item flex items-center p-3 w-full rounded-md hover:bg-white/10">
                     <i class="fas fa-sign-out-alt text-xl w-8 text-center"></i>
                     <span class="hidden lg:block ml-3">Salir</span>
                 </button>
             </div>
         </nav>
 
-        <main class="flex-grow relative overflow-hidden flex flex-col bg-[#141414]">
+        <main class="flex-grow relative overflow-hidden flex flex-col bg-transparent">
             
             <header class="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black to-transparent z-10 flex items-center justify-between px-8">
-                <div class="flex items-center bg-black bg-opacity-50 border border-gray-700 rounded-full px-3 py-1">
+                <div class="flex items-center bg-black bg-opacity-60 border border-gray-700 rounded-full px-3 py-1">
                     <i class="fas fa-search text-gray-400"></i>
                     <input type="text" id="searchInput" placeholder="Buscar..." class="bg-transparent border-none text-white px-3 py-1 outline-none text-sm w-40 lg:w-64 focus:w-80 transition-all">
                 </div>
@@ -167,7 +246,7 @@
                 <div id="liveToolbar" class="hidden px-6 lg:px-10 mb-4 flex flex-col space-y-4">
                     <div class="flex items-center justify-between">
                         <h2 class="text-xl font-bold text-white">Categorías</h2>
-                        <button onclick="app.toggleLayout()" class="text-gray-400 hover:text-white p-2 rounded bg-[#222] flex items-center" title="Cambiar Vista">
+                        <button onclick="app.toggleLayout()" class="text-gray-400 hover:text-white p-2 rounded bg-black/50 flex items-center" title="Cambiar Vista">
                             <i class="fas fa-th-large mr-2" id="layoutIcon"></i>
                             <span class="text-sm" id="layoutText">Grid</span>
                         </button>
@@ -178,7 +257,7 @@
 
                 <div id="heroSection" class="relative w-full h-[60vh] hidden -mt-20">
                     <img id="heroImage" src="" class="w-full h-full object-cover opacity-60">
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black"></div>
                     <div class="absolute bottom-0 left-0 p-8 lg:p-16 max-w-2xl">
                         <h1 id="heroTitle" class="text-4xl lg:text-6xl font-extrabold mb-4 text-shadow drop-shadow-lg">Título Destacado</h1>
                         <p id="heroDesc" class="text-gray-300 mb-6 line-clamp-3 text-sm lg:text-base">Descripción de la película o serie destacada para dar ambiente de cine.</p>
@@ -283,7 +362,7 @@
 <script>
 /**
  * STREAMFLIX CORE ENGINE
- * V4.4 - Direct File System Recording
+ * V4.5 - Optimized UI & No-Flicker Images
  */
 
 const DOM = {
@@ -338,18 +417,17 @@ const STATE = {
     hls: null,
 };
 
-// --- RECORDER MODULE (NEW) ---
+// --- RECORDER MODULE ---
 const recorder = {
     isRecording: false,
     mediaRecorder: null,
-    dirHandle: null,    // Carpeta seleccionada
-    fileHandle: null,   // Archivo actual
-    writable: null,     // Stream de escritura
-    chunks: [],         // Fallback para descarga normal
+    dirHandle: null,
+    fileHandle: null,
+    writable: null,
+    chunks: [],
 
     pickFolder: async () => {
         try {
-            // Solicitar carpeta al usuario (API Chrome/Edge)
             recorder.dirHandle = await window.showDirectoryPicker();
             DOM.folderStatus.innerHTML = `<i class="fas fa-check-circle mr-2 text-green-500"></i> Carpeta: ${recorder.dirHandle.name}`;
             DOM.folderStatus.classList.replace('text-yellow-500', 'text-white');
@@ -361,14 +439,12 @@ const recorder = {
     },
 
     start: async (stream) => {
-        recorder.chunks = []; // Reset chunks for fallback
-        
+        recorder.chunks = [];
         const options = { mimeType: 'video/webm; codecs=vp9' };
         if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'video/webm';
         
         recorder.mediaRecorder = new MediaRecorder(stream, options);
 
-        // -- MODO DIRECTO (Si hay carpeta) --
         if (recorder.dirHandle) {
             try {
                 const fileName = `streamflix_${Date.now()}.webm`;
@@ -389,12 +465,11 @@ const recorder = {
             } catch(e) {
                 console.error("Error escritura directa", e);
                 app.showToast("Error escribiendo archivo. Usando modo descarga.");
-                recorder.dirHandle = null; // Volver a modo normal
+                recorder.dirHandle = null;
                 recorder.startFallback(stream, options);
                 return;
             }
         } 
-        // -- MODO FALLBACK (Descarga normal) --
         else {
             recorder.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) recorder.chunks.push(event.data);
@@ -413,7 +488,7 @@ const recorder = {
             };
         }
 
-        recorder.mediaRecorder.start(1000); // Escribir/Guardar cada 1 segundo
+        recorder.mediaRecorder.start(1000); 
         recorder.isRecording = true;
         DOM.recDot.classList.add('rec-dot');
         DOM.recText.innerText = recorder.dirHandle ? "Grabando en Disco..." : "Grabando...";
@@ -430,7 +505,6 @@ const recorder = {
     },
 
     startFallback: (stream, options) => {
-        // Reinicia en modo normal si falla el modo carpeta
         recorder.mediaRecorder = new MediaRecorder(stream, options);
         recorder.mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) recorder.chunks.push(e.data); };
         recorder.mediaRecorder.onstop = () => {
@@ -736,7 +810,7 @@ const app = {
         const items = STATE.renderList.slice(start, end);
         
         if (items.length === 0 && STATE.page === 1) {
-            DOM.grid.innerHTML = '<div class="text-gray-500">No hay contenido disponible.</div>';
+            DOM.grid.innerHTML = '<div class="text-gray-500 col-span-full text-center mt-10">No hay contenido disponible.</div>';
             return;
         }
 
@@ -747,13 +821,14 @@ const app = {
         items.forEach(item => {
             const el = document.createElement('div');
             const isFav = STATE.favorites.some(f => f.name === item.name);
-            const placeholder = item.type === 'live' ? 'https://via.placeholder.com/300x450/000/FFF?text=TV' : 'https://via.placeholder.com/300x450/222/FFF?text=No+Poster';
-            const imgUrl = item.img && item.img.length > 5 ? item.img : placeholder;
-            
+            const hasImg = item.img && item.img.length > 5;
+            const imgUrl = hasImg ? item.img : '';
+
             if (isListMode) {
+                const listPlaceholder = 'https://via.placeholder.com/100?text=TV';
                 el.className = 'list-item group animate-fade-in';
                 el.innerHTML = `
-                    <img src="${imgUrl}" loading="lazy" onerror="this.src='${placeholder}'">
+                    <img src="${hasImg ? imgUrl : listPlaceholder}" loading="lazy" onerror="this.src='${listPlaceholder}'">
                     <div class="flex-grow">
                         <div class="font-bold text-white text-sm md:text-base">${item.name}</div>
                         <div class="text-xs text-gray-400">${item.cat || ''}</div>
@@ -764,12 +839,21 @@ const app = {
                     </div>
                 `;
             } else {
+                // VISTA GRID SIN PARPADEO
                 el.className = 'poster-card group';
                 const objFitClass = item.type === 'live' ? 'object-contain p-2' : 'object-cover';
+                
+                // Si la imagen falla, la clase img-error la oculta y se ve el poster-fallback
                 el.innerHTML = `
-                    <img src="${imgUrl}" loading="lazy" class="w-full h-full ${objFitClass}" onerror="this.src='${placeholder}'">
+                    <div class="poster-fallback">
+                        <span>${item.name}</span>
+                    </div>
+                    ${hasImg ? 
+                        `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" onerror="this.classList.add('img-error')">` 
+                        : '' 
+                    }
                     <div class="poster-overlay">
-                        <h4 class="font-bold text-white text-sm leading-tight mb-2">${item.name}</h4>
+                        <h4 class="font-bold text-white text-sm leading-tight mb-2 line-clamp-2">${item.name}</h4>
                         <div class="flex justify-between items-center">
                             <button class="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center hover:scale-110 transition play-trigger">
                                 <i class="fas fa-play text-xs"></i>
@@ -788,10 +872,12 @@ const app = {
                 else app.openDetail(item);
             };
 
-            el.querySelector('.play-trigger').onclick = action;
+            const playBtn = el.querySelector('.play-trigger');
+            if(playBtn) playBtn.onclick = action;
             el.onclick = action;
             
-            el.querySelector('.fav-trigger').onclick = (e) => {
+            const favBtn = el.querySelector('.fav-trigger');
+            if(favBtn) favBtn.onclick = (e) => {
                 e.stopPropagation();
                 app.toggleFav(item, e.currentTarget.querySelector('i'));
             };
@@ -904,7 +990,6 @@ const app = {
     },
 
     buildDetailHtml: (img, title, desc, extraHtml, playUrl) => {
-        const bgImg = img || 'https://via.placeholder.com/800x600/111/333?text=No+Image';
         const posterImg = img || 'https://via.placeholder.com/300x450/222/FFF?text=No+Poster';
         
         const playBtnHtml = playUrl ? 
@@ -931,7 +1016,6 @@ const app = {
         DOM.detailModal.classList.remove('flex');
     },
 
-    // --- SETTINGS MODAL LOGIC ---
     openSettings: () => {
         DOM.settingsModal.classList.remove('hidden');
         DOM.settingsModal.classList.add('flex');
@@ -953,7 +1037,7 @@ const player = {
         if(type === 'live') DOM.btnRecord.classList.remove('hidden');
         else DOM.btnRecord.classList.add('hidden');
 
-        recorder.stop(); // Stop previous recording
+        recorder.stop(); 
 
         if(STATE.hls) STATE.hls.destroy();
         DOM.video.src = '';
@@ -995,7 +1079,6 @@ const player = {
     toggleRecording: () => {
         if(!recorder.isRecording) {
             try {
-                // Capturar stream
                 const stream = DOM.video.captureStream();
                 recorder.start(stream);
             } catch (e) {
@@ -1065,7 +1148,6 @@ DOM.muteBtn.addEventListener('click', () => {
     DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
 });
 
-// UI TIMEOUT
 let uiTimer;
 const resetUITimer = () => {
     DOM.overlay.classList.add('active-ui');
