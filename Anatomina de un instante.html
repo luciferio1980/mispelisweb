@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Listado de Enlaces</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 40px 20px;
+      margin: 0;
+      position: relative;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: #ff0066;
+      color: #fff;
+      border: none;
+      padding: 15px 25px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #ff0066;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .back-button:hover {
+      background-color: #ffffff;
+      color: #ff0066;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 30px;
+      color: #00ffff;
+      text-align: center;
+    }
+
+    .link-list {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .link-item {
+      display: flex;
+      align-items: center;
+      margin: 15px 0;
+      font-size: 20px;
+    }
+
+    .check {
+      cursor: pointer;
+      margin-right: 10px;
+      font-size: 22px;
+      color: green;
+      user-select: none;
+      display: none;
+    }
+
+    .link-list a {
+      color: #00ff88;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .link-list a:hover {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+
+    .seen .check {
+      display: inline;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="back-button">← Volver</a>
+  <h1>TEMPORADA 1</h1>
+
+  <div class="link-list">
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/6lire0kebcci" target="_blank">Anatomia de un instante 1x01</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/37oluox0xxc6" target="_blank">Anatomia de un instante 1x02</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/v6y3v6nv6orb" target="_blank">Anatomia de un instante 1x03</a></div>
+    <div class="link-item"><span class="check">✔</span><a href="https://filemoon.to/e/gt7jga65mlkb" target="_blank">Anatomia de un instante 1x04</a></div>
+    
+  </div>
+  
+  
+  
+  <script>
+    // **AQUÍ EMPIEZA LA MODIFICACIÓN**
+
+    // Crear una clave única para esta página específica.
+    // Usamos 'videoStates_' seguido del nombre del archivo de la página.
+    const storageKey = 'videoStates_' + window.location.pathname;
+
+    document.querySelectorAll('.link-item a').forEach(link => {
+      link.addEventListener('click', function() {
+        let item = this.parentElement;
+        item.classList.add('seen');
+        saveState();
+      });
+    });
+
+    document.querySelectorAll('.check').forEach(check => {
+      check.addEventListener('click', function() {
+        let item = this.parentElement;
+        item.classList.toggle('seen');
+        saveState();
+      });
+    });
+
+    function saveState() {
+      let states = [];
+      document.querySelectorAll('.link-item').forEach(item => {
+        states.push(item.classList.contains('seen'));
+      });
+      // Guardar el estado usando la clave única de esta página.
+      localStorage.setItem(storageKey, JSON.stringify(states));
+    }
+
+    function loadState() {
+      // Cargar el estado usando la clave única de esta página.
+      let states = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      document.querySelectorAll('.link-item').forEach((item, index) => {
+        if (states[index]) {
+          item.classList.add('seen');
+        }
+      });
+    }
+
+    // Cargar el estado guardado cuando la página se abre.
+    loadState();
+  </script>
+
+</body>
+</html>
