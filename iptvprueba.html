@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFlix Player - Cloud Recording</title>
+    <title>StreamFlix Player - Cloud Recording v5.2</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -65,6 +65,10 @@
 
         .detail-modal { background-color: #181818; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
         .settings-modal { background-color: #222; border: 1px solid #444; }
+
+        /* Estilos del indicador de grabación de fondo */
+        #recordingIndicator { animation: slideUp 0.5s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
 <body class="flex h-screen w-screen bg-black">
@@ -91,7 +95,7 @@
             <div id="loginStatus" class="mt-4 text-sm text-center text-gray-400 min-h-[20px]"></div>
             <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
                 <button onclick="app.clearData()" class="hover:text-white underline">Borrar Datos</button>
-                <span>v5.0 CloudRec</span>
+                <span>v5.2 CloudRec</span>
             </div>
         </div>
     </div>
@@ -148,6 +152,20 @@
                     <h2 id="sectionTitle" class="text-xl font-bold mb-4 text-white">Tendencias</h2>
                     <div id="gridContainer" class="content-grid"></div>
                     <div id="loadMoreTrigger" class="h-20 w-full flex items-center justify-center text-gray-500 text-sm">Cargando más contenido...</div>
+                </div>
+            </div>
+            
+            <div id="recordingIndicator" class="absolute bottom-0 left-0 right-0 bg-red-900 bg-opacity-95 border-t-2 border-red-600 p-3 hidden flex justify-between items-center z-40">
+                <div class="flex items-center space-x-3">
+                    <div class="rec-dot w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <div class="flex flex-col">
+                        <span class="font-bold text-white text-sm">GRABANDO EN SEGUNDO PLANO</span>
+                        <span id="recBackgroundTitle" class="text-xs text-red-200">Canal TV</span>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="player.restore()" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-2 rounded uppercase font-bold">Ver Video</button>
+                    <button onclick="player.stopBackground()" class="bg-white text-red-900 hover:bg-gray-200 text-xs px-3 py-2 rounded uppercase font-bold"><i class="fas fa-stop mr-1"></i> Detener</button>
                 </div>
             </div>
         </main>
@@ -250,12 +268,11 @@
 <script>
 /**
  * STREAMFLIX CORE ENGINE
- * V5.0 - Cloud Recording Enabled
+ * V5.2 - Cloud Recording, Background Support & Auth Fixed
  */
 
-// --- CONFIGURACIÓN DE GOOGLE (IMPORTANTE: RELLENAR ESTO) ---
-const GOOGLE_CLIENT_ID = 'TU_CLIENT_ID_DE_GOOGLE_CLOUD_AQUI'; 
-// Si no pones el Client ID, la función de Drive dará error.
+// --- TU CLIENT ID DE GOOGLE CONFIGURADO ---
+const GOOGLE_CLIENT_ID = '653955063422-dr882a448japajmpfs8l8pkbk50vi4dn.apps.googleusercontent.com'; 
 
 const DOM = {
     login: document.getElementById('loginScreen'),
@@ -292,6 +309,8 @@ const DOM = {
     folderStatus: document.getElementById('folderStatus'),
     driveStatus: document.getElementById('driveStatus'),
     uploadModal: document.getElementById('uploadProgressModal'),
+    recIndicator: document.getElementById('recordingIndicator'),
+    recBgTitle: document.getElementById('recBackgroundTitle')
 };
 
 const STATE = {
@@ -306,7 +325,8 @@ const STATE = {
     page: 1,
     perPage: 50,
     hls: null,
-    driveToken: null
+    driveToken: null,
+    currentStreamName: ''
 };
 
 // --- GOOGLE DRIVE MODULE ---
@@ -314,44 +334,46 @@ const drive = {
     tokenClient: null,
     
     init: () => {
-        if(typeof google === 'undefined' || !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')) return;
+        if(typeof google === 'undefined') {
+            console.warn("Librería de Google no cargada.");
+            return;
+        }
         
-        drive.tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.file',
-            callback: (tokenResponse) => {
-                if (tokenResponse && tokenResponse.access_token) {
-                    STATE.driveToken = tokenResponse.access_token;
-                    DOM.driveStatus.innerHTML = `<i class="fas fa-check-circle mr-2 text-green-500"></i> Conectado`;
-                    DOM.driveStatus.classList.replace('text-gray-500', 'text-white');
-                    app.showToast("Google Drive Conectado");
-                    // Guardar preferencia, aunque el token caduca
-                    localStorage.setItem('sf_drive_connected', 'true');
-                }
-            },
-        });
-        
-        // Auto-conectar si estaba conectado antes (pedirá permiso si token caducó)
-        if(localStorage.getItem('sf_drive_connected') === 'true') {
-            // No forzamos login automático invasivo, usuario debe dar click
+        try {
+            drive.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        STATE.driveToken = tokenResponse.access_token;
+                        DOM.driveStatus.innerHTML = `<i class="fas fa-check-circle mr-2 text-green-500"></i> Conectado`;
+                        DOM.driveStatus.classList.replace('text-gray-500', 'text-white');
+                        app.showToast("Google Drive Conectado");
+                        localStorage.setItem('sf_drive_connected', 'true');
+                    }
+                },
+            });
+        } catch(e) {
+            console.error("Error inicializando Google:", e);
         }
     },
 
     login: () => {
         if(!drive.tokenClient) {
-            if(!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes(653955063422-dr882a448japajmpfs8l8pkbk50vi4dn.apps.googleusercontent.com)) {
-                alert("ERROR: Debes configurar el CLIENT_ID de Google en el código fuente (línea 363) para usar esta función.");
+             drive.init(); 
+             if(!drive.tokenClient) {
+                alert("Error inicializando Google Auth. Revisa la consola.");
                 return;
-            }
-            drive.init();
+             }
         }
         drive.tokenClient.requestAccessToken();
     },
 
     upload: async (blob, filename) => {
         if (!STATE.driveToken) {
-            app.showToast("Error: No autenticado en Drive");
-            return false;
+            app.showToast("Error: Token Drive no válido. Descargando local...");
+            recorder.downloadLocal(blob, filename);
+            return;
         }
 
         DOM.uploadModal.classList.remove('hidden');
@@ -376,17 +398,12 @@ const drive = {
             if(data.id) {
                 app.showToast("¡Grabación guardada en Drive!");
             } else {
-                throw new Error("Error en respuesta de Drive");
+                throw new Error("Error API Drive");
             }
         } catch(e) {
             console.error(e);
-            app.showToast("Error subiendo a Drive. Se descargará localmente.");
-            // Fallback descarga normal
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
+            app.showToast("Fallo subida a Drive. Descargando local.");
+            recorder.downloadLocal(blob, filename);
         } finally {
             DOM.uploadModal.classList.add('hidden');
             DOM.uploadModal.classList.remove('flex');
@@ -419,8 +436,8 @@ const recorder = {
         
         recorder.mediaRecorder = new MediaRecorder(stream, options);
 
-        // Si hay carpeta local y NO estamos usando Drive (o Drive no está conectado)
         if (recorder.dirHandle && !STATE.driveToken) {
+            // Modo Stream a Disco Local
             try {
                 const fileName = `streamflix_${Date.now()}.webm`;
                 recorder.fileHandle = await recorder.dirHandle.getFileHandle(fileName, { create: true });
@@ -429,7 +446,11 @@ const recorder = {
                 recorder.mediaRecorder.ondataavailable = async (event) => {
                     if (event.data.size > 0 && recorder.writable) await recorder.writable.write(event.data);
                 };
-                recorder.mediaRecorder.onstop = async () => { if(recorder.writable) await recorder.writable.close(); app.showToast("Grabado en disco local."); };
+                recorder.mediaRecorder.onstop = async () => { 
+                    if(recorder.writable) await recorder.writable.close(); 
+                    app.showToast("Grabado en disco local."); 
+                    DOM.recIndicator.classList.add('hidden'); 
+                };
             } catch(e) {
                 console.error("Fallo local", e);
                 recorder.dirHandle = null;
@@ -437,7 +458,7 @@ const recorder = {
                 return;
             }
         } else {
-            // Modo Memoria (Para descarga o Drive)
+            // Modo Memoria (Drive o Descarga)
             recorder.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) recorder.chunks.push(event.data);
             };
@@ -446,20 +467,12 @@ const recorder = {
                 const blob = new Blob(recorder.chunks, { type: 'video/webm' });
                 const fileName = `streamflix_cloud_${Date.now()}.webm`;
 
-                // Prioridad: Si hay token de Drive, subimos. Si no, descargamos.
                 if (STATE.driveToken) {
                     drive.upload(blob, fileName);
                 } else {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    app.showToast("Grabación descargada");
+                    recorder.downloadLocal(blob, fileName);
                 }
+                DOM.recIndicator.classList.add('hidden');
             };
         }
 
@@ -480,18 +493,28 @@ const recorder = {
         DOM.recText.innerText = "Grabar";
     },
 
+    downloadLocal: (blob, filename) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        app.showToast("Grabación descargada");
+    },
+
     startFallback: (stream, options) => {
         recorder.mediaRecorder = new MediaRecorder(stream, options);
         recorder.mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) recorder.chunks.push(e.data); };
         recorder.mediaRecorder.onstop = () => {
             const blob = new Blob(recorder.chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `grabacion_fallback_${Date.now()}.webm`;
-            a.click();
+            recorder.downloadLocal(blob, `grabacion_fallback_${Date.now()}.webm`);
+            DOM.recIndicator.classList.add('hidden');
         };
         recorder.mediaRecorder.start();
+        recorder.isRecording = true;
     }
 };
 
@@ -514,11 +537,8 @@ const app = {
                 app.loadSource('xtream', true);
             }
         }
-        // Inicializar Google Drive al cargar página
-        window.onload = () => {
-             // Pequeño delay para asegurar que script de google cargó
-             setTimeout(() => drive.init(), 1000);
-        };
+        
+        window.onload = () => { setTimeout(() => drive.init(), 1000); };
 
         DOM.search.addEventListener('input', (e) => {
             if(e.target.value.length > 2) app.filterContent(e.target.value);
@@ -570,7 +590,6 @@ const app = {
                 STATE.creds = { s, u, p };
                 status.innerText = "Descargando Datos...";
                 
-                // Carga optimizada (paralela si es posible, aquí secuencial por simplicidad de errores)
                 try {
                     const [live, vod, ser, liveCats] = await Promise.all([
                         fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_streams`).then(r=>r.json()),
@@ -792,26 +811,79 @@ const app = {
 
 const player = {
     start: (url, title, type, id = null) => {
-        app.closeDetail(); DOM.overlay.classList.remove('hidden');
-        DOM.pTitle.innerText = title; DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
+        if(recorder.isRecording) {
+            if(!confirm("Hay una grabación activa. ¿Detenerla y cambiar de canal?")) return;
+            player.stopBackground();
+        }
+
+        STATE.currentStreamName = title;
+        app.closeDetail(); 
+        DOM.overlay.classList.remove('hidden');
+        DOM.recIndicator.classList.add('hidden'); 
+
+        DOM.pTitle.innerText = title; 
+        DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
+        
         if(type === 'live') DOM.btnRecord.classList.remove('hidden'); else DOM.btnRecord.classList.add('hidden');
-        recorder.stop(); 
-        if(STATE.hls) STATE.hls.destroy();
+        
         DOM.video.src = '';
+        if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+
         if(Hls.isSupported() && url.includes('.m3u8')) {
             STATE.hls = new Hls({ xhrSetup: xhr => { xhr.withCredentials = false; } }); 
-            STATE.hls.loadSource(url); STATE.hls.attachMedia(DOM.video); STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
-        } else { DOM.video.src = url; DOM.video.play(); }
+            STATE.hls.loadSource(url); 
+            STATE.hls.attachMedia(DOM.video); 
+            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
+        } else { 
+            DOM.video.src = url; 
+            DOM.video.play(); 
+        }
+
         if (type === 'live' && id && STATE.creds) {
             fetch(`https://miproxyiptv.onrender.com/${STATE.creds.s}/player_api.php?username=${STATE.creds.u}&password=${STATE.creds.p}&action=get_short_epg&stream_id=${id}`)
                 .then(r=>r.json()).then(d => { DOM.pEpg.innerText = d.epg_listings && d.epg_listings.length ? `AHORA: ${atob(d.epg_listings[0].title)}` : "Sin EPG"; }).catch(()=>DOM.pEpg.innerText = "");
         }
     },
-    close: () => { if(recorder.isRecording) recorder.stop(); DOM.video.pause(); DOM.video.src = ''; if(STATE.hls) STATE.hls.destroy(); DOM.overlay.classList.add('hidden'); },
+    
+    close: () => { 
+        if(recorder.isRecording) {
+            DOM.overlay.classList.add('hidden');
+            DOM.recBgTitle.innerText = STATE.currentStreamName;
+            DOM.recIndicator.classList.remove('hidden');
+            app.showToast("Grabación continuando en 2º plano");
+        } else {
+            DOM.video.pause(); 
+            DOM.video.src = ''; 
+            if(STATE.hls) STATE.hls.destroy(); 
+            DOM.overlay.classList.add('hidden'); 
+        }
+    },
+
+    restore: () => {
+        DOM.overlay.classList.remove('hidden');
+        DOM.recIndicator.classList.add('hidden');
+    },
+
+    stopBackground: () => {
+        recorder.stop();
+        DOM.video.pause(); 
+        DOM.video.src = ''; 
+        if(STATE.hls) STATE.hls.destroy(); 
+        DOM.recIndicator.classList.add('hidden');
+    },
+
     toggleRecording: () => {
         if(!recorder.isRecording) {
-            try { recorder.start(DOM.video.captureStream()); } catch (e) { app.showToast("Error: CORS impide grabar este stream"); }
-        } else { recorder.stop(); }
+            try { 
+                const stream = DOM.video.captureStream();
+                recorder.start(stream); 
+            } catch (e) { 
+                console.error(e);
+                app.showToast("Error: El navegador bloquea la grabación de este formato (CORS)."); 
+            }
+        } else { 
+            recorder.stop(); 
+        }
     },
     togglePlay: () => {
         if(DOM.video.paused) { DOM.video.play(); DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-play text-6xl animate-ping'; setTimeout(()=>document.getElementById('centerPlayIcon').className='fas fa-play text-6xl opacity-0 transition-opacity', 500); } 
