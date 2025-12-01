@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFlix Player - Cloud Recording v5.2</title>
+    <title>StreamFlix Player - Cloud Recording v5.3.1 (EPG Fix)</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -95,7 +95,7 @@
             <div id="loginStatus" class="mt-4 text-sm text-center text-gray-400 min-h-[20px]"></div>
             <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
                 <button onclick="app.clearData()" class="hover:text-white underline">Borrar Datos</button>
-                <span>v5.2 CloudRec</span>
+                <span>v5.3.1 CloudRec</span>
             </div>
         </div>
     </div>
@@ -108,6 +108,7 @@
             <div class="flex flex-col space-y-2 mt-4 px-2">
                 <button onclick="app.nav('home')" id="nav-home" class="nav-item active flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-home text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Inicio</span></button>
                 <button onclick="app.nav('live')" id="nav-live" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-broadcast-tower text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">TV en Vivo</span></button>
+                <button onclick="app.nav('epg')" id="nav-epg" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-calendar-alt text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Guía EPG</span></button>
                 <button onclick="app.nav('movies')" id="nav-movies" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-film text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Películas</span></button>
                 <button onclick="app.nav('series')" id="nav-series" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-tv text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Series</span></button>
                 <button onclick="app.nav('favorites')" id="nav-favorites" class="nav-item flex items-center p-3 rounded-md hover:bg-white/10"><i class="fas fa-heart text-xl w-8 text-center"></i><span class="hidden lg:block ml-3">Favoritos</span></button>
@@ -148,7 +149,16 @@
                     </div>
                 </div>
 
-                <div class="p-6 lg:p-10">
+                <div id="epgSection" class="px-6 lg:px-10 hidden">
+                    <h2 class="text-xl font-bold mb-4 text-white">Guía de Programación (EPG)</h2>
+                    <div id="epgControls" class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-6 p-3 rounded-lg bg-gray-900/50 overflow-x-auto hide-scroll">
+                        <button id="daySelector" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold text-white flex-shrink-0">Hoy</button>
+                        <div id="hourSelector" class="flex overflow-x-auto space-x-2 hide-scroll flex-grow">
+                            </div>
+                    </div>
+                    <div id="epgList" class="space-y-4 pb-20"></div>
+                </div>
+                <div id="gridSection" class="p-6 lg:p-10">
                     <h2 id="sectionTitle" class="text-xl font-bold mb-4 text-white">Tendencias</h2>
                     <div id="gridContainer" class="content-grid"></div>
                     <div id="loadMoreTrigger" class="h-20 w-full flex items-center justify-center text-gray-500 text-sm">Cargando más contenido...</div>
@@ -240,7 +250,11 @@
                         </button>
                     </div>
                 </div>
-
+                
+                <div class="border-t border-gray-700 pt-4">
+                    <h3 class="text-gray-300 font-medium mb-2">Nota sobre Otros Servidores</h3>
+                    <p class="text-xs text-gray-500">Actualmente, la grabación en nube está optimizada e integrada únicamente con **Google Drive** usando su API de autenticación. Implementar otros servicios como Dropbox o OneDrive requeriría una integración de APIs completamente separada y compleja.</p>
+                </div>
                 <div class="border-t border-gray-700 pt-4">
                     <h3 class="text-gray-300 font-medium mb-2">Ruta Local (PC)</h3>
                     <p class="text-xs text-gray-500 mb-3">Opción alternativa para guardar en disco local.</p>
@@ -268,7 +282,7 @@
 <script>
 /**
  * STREAMFLIX CORE ENGINE
- * V5.2 - Cloud Recording, Background Support & Auth Fixed
+ * V5.3.1 - EPG Data Decoding Fix
  */
 
 // --- TU CLIENT ID DE GOOGLE CONFIGURADO ---
@@ -277,6 +291,7 @@ const GOOGLE_CLIENT_ID = '653955063422-dr882a448japajmpfs8l8pkbk50vi4dn.apps.goo
 const DOM = {
     login: document.getElementById('loginScreen'),
     main: document.getElementById('mainInterface'),
+    gridSection: document.getElementById('gridSection'), // Nuevo
     grid: document.getElementById('gridContainer'),
     hero: document.getElementById('heroSection'),
     heroImg: document.getElementById('heroImage'),
@@ -310,7 +325,10 @@ const DOM = {
     driveStatus: document.getElementById('driveStatus'),
     uploadModal: document.getElementById('uploadProgressModal'),
     recIndicator: document.getElementById('recordingIndicator'),
-    recBgTitle: document.getElementById('recBackgroundTitle')
+    recBgTitle: document.getElementById('recBackgroundTitle'),
+    // NUEVOS EPG
+    epgSection: document.getElementById('epgSection'),
+    epgList: document.getElementById('epgList')
 };
 
 const STATE = {
@@ -326,7 +344,8 @@ const STATE = {
     perPage: 50,
     hls: null,
     driveToken: null,
-    currentStreamName: ''
+    currentStreamName: '',
+    epgData: {} // Para almacenar toda la EPG de los canales { channelId: { channel: {...}, listings: [...] } }
 };
 
 // --- GOOGLE DRIVE MODULE ---
@@ -601,6 +620,7 @@ const app = {
                     const catMap = {};
                     if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
 
+                    // Aseguramos que los canales Xtream tengan un ID para EPG
                     STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon, url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
                     STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon || x.cover, url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
                     STATE.data.series = ser.map(x => ({ id: x.series_id, name: x.name, img: x.cover || x.stream_icon, url: null, type: 'series', plot: x.plot }));
@@ -646,13 +666,22 @@ const app = {
         STATE.view = view;
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.getElementById(`nav-${view}`)?.classList.add('active');
-        DOM.hero.classList.add('hidden'); DOM.liveToolbar.classList.add('hidden'); 
-        DOM.grid.innerHTML = ''; DOM.grid.className = 'content-grid'; 
-        STATE.page = 1; document.getElementById('contentArea').scrollTop = 0;
         
-        DOM.search.placeholder = view === 'live' ? "Buscar Canales..." : (view === 'movies' ? "Buscar Películas..." : "Buscar...");
+        // Ocultar todos los contenedores principales
+        DOM.hero.classList.add('hidden'); 
+        DOM.liveToolbar.classList.add('hidden'); 
+        DOM.gridSection.classList.add('hidden');
+        DOM.epgSection.classList.add('hidden'); // Contenedor EPG
+
+        DOM.grid.innerHTML = ''; 
+        DOM.grid.className = 'content-grid'; 
+        STATE.page = 1; 
+        document.getElementById('contentArea').scrollTop = 0;
+        
+        DOM.search.placeholder = view === 'live' ? "Buscar Canales..." : (view === 'movies' ? "Buscar Películas..." : (view === 'epg' ? "Buscar en EPG..." : "Buscar..."));
 
         if (view === 'home') {
+            DOM.gridSection.classList.remove('hidden');
             DOM.title.innerText = "Tendencias & Recomendados";
             DOM.hero.classList.remove('hidden');
             const pool = [...STATE.data.movie, ...STATE.data.series];
@@ -665,19 +694,201 @@ const app = {
             STATE.renderList = [...STATE.data.movie.slice(0,40), ...STATE.data.series.slice(0,40), ...STATE.data.live.slice(0,20)].sort(() => 0.5 - Math.random());
             app.renderMore();
         } else if (view === 'live') {
+            DOM.gridSection.classList.remove('hidden');
             DOM.title.innerText = "TV en Vivo";
             DOM.liveToolbar.classList.remove('hidden');
             app.renderCategories();
             if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout');
             app.filterByCategory(STATE.activeCat);
+        } else if (view === 'epg') { // Lógica para Guía EPG
+            DOM.epgSection.classList.remove('hidden');
+            app.renderEPG();
         } else if (view === 'favorites') {
+            DOM.gridSection.classList.remove('hidden');
             DOM.title.innerText = "Mi Lista"; STATE.renderList = STATE.favorites; app.renderMore();
         } else {
+            DOM.gridSection.classList.remove('hidden');
             DOM.title.innerText = view === 'movies' ? "Películas" : "Series";
             STATE.renderList = STATE.data[view === 'movies' ? 'movie' : 'series'];
             app.renderMore();
         }
     },
+
+    // ------------------------------------
+    // NUEVA FUNCIÓN DE DECODIFICACIÓN SEGURA
+    // ------------------------------------
+    safeBase64Decode: (encoded) => {
+        if (!encoded) return 'Programa sin título/descripción';
+        try {
+            // Intento de decodificación Base64 a UTF-8 (necesario para Xtream Codes)
+            return decodeURIComponent(atob(encoded).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        } catch (e) {
+            // Si falla (por Base64 corrupto), devolvemos un marcador para evitar el error
+            console.error("Fallo al decodificar Base64:", e, "Input:", encoded);
+            return 'Título ilegible (Error de Decodificación)'; 
+        }
+    },
+    // ------------------------------------
+    // FIN NUEVA FUNCIÓN
+    // ------------------------------------
+    
+    // NUEVO: Generar botones de hora (00:00 a 23:00)
+    generateHourSelectors: (initialHour) => {
+        const selector = document.getElementById('hourSelector');
+        selector.innerHTML = '';
+        const now = new Date();
+        const currentHour = initialHour !== undefined ? initialHour : now.getHours();
+
+        for (let i = 0; i < 24; i++) {
+            const hour = i.toString().padStart(2, '0');
+            const button = document.createElement('button');
+            button.className = 'cat-chip flex-shrink-0';
+            button.innerText = `${hour}:00`;
+            button.dataset.hour = i;
+            button.onclick = () => app.filterEPGByHour(i);
+
+            if (i === currentHour) {
+                button.classList.add('active');
+            }
+            selector.appendChild(button);
+        }
+        
+        // Desplazar el selector para que se vea la hora actual
+        const activeBtn = selector.querySelector('.active');
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    },
+
+    // NUEVO: Función para filtrar y renderizar EPG por hora
+    filterEPGByHour: (hour) => {
+        // Resaltar el botón activo
+        document.getElementById('hourSelector').querySelectorAll('.cat-chip').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.hour) === hour);
+        });
+
+        DOM.epgList.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        const targetHour = hour; // 0-23
+
+        // Crear el rango de tiempo de la franja horaria seleccionada
+        const startTime = new Date();
+        startTime.setHours(targetHour, 0, 0, 0); // Inicio de la hora (Ej: 10:00:00)
+        const endTime = new Date(startTime);
+        endTime.setHours(targetHour + 1, 0, 0, -1); // Fin de la hora (Ej: 10:59:59)
+
+        let hasResults = false;
+
+        Object.values(STATE.epgData).forEach(data => {
+            const matchingPrograms = data.listings.filter(program => {
+                // El programa está activo O comienza dentro de la franja horaria
+                return (program.start < endTime && program.end > startTime);
+            }).sort((a, b) => a.start - b.start); // Ordenar por hora de inicio
+
+            if (matchingPrograms.length > 0) {
+                hasResults = true;
+                const item = document.createElement('div');
+                item.className = 'list-item flex flex-col md:flex-row md:items-center bg-gray-800/70 p-4 rounded-lg transition';
+                
+                const logo = data.channel.img && data.channel.img.length > 5 ? data.channel.img : 'https://via.placeholder.com/100?text=TV';
+
+                item.innerHTML = `
+                    <div class="flex-shrink-0 mb-3 md:mb-0 mr-4 flex items-center w-full md:w-auto">
+                        <img src="${logo}" class="w-12 h-12 object-contain rounded mr-3" onerror="this.src='https://via.placeholder.com/100?text=TV'">
+                        <div class="flex-grow">
+                            <div class="font-bold text-white text-lg">${data.channel.name}</div>
+                            <div class="text-sm text-gray-400">${data.channel.cat || 'General'}</div>
+                        </div>
+                    </div>
+                    <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2 border-l-0 md:border-l border-gray-600 md:pl-4">
+                        ${matchingPrograms.slice(0, 3).map(p => `
+                            <div class="p-2 rounded-md bg-gray-700/50 hover:bg-gray-700 transition cursor-pointer" 
+                                 onclick="player.start('${data.channel.url}', '${data.channel.name} - ${p.title.replace(/'/g, "\\'")}', 'live', '${data.channel.id}')"
+                                 title="${p.title}: ${p.desc}">
+                                <span class="text-xs font-medium text-red-400">${p.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${p.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <div class="text-white text-sm font-bold truncate">${p.title}</div>
+                            </div>
+                        `).join('')}
+                        ${matchingPrograms.length > 3 ? `<div class="text-center text-gray-500 text-sm flex items-center justify-center">... ${matchingPrograms.length - 3} programas más</div>` : ''}
+                    </div>
+                    <div class="flex-shrink-0 ml-4 hidden md:flex">
+                        <button onclick="player.start('${data.channel.url}', '${data.channel.name}', 'live', '${data.channel.id}')" class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full"><i class="fas fa-play"></i></button>
+                    </div>
+                `;
+                fragment.appendChild(item);
+            }
+        });
+
+        if (!hasResults) {
+            DOM.epgList.innerHTML = `<div class="text-gray-500 text-center mt-10 p-4 bg-gray-900/50 rounded-lg">No hay programación disponible para la franja horaria de las **${targetHour}:00** o el servidor no devolvió datos.</div>`;
+        } else {
+            DOM.epgList.appendChild(fragment);
+        }
+    },
+
+
+    // MODIFICADO: Función para renderizar la EPG
+    renderEPG: async () => {
+        DOM.epgList.innerHTML = '<div class="text-center p-10"><div class="loader mx-auto mb-4"></div><p class="text-gray-400">Cargando Guía EPG (máximo 50 canales)...</p></div>';
+
+        // 1. Inicializar la navegación por horas y el estado
+        STATE.epgData = {};
+        app.generateHourSelectors();
+        
+        const liveChannels = STATE.data.live.slice(0, 50); // Limitar a 50 canales por rendimiento
+
+        if (liveChannels.length === 0) {
+            DOM.epgList.innerHTML = '<div class="text-gray-500 text-center mt-10">No se encontraron canales en vivo.</div>';
+            return;
+        }
+
+        if (STATE.sourceType === 'm3u') {
+            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-info-circle mr-2"></i>La información EPG (Programación Futura) solo está disponible con credenciales de **Xtream Codes**.</p>';
+            return;
+        }
+
+        const { s, u, p } = STATE.creds;
+
+        // 2. Fetch de EPG simple para cada canal (obtiene un rango de programas)
+        const epgPromises = liveChannels.map(channel => {
+            // Usamos get_simple_epg para obtener una lista de programas futuros
+            return fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_simple_epg&stream_id=${channel.id}&limit=100`)
+                .then(r => r.json())
+                .then(data => {
+                    if(data.epg_listings && data.epg_listings.length > 0) {
+                        STATE.epgData[channel.id] = { 
+                            channel: channel, 
+                            listings: data.epg_listings.map(item => ({
+                                title: app.safeBase64Decode(item.title), // <--- USO DE DECODIFICADOR SEGURO
+                                start: new Date(item.start_timestamp * 1000),
+                                end: new Date(item.stop_timestamp * 1000),
+                                desc: item.description ? app.safeBase64Decode(item.description) : 'Sin descripción' // <--- USO DE DECODIFICADOR SEGURO
+                            }))
+                        };
+                    }
+                })
+                .catch(e => console.error(`Error EPG ${channel.id}:`, e));
+        });
+
+        await Promise.all(epgPromises);
+        
+        // 3. Verificación de resultados y Renderizado inicial
+        const now = new Date().getHours();
+
+        const totalPrograms = Object.values(STATE.epgData).reduce((acc, data) => acc + data.listings.length, 0);
+        
+        if (totalPrograms === 0) {
+            // Mensaje explícito si no hay EPG de ningún canal
+            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-exclamation-triangle mr-2"></i>El servidor Xtream no devolvió ninguna programación EPG (Guía) para los canales solicitados. Puede que no esté disponible o la lista de canales no tenga metadatos EPG.</p>';
+            app.generateHourSelectors(now);
+            return;
+        }
+
+        app.filterEPGByHour(now); 
+    },
+    // FIN MODIFICACIÓN EPG
 
     renderCategories: () => {
         const uniqueCats = ['Todas', ...new Set(STATE.data.live.map(c => c.cat))].sort();
@@ -840,8 +1051,17 @@ const player = {
         }
 
         if (type === 'live' && id && STATE.creds) {
-            fetch(`https://miproxyiptv.onrender.com/${STATE.creds.s}/player_api.php?username=${STATE.creds.u}&password=${STATE.creds.p}&action=get_short_epg&stream_id=${id}`)
-                .then(r=>r.json()).then(d => { DOM.pEpg.innerText = d.epg_listings && d.epg_listings.length ? `AHORA: ${atob(d.epg_listings[0].title)}` : "Sin EPG"; }).catch(()=>DOM.pEpg.innerText = "");
+            // Buscamos el EPG actual si lo tenemos almacenado
+            if(STATE.epgData[id] && STATE.epgData[id].listings.length > 0) {
+                 const now = new Date();
+                 const current = STATE.epgData[id].listings.find(p => p.start <= now && p.end >= now);
+                 if(current) DOM.pEpg.innerText = `AHORA: ${current.title}`;
+                 else DOM.pEpg.innerText = "Sin EPG Actual";
+            } else {
+                 // Fallback para obtener el actual si no se cargó el EPG completo (usando get_short_epg)
+                fetch(`https://miproxyiptv.onrender.com/${STATE.creds.s}/player_api.php?username=${STATE.creds.u}&password=${STATE.creds.p}&action=get_short_epg&stream_id=${id}`)
+                    .then(r=>r.json()).then(d => { DOM.pEpg.innerText = d.epg_listings && d.epg_listings.length ? `AHORA: ${app.safeBase64Decode(d.epg_listings[0].title)}` : "Sin EPG"; }).catch(()=>DOM.pEpg.innerText = "");
+            }
         }
     },
     
