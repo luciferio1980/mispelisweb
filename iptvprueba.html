@@ -452,19 +452,23 @@ const recorder = {
         recorder.chunks = [];
         const options = { mimeType: 'video/webm; codecs=vp9' };
         if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'video/webm';
+        
         recorder.mediaRecorder = new MediaRecorder(stream, options);
-        if (recorder.dirHandle && !STATE.driveToken) { // Modo Stream a Disco Local
+
+        if (recorder.dirHandle && !STATE.driveToken) {
+            // Modo Stream a Disco Local
             try {
                 const fileName = `streamflix_${Date.now()}.webm`;
                 recorder.fileHandle = await recorder.dirHandle.getFileHandle(fileName, { create: true });
                 recorder.writable = await recorder.fileHandle.createWritable();
+                
                 recorder.mediaRecorder.ondataavailable = async (event) => {
                     if (event.data.size > 0 && recorder.writable) await recorder.writable.write(event.data);
                 };
-                recorder.mediaRecorder.onstop = async () => {
-                    if(recorder.writable) await recorder.writable.close();
-                    app.showToast("Grabado en disco local.");
-                    DOM.recIndicator.classList.add('hidden');
+                recorder.mediaRecorder.onstop = async () => { 
+                    if(recorder.writable) await recorder.writable.close(); 
+                    app.showToast("Grabado en disco local."); 
+                    DOM.recIndicator.classList.add('hidden'); 
                 };
             } catch(e) {
                 console.error("Fallo local", e);
@@ -472,50 +476,57 @@ const recorder = {
                 recorder.startFallback(stream, options);
                 return;
             }
-        } else { // Modo Memoria (Drive o Descarga)
+        } else {
+            // Modo Memoria (Drive o Descarga)
             recorder.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) recorder.chunks.push(event.data);
             };
+            
             recorder.mediaRecorder.onstop = () => {
                 const blob = new Blob(recorder.chunks, { type: 'video/webm' });
                 const fileName = `streamflix_cloud_${Date.now()}.webm`;
-                if (STATE.driveToken) drive.upload(blob, fileName);
-                else recorder.downloadLocal(blob, fileName);
+
+                if (STATE.driveToken) {
+                    drive.upload(blob, fileName);
+                } else {
+                    recorder.downloadLocal(blob, fileName);
+                }
                 DOM.recIndicator.classList.add('hidden');
             };
         }
 
-        recorder.mediaRecorder.start();
+        recorder.mediaRecorder.start(1000); 
         recorder.isRecording = true;
-        app.showToast("Grabación iniciada en 2º plano.");
+        DOM.recDot.classList.add('rec-dot');
+        const mode = STATE.driveToken ? "NUBE (Drive)" : (recorder.dirHandle ? "DISCO LOCAL" : "MEMORIA");
+        DOM.recText.innerText = `GRABANDO (${mode})`;
+        app.showToast(`Grabando en: ${mode}`);
     },
 
     stop: () => {
-        if (recorder.isRecording) {
+        if(recorder.mediaRecorder && recorder.mediaRecorder.state !== 'inactive') {
             recorder.mediaRecorder.stop();
-            recorder.isRecording = false;
         }
+        recorder.isRecording = false;
+        DOM.recDot.classList.remove('rec-dot');
+        DOM.recText.innerText = "Grabar";
     },
 
     downloadLocal: (blob, filename) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
+        a.style.display = 'none';
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        app.showToast("Grabación descargada localmente.");
+        window.URL.revokeObjectURL(url);
+        app.showToast("Grabación descargada");
     },
-    
-    // Fallback for browsers without stream to disk API
-    startFallback: (stream, options) => { 
-        recorder.chunks = [];
+
+    startFallback: (stream, options) => {
         recorder.mediaRecorder = new MediaRecorder(stream, options);
-        recorder.mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) recorder.chunks.push(event.data);
-        };
+        recorder.mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) recorder.chunks.push(e.data); };
         recorder.mediaRecorder.onstop = () => {
             const blob = new Blob(recorder.chunks, { type: 'video/webm' });
             recorder.downloadLocal(blob, `grabacion_fallback_${Date.now()}.webm`);
@@ -531,7 +542,7 @@ const app = {
     init: () => {
         document.getElementById('tabM3u').onclick = () => app.toggleLoginTab('m3u');
         document.getElementById('tabXtream').onclick = () => app.toggleLoginTab('xtream');
-
+        
         const stored = localStorage.getItem('sf_creds');
         if (stored) {
             const data = JSON.parse(stored);
@@ -545,127 +556,81 @@ const app = {
                 app.loadSource('xtream', true);
             }
         }
-
-        window.onload = () => {
-            setTimeout(() => drive.init(), 1000);
-        };
         
+        window.onload = () => { setTimeout(() => drive.init(), 1000); };
+
         DOM.search.addEventListener('input', (e) => {
             if(e.target.value.length > 2) app.filterContent(e.target.value);
             else if(e.target.value.length === 0) app.nav(STATE.view);
         });
-
         document.getElementById('contentArea').addEventListener('scroll', (e) => {
-            if (e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 200)
-                app.renderMore();
+            if (e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 200) app.renderMore();
         });
-
         setInterval(() => {
             document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }, 1000);
     },
 
     toggleLoginTab: (tab) => {
-        const m3uP = document.getElementById('panelM3u');
-        const xtP = document.getElementById('panelXtream');
-        const m3uT = document.getElementById('tabM3u');
-        const xtT = document.getElementById('tabXtream');
-
+        const m3uP = document.getElementById('panelM3u'); const xtP = document.getElementById('panelXtream');
+        const m3uT = document.getElementById('tabM3u'); const xtT = document.getElementById('tabXtream');
         if (tab === 'm3u') {
-            m3uP.classList.remove('hidden');
-            xtP.classList.add('hidden');
-            m3uT.classList.add('border-red-600', 'text-white');
-            m3uT.classList.remove('text-gray-400');
-            xtT.classList.remove('border-red-600', 'text-white');
-            xtT.classList.add('text-gray-400');
+            m3uP.classList.remove('hidden'); xtP.classList.add('hidden');
+            m3uT.classList.add('border-red-600', 'text-white'); m3uT.classList.remove('text-gray-400');
+            xtT.classList.remove('border-red-600', 'text-white'); xtT.classList.add('text-gray-400');
         } else {
-            xtP.classList.remove('hidden');
-            m3uP.classList.add('hidden');
-            xtT.classList.add('border-red-600', 'text-white');
-            xtT.classList.remove('text-gray-400');
-            m3uT.classList.remove('border-red-600', 'text-white');
-            m3uT.classList.add('text-gray-400');
+            xtP.classList.remove('hidden'); m3uP.classList.add('hidden');
+            xtT.classList.add('border-red-600', 'text-white'); xtT.classList.remove('text-gray-400');
+            m3uT.classList.remove('border-red-600', 'text-white'); m3uT.classList.add('text-gray-400');
         }
     },
 
-    loadSource: async (type, isAuto = false) => {
+    loadSource: async (type, auto = false) => {
         const status = document.getElementById('loginStatus');
-        status.className = "mt-4 text-sm text-center text-gray-400";
-        status.innerText = "Cargando...";
-
+        status.innerText = "Conectando al servidor...";
+        status.className = "mt-4 text-sm text-center text-yellow-500 animate-pulse";
         try {
             if (type === 'm3u') {
                 const url = document.getElementById('m3uInput').value.trim();
-                if (!url.startsWith('http')) throw new Error("URL M3U no válida.");
-                
-                const response = await fetch(url);
-                const text = await response.text();
+                if (!url) throw new Error("URL vacía");
+                const proxy = `https://miproxyiptv.onrender.com/${url}`;
+                const res = await fetch(proxy);
+                if (!res.ok) throw new Error("Error descargando lista");
+                const text = await res.text();
                 app.parseM3U(text);
-                
                 localStorage.setItem('sf_creds', JSON.stringify({ type: 'm3u', url }));
                 STATE.sourceType = 'm3u';
-            } else if (type === 'xtream') {
-                const s = document.getElementById('xServer').value.trim().replace(/\/+$/, '');
+            } else {
+                const s = document.getElementById('xServer').value.trim();
                 const u = document.getElementById('xUser').value.trim();
                 const p = document.getElementById('xPass').value.trim();
-
-                if (!s || !u || !p) throw new Error("Todos los campos son obligatorios.");
-
+                if(!s || !u || !p) throw new Error("Faltan datos");
+                const baseUrl = `${s}/player_api.php?username=${u}&password=${p}`;
                 STATE.creds = { s, u, p };
+                status.innerText = "Descargando Datos...";
+                
+                try {
+                    const [live, vod, ser, liveCats] = await Promise.all([
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_streams`).then(r=>r.json()),
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_vod_streams`).then(r=>r.json()),
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_series`).then(r=>r.json()),
+                        fetch(`https://miproxyiptv.onrender.com/${baseUrl}&action=get_live_categories`).then(r=>r.json()).catch(()=>[])
+                    ]);
 
-                const [liveRes, vodRes, serRes, epgRes] = await Promise.all([
-                    fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_live_streams`),
-                    fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_vod_streams`),
-                    fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series`),
-                    fetch(`https://miproxyiptv.onrender.com/${s}/xmltv.php?username=${u}&password=${p}`)
-                ]);
+                    const catMap = {};
+                    if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
 
-                const [live, vod, ser, epgRaw] = await Promise.all([liveRes.json(), vodRes.json(), serRes.json(), epgRes.text()]);
-
-                // LIVE
-                STATE.data.live = live.map(x => ({ 
-                    id: x.stream_id, 
-                    name: x.name, 
-                    img: x.stream_icon, 
-                    url: `${s}/live/${u}/${p}/${x.stream_id}.m3u8`, 
-                    type: 'live', 
-                    cat: x.category_name 
-                }));
-
-                // MOVIES
-                STATE.data.movie = vod.map(x => ({ 
-                    id: x.vod_id, 
-                    name: x.name, 
-                    img: x.stream_icon, 
-                    url: null, 
-                    type: 'movie', 
-                    cat: x.category_name 
-                }));
-
-                // SERIES
-                STATE.data.series = ser.map(x => ({ 
-                    id: x.series_id, 
-                    name: x.name, 
-                    img: x.cover || x.stream_icon, 
-                    url: null, 
-                    type: 'series', 
-                    plot: x.plot 
-                }));
-
-                // EPG (XMLTV Parsing)
-                app.parseXMLTV(epgRaw);
-
-                localStorage.setItem('sf_creds', JSON.stringify({ type: 'xtream', server:s, username:u, password:p }));
-                STATE.sourceType = 'xtream';
+                    // Aseguramos que los canales Xtream tengan un ID para EPG
+                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon, url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
+                    STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon || x.cover, url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
+                    STATE.data.series = ser.map(x => ({ id: x.series_id, name: x.name, img: x.cover || x.stream_icon, url: null, type: 'series', plot: x.plot }));
+                    
+                    localStorage.setItem('sf_creds', JSON.stringify({ type: 'xtream', server:s, username:u, password:p }));
+                    STATE.sourceType = 'xtream';
+                } catch(err) { throw new Error("Fallo en API Xtream: " + err.message); }
             }
-
             status.innerText = "¡Listo!";
-            setTimeout(() => {
-                DOM.login.classList.add('hidden');
-                DOM.main.classList.remove('hidden');
-                app.nav('home');
-            }, 500);
-
+            setTimeout(() => { DOM.login.classList.add('hidden'); DOM.main.classList.remove('hidden'); app.nav('home'); }, 500);
         } catch (e) {
             console.error(e);
             status.innerText = "Error: " + e.message;
@@ -676,7 +641,6 @@ const app = {
     parseM3U: (text) => {
         const lines = text.split('\n');
         STATE.data = { live: [], movie: [], series: [] };
-
         for(let i=0; i<lines.length; i++) {
             const line = lines[i].trim();
             if(line.startsWith('#EXTINF:')) {
@@ -686,53 +650,63 @@ const app = {
                     const img = line.match(/tvg-logo="([^"]*)"/)?.[1] || '';
                     const group = line.match(/group-title="([^"]*)"/)?.[1] || 'General';
                     const groupUpper = group.toUpperCase();
-
                     const isMovie = url.includes('/movie/') || groupUpper.includes('MOVIE') || url.match(/\.(mp4|mkv|avi)$/i);
                     const isSeries = url.includes('/series/') || groupUpper.includes('SERIES');
-                    
+
                     if(isSeries) STATE.data.series.push({ name, img, url, type: 'series', group });
                     else if(isMovie) STATE.data.movie.push({ name, img, url, type: 'movie', group });
-                    else STATE.data.live.push({ name, img, url, type: 'live', cat: group });
+                    else STATE.data.live.push({ name, img, url, type: 'live', cat: group }); 
                 }
             }
         }
     },
-
-    clearData: () => {
-        localStorage.clear();
-        location.reload();
-    },
-
+    clearData: () => { localStorage.clear(); location.reload(); },
+    
     nav: (view) => {
         STATE.view = view;
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.getElementById(`nav-${view}`).classList.add('active');
+        document.getElementById(`nav-${view}`)?.classList.add('active');
+        
+        // Ocultar todos los contenedores principales
+        DOM.hero.classList.add('hidden'); 
+        DOM.liveToolbar.classList.add('hidden'); 
         DOM.gridSection.classList.add('hidden');
-        DOM.liveToolbar.classList.add('hidden');
-        DOM.hero.classList.add('hidden');
-        DOM.epgSection.classList.add('hidden');
+        DOM.epgSection.classList.add('hidden'); // Contenedor EPG
 
-        DOM.grid.innerHTML = '';
-        STATE.page = 1;
-        DOM.search.value = '';
+        DOM.grid.innerHTML = ''; 
+        DOM.grid.className = 'content-grid'; 
+        STATE.page = 1; 
+        document.getElementById('contentArea').scrollTop = 0;
+        
+        DOM.search.placeholder = view === 'live' ? "Buscar Canales..." : (view === 'movies' ? "Buscar Películas..." : (view === 'epg' ? "Buscar en EPG..." : "Buscar..."));
 
-        if (view === 'live' || view === 'favorites') {
+        if (view === 'home') {
             DOM.gridSection.classList.remove('hidden');
-            DOM.liveToolbar.classList.remove('hidden');
-            DOM.title.innerText = view === 'live' ? 'Canales en Vivo' : 'Mis Favoritos';
-            STATE.renderList = view === 'live' ? STATE.data.live : STATE.favorites.filter(f => f.type === 'live');
-            app.renderCategories();
-            app.filterByCategory(STATE.activeCat);
-        } else if (view === 'home') {
-            DOM.gridSection.classList.remove('hidden');
-            DOM.title.innerText = 'Tendencias';
-            STATE.renderList = [...STATE.data.live, ...STATE.data.movie, ...STATE.data.series].slice(0, 100);
+            DOM.title.innerText = "Tendencias & Recomendados";
+            DOM.hero.classList.remove('hidden');
+            const pool = [...STATE.data.movie, ...STATE.data.series];
+            if(pool.length > 0) {
+                const random = pool[Math.floor(Math.random() * pool.length)];
+                DOM.heroImg.src = random.img || 'https://via.placeholder.com/1920x1080?text=StreamFlix';
+                DOM.heroTitle.innerText = random.name;
+                DOM.heroPlay.onclick = () => app.openDetail(random);
+            }
+            STATE.renderList = [...STATE.data.movie.slice(0,40), ...STATE.data.series.slice(0,40), ...STATE.data.live.slice(0,20)].sort(() => 0.5 - Math.random());
             app.renderMore();
-            if (STATE.renderList.length > 0) app.setHero(STATE.renderList[0]);
-        } else if (view === 'epg') {
+        } else if (view === 'live') {
+            DOM.gridSection.classList.remove('hidden');
+            DOM.title.innerText = "TV en Vivo";
+            DOM.liveToolbar.classList.remove('hidden');
+            app.renderCategories();
+            if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout');
+            app.filterByCategory(STATE.activeCat);
+        } else if (view === 'epg') { // Lógica para Guía EPG
             DOM.epgSection.classList.remove('hidden');
-            app.loadEPG();
-        } else if (view === 'movies' || view === 'series') {
+            app.renderEPG();
+        } else if (view === 'favorites') {
+            DOM.gridSection.classList.remove('hidden');
+            DOM.title.innerText = "Mi Lista"; STATE.renderList = STATE.favorites; app.renderMore();
+        } else {
             DOM.gridSection.classList.remove('hidden');
             DOM.title.innerText = view === 'movies' ? "Películas" : "Series";
             STATE.renderList = STATE.data[view === 'movies' ? 'movie' : 'series'];
@@ -753,13 +727,13 @@ const app = {
         } catch (e) {
             // Si falla (por Base64 corrupto), devolvemos un marcador para evitar el error
             console.error("Fallo al decodificar Base64:", e, "Input:", encoded);
-            return 'Título ilegible (Error de Decodificación)';
+            return 'Título ilegible (Error de Decodificación)'; 
         }
     },
     // ------------------------------------
     // FIN NUEVA FUNCIÓN
     // ------------------------------------
-
+    
     // NUEVO: Generar botones de hora (00:00 a 23:00)
     generateHourSelectors: (initialHour) => {
         const selector = document.getElementById('hourSelector');
@@ -780,6 +754,7 @@ const app = {
             }
             selector.appendChild(button);
         }
+        
         // Desplazar el selector para que se vea la hora actual
         const activeBtn = selector.querySelector('.active');
         if (activeBtn) {
@@ -796,218 +771,167 @@ const app = {
 
         DOM.epgList.innerHTML = '';
         const fragment = document.createDocumentFragment();
-        const now = new Date();
-        now.setHours(hour, 0, 0, 0); // Hora de inicio para el filtro
+        const targetHour = hour; // 0-23
 
-        // Filtrar y ordenar los canales que tienen al menos un programa en la hora seleccionada
-        const channelsWithPrograms = Object.values(STATE.epgData)
-            .filter(data => 
-                data.listings.some(p => p.start.getHours() === hour || (p.start.getHours() < hour && p.end.getHours() >= hour))
-            )
-            .sort((a, b) => a.channel.name.localeCompare(b.channel.name));
+        // Crear el rango de tiempo de la franja horaria seleccionada
+        const startTime = new Date();
+        startTime.setHours(targetHour, 0, 0, 0); // Inicio de la hora (Ej: 10:00:00)
+        const endTime = new Date(startTime);
+        endTime.setHours(targetHour + 1, 0, 0, -1); // Fin de la hora (Ej: 10:59:59)
 
-        channelsWithPrograms.forEach(data => {
-            const item = document.createElement('div');
-            item.className = 'list-item flex-col md:flex-row items-start md:items-center list-item-epg bg-gray-900/70 border-gray-700/50 hover:bg-gray-800';
-            
-            // Programas que están activos o empiezan en esta hora
-            const matchingPrograms = data.listings.filter(p => {
-                return (p.start.getHours() === hour || (p.start.getHours() < hour && p.end.getHours() > hour));
-            }).sort((a, b) => a.start - b.start);
+        let hasResults = false;
 
-            if (matchingPrograms.length === 0) return; // No debería pasar si el canal pasó el filtro principal
+        Object.values(STATE.epgData).forEach(data => {
+            const matchingPrograms = data.listings.filter(program => {
+                // El programa está activo O comienza dentro de la franja horaria
+                return (program.start < endTime && program.end > startTime);
+            }).sort((a, b) => a.start - b.start); // Ordenar por hora de inicio
 
-            const logo = data.channel.img.length > 5 ? data.channel.img : 'https://via.placeholder.com/100?text=TV';
+            if (matchingPrograms.length > 0) {
+                hasResults = true;
+                const item = document.createElement('div');
+                item.className = 'list-item flex flex-col md:flex-row md:items-center bg-gray-800/70 p-4 rounded-lg transition';
+                
+                const logo = data.channel.img && data.channel.img.length > 5 ? data.channel.img : 'https://via.placeholder.com/100?text=TV';
 
-            item.innerHTML = `
-                <div class="flex-shrink-0 mb-3 md:mb-0 mr-4 flex items-center w-full md:w-auto">
-                    <img src="${logo}" class="w-12 h-12 object-contain rounded mr-3" onerror="this.src='https://via.placeholder.com/100?text=TV'">
-                    <div class="flex-grow">
-                        <div class="font-bold text-white text-lg">${data.channel.name}</div>
-                        <div class="text-sm text-gray-400">${data.channel.cat || 'General'}</div>
-                    </div>
-                </div>
-                <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2 border-l-0 md:border-l border-gray-600 md:pl-4">
-                    ${matchingPrograms.slice(0, 3).map(p => `
-                        <div class="p-2 rounded-md bg-gray-700/50 hover:bg-gray-700 transition cursor-pointer" onclick="player.start('${data.channel.url}', '${data.channel.name} - ${p.title.replace(/'/g, "\\'")}', 'live', '${data.channel.id}')" title="${p.title}: ${p.desc}">
-                            <span class="text-xs font-medium text-red-400">${p.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${p.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            <div class="text-white text-sm font-bold truncate">${p.title}</div>
+                item.innerHTML = `
+                    <div class="flex-shrink-0 mb-3 md:mb-0 mr-4 flex items-center w-full md:w-auto">
+                        <img src="${logo}" class="w-12 h-12 object-contain rounded mr-3" onerror="this.src='https://via.placeholder.com/100?text=TV'">
+                        <div class="flex-grow">
+                            <div class="font-bold text-white text-lg">${data.channel.name}</div>
+                            <div class="text-sm text-gray-400">${data.channel.cat || 'General'}</div>
                         </div>
-                    `).join('')}
-                    ${matchingPrograms.length > 3 ? `<div class="text-center text-gray-500 text-sm flex items-center justify-center">... ${matchingPrograms.length - 3} programas más</div>` : ''}
-                </div>
-                <div class="flex-shrink-0 ml-4 hidden md:flex">
-                    <button onclick="player.start('${data.channel.url}', '${data.channel.name}', 'live', '${data.channel.id}')" class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full"><i class="fas fa-play"></i></button>
-                </div>
-            `;
-            fragment.appendChild(item);
+                    </div>
+                    <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2 border-l-0 md:border-l border-gray-600 md:pl-4">
+                        ${matchingPrograms.slice(0, 3).map(p => `
+                            <div class="p-2 rounded-md bg-gray-700/50 hover:bg-gray-700 transition cursor-pointer" 
+                                 onclick="player.start('${data.channel.url}', '${data.channel.name} - ${p.title.replace(/'/g, "\\'")}', 'live', '${data.channel.id}')"
+                                 title="${p.title}: ${p.desc}">
+                                <span class="text-xs font-medium text-red-400">${p.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${p.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <div class="text-white text-sm font-bold truncate">${p.title}</div>
+                            </div>
+                        `).join('')}
+                        ${matchingPrograms.length > 3 ? `<div class="text-center text-gray-500 text-sm flex items-center justify-center">... ${matchingPrograms.length - 3} programas más</div>` : ''}
+                    </div>
+                    <div class="flex-shrink-0 ml-4 hidden md:flex">
+                        <button onclick="player.start('${data.channel.url}', '${data.channel.name}', 'live', '${data.channel.id}')" class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full"><i class="fas fa-play"></i></button>
+                    </div>
+                `;
+                fragment.appendChild(item);
+            }
         });
 
-        if (channelsWithPrograms.length === 0) {
-            DOM.epgList.innerHTML = `<p class="text-gray-400 p-4 text-center">No hay programas para la hora ${hour.toString().padStart(2, '0')}:00.</p>`;
+        if (!hasResults) {
+            DOM.epgList.innerHTML = `<div class="text-gray-500 text-center mt-10 p-4 bg-gray-900/50 rounded-lg">No hay programación disponible para la franja horaria de las **${targetHour}:00** o el servidor no devolvió datos.</div>`;
         } else {
             DOM.epgList.appendChild(fragment);
         }
     },
 
-    // NUEVO: Parser XMLTV (Formato EPG Xtream Codes)
-    parseXMLTV: (xmlText) => {
+
+    // MODIFICADO: Función para renderizar la EPG
+    renderEPG: async () => {
+        DOM.epgList.innerHTML = '<div class="text-center p-10"><div class="loader mx-auto mb-4"></div><p class="text-gray-400">Cargando Guía EPG (máximo 50 canales)...</p></div>';
+
+        // 1. Inicializar la navegación por horas y el estado
         STATE.epgData = {};
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-
-        // 1. Obtener información de canales
-        xmlDoc.querySelectorAll('channel').forEach(channelEl => {
-            const id = channelEl.getAttribute('id');
-            const name = channelEl.querySelector('display-name')?.textContent || 'Sin Nombre';
-            const icon = channelEl.querySelector('icon')?.getAttribute('src') || '';
-            const matchingChannel = STATE.data.live.find(c => c.id == id);
-            
-            if (matchingChannel) {
-                STATE.epgData[id] = {
-                    channel: {
-                        id: id,
-                        name: name,
-                        img: icon || matchingChannel.img,
-                        url: matchingChannel.url,
-                        cat: matchingChannel.cat
-                    },
-                    listings: []
-                };
-            }
-        });
-
-        // 2. Obtener listings (programación)
-        xmlDoc.querySelectorAll('programme').forEach(progEl => {
-            const id = progEl.getAttribute('channel');
-            if (STATE.epgData[id]) {
-                const startStr = progEl.getAttribute('start');
-                const endStr = progEl.getAttribute('stop');
-
-                // Función auxiliar para parsear el formato YYYYMMDDHHMMSS ±ZONE
-                const parseDate = (str) => {
-                    if (!str || str.length < 14) return null;
-                    const year = str.substring(0, 4);
-                    const month = str.substring(4, 6);
-                    const day = str.substring(6, 8);
-                    const hour = str.substring(8, 10);
-                    const minute = str.substring(10, 12);
-                    const second = str.substring(12, 14);
-                    const tz = str.substring(14);
-                    
-                    // Simple T-Z format for Date object
-                    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}${tz}`);
-                };
-
-                const titleEl = progEl.querySelector('title');
-                const descEl = progEl.querySelector('desc');
-                
-                // Aplicar decodificación segura al título/descripción
-                const title = titleEl ? app.safeBase64Decode(titleEl.textContent) : 'Sin Título';
-                const desc = descEl ? app.safeBase64Decode(descEl.textContent) : 'Sin Descripción';
-
-
-                STATE.epgData[id].listings.push({
-                    start: parseDate(startStr),
-                    end: parseDate(endStr),
-                    title: title,
-                    desc: desc
-                });
-            }
-        });
-    },
-
-    // NUEVO: Cargar EPG
-    loadEPG: async () => {
-        DOM.epgList.innerHTML = '<p class="text-gray-400 p-4 text-center"><i class="fas fa-sync-alt fa-spin mr-2"></i> Cargando Guía EPG...</p>';
         app.generateHourSelectors();
         
-        if (STATE.sourceType !== 'xtream') {
-            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-exclamation-triangle mr-2"></i> La guía EPG solo está disponible al cargar la lista con **Xtream Codes**.</p>';
+        const liveChannels = STATE.data.live.slice(0, 50); // Limitar a 50 canales por rendimiento
+
+        if (liveChannels.length === 0) {
+            DOM.epgList.innerHTML = '<div class="text-gray-500 text-center mt-10">No se encontraron canales en vivo.</div>';
             return;
         }
 
-        // Si ya hay datos de EPG, solo renderizar
-        const totalPrograms = Object.values(STATE.epgData).reduce((acc, data) => acc + data.listings.length, 0);
-        if (totalPrograms > 0) {
-            const now = new Date().getHours();
-            app.filterEPGByHour(now);
+        if (STATE.sourceType === 'm3u') {
+            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-info-circle mr-2"></i>La información EPG (Programación Futura) solo está disponible con credenciales de **Xtream Codes**.</p>';
             return;
         }
+
+        const { s, u, p } = STATE.creds;
+
+        // 2. Fetch de EPG simple para cada canal (obtiene un rango de programas)
+        const epgPromises = liveChannels.map(channel => {
+            // Usamos get_simple_epg para obtener una lista de programas futuros
+            return fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_simple_epg&stream_id=${channel.id}&limit=100`)
+                .then(r => r.json())
+                .then(data => {
+                    if(data.epg_listings && data.epg_listings.length > 0) {
+                        STATE.epgData[channel.id] = { 
+                            channel: channel, 
+                            listings: data.epg_listings.map(item => ({
+                                title: app.safeBase64Decode(item.title), // <--- USO DE DECODIFICADOR SEGURO
+                                start: new Date(item.start_timestamp * 1000),
+                                end: new Date(item.stop_timestamp * 1000),
+                                desc: item.description ? app.safeBase64Decode(item.description) : 'Sin descripción' // <--- USO DE DECODIFICADOR SEGURO
+                            }))
+                        };
+                    }
+                })
+                .catch(e => console.error(`Error EPG ${channel.id}:`, e));
+        });
+
+        await Promise.all(epgPromises);
         
-        // Si no hay EPG (aunque se llamó a parseXMLTV al inicio), mostramos el mensaje de error de Xtream.
-        DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-exclamation-triangle mr-2"></i>El servidor Xtream no devolvió ninguna programación EPG (Guía) para los canales solicitados. Puede que no esté disponible o la lista de canales no tenga metadatos EPG.</p>';
+        // 3. Verificación de resultados y Renderizado inicial
+        const now = new Date().getHours();
+
+        const totalPrograms = Object.values(STATE.epgData).reduce((acc, data) => acc + data.listings.length, 0);
+        
+        if (totalPrograms === 0) {
+            // Mensaje explícito si no hay EPG de ningún canal
+            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-exclamation-triangle mr-2"></i>El servidor Xtream no devolvió ninguna programación EPG (Guía) para los canales solicitados. Puede que no esté disponible o la lista de canales no tenga metadatos EPG.</p>';
+            app.generateHourSelectors(now);
+            return;
+        }
+
+        app.filterEPGByHour(now); 
     },
     // FIN MODIFICACIÓN EPG
-
 
     renderCategories: () => {
         const uniqueCats = ['Todas', ...new Set(STATE.data.live.map(c => c.cat))].sort();
         DOM.catList.innerHTML = uniqueCats.map(cat => `<button onclick="app.setCategory('${cat}')" class="cat-chip ${STATE.activeCat === cat ? 'active' : ''}">${cat}</button>`).join('');
     },
-
-    setCategory: (cat) => {
-        STATE.activeCat = cat;
-        app.renderCategories();
-        app.filterByCategory(cat);
-    },
-
+    setCategory: (cat) => { STATE.activeCat = cat; app.renderCategories(); app.filterByCategory(cat); },
     filterByCategory: (cat) => {
-        STATE.page = 1;
-        DOM.grid.innerHTML = '';
+        STATE.page = 1; DOM.grid.innerHTML = '';
         STATE.renderList = cat === 'Todas' ? STATE.data.live : STATE.data.live.filter(c => c.cat === cat);
         app.renderMore();
     },
-
     toggleLayout: () => {
         STATE.viewMode = STATE.viewMode === 'grid' ? 'list' : 'grid';
         DOM.layoutText.innerText = STATE.viewMode === 'grid' ? 'Grid' : 'Lista';
         DOM.layoutIcon.className = STATE.viewMode === 'grid' ? 'fas fa-th-large mr-2' : 'fas fa-list mr-2';
-        DOM.grid.innerHTML = '';
-        STATE.page = 1;
-        if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout');
-        else DOM.grid.classList.remove('list-layout');
+        DOM.grid.innerHTML = ''; STATE.page = 1;
+        if(STATE.viewMode === 'list') DOM.grid.classList.add('list-layout'); else DOM.grid.classList.remove('list-layout');
         app.renderMore();
     },
-
     filterContent: (term) => {
         term = term.toLowerCase();
         let pool = [...STATE.data.live, ...STATE.data.movie, ...STATE.data.series];
-        
-        if(STATE.view !== 'home' && STATE.view !== 'favorites') pool = STATE.data[STATE.view === 'movies' ? 'movie' : 'series'];
-        if(STATE.view === 'live') pool = STATE.data.live;
+        if(STATE.view !== 'home' && STATE.view !== 'favorites') pool = STATE.data[STATE.view === 'live' ? 'live' : (STATE.view === 'movies' ? 'movie' : 'series')];
         if(STATE.view === 'favorites') pool = STATE.favorites;
-
-        STATE.page = 1;
-        DOM.grid.innerHTML = '';
-        STATE.renderList = pool.filter(item => item.name.toLowerCase().includes(term));
-        app.renderMore();
+        STATE.renderList = pool.filter(x => x.name.toLowerCase().includes(term));
+        STATE.page = 1; DOM.grid.innerHTML = ''; DOM.hero.classList.add('hidden');
+        DOM.title.innerText = `Resultados: "${term}"`; app.renderMore();
     },
-
     renderMore: () => {
         const start = (STATE.page - 1) * STATE.perPage;
-        const end = start + STATE.perPage;
-        const itemsToRender = STATE.renderList.slice(start, end);
-
-        if (itemsToRender.length === 0 && STATE.page > 1) return; 
-
-        if (itemsToRender.length === 0) {
-            DOM.grid.innerHTML = `<p class="p-6 text-gray-400">No hay contenido disponible para la vista actual.</p>`;
-            return;
-        }
-
+        const items = STATE.renderList.slice(start, start + STATE.perPage);
+        if (items.length === 0 && STATE.page === 1) { DOM.grid.innerHTML = '<div class="text-gray-500 col-span-full text-center mt-10">No hay contenido.</div>'; return; }
         const fragment = document.createDocumentFragment();
-        
-        const isList = STATE.viewMode === 'list' && (STATE.view === 'live' || STATE.view === 'favorites');
-        const placeholder = 'https://via.placeholder.com/100x150/222/FFF?text=No+Logo';
+        const isListMode = STATE.view === 'live' && STATE.viewMode === 'list';
 
-        itemsToRender.forEach(item => {
+        items.forEach(item => {
             const el = document.createElement('div');
             const isFav = STATE.favorites.some(f => f.name === item.name);
-            const imgUrl = item.img || placeholder;
             const hasImg = item.img && item.img.length > 5;
+            const imgUrl = hasImg ? item.img : '';
 
-            if (isList) {
+            if (isListMode) {
+                const placeholder = 'https://via.placeholder.com/100?text=TV';
                 el.className = 'list-item group animate-fade-in';
                 el.innerHTML = `
                     <img src="${hasImg ? imgUrl : placeholder}" loading="lazy" onerror="this.src='${placeholder}'">
@@ -1030,119 +954,51 @@ const app = {
                         </div>
                     </div>`;
             }
-
-            const action = (e) => {
-                if(e) e.stopPropagation();
-                if(item.type === 'live') player.start(item.url, item.name, item.type, item.id);
-                else app.openDetail(item);
-            };
-
-            el.querySelector('.play-trigger').onclick = action;
-            el.onclick = action;
-
-            el.querySelector('.fav-trigger').onclick = (e) => {
-                e.stopPropagation();
-                app.toggleFav(item, e.currentTarget.querySelector('i'));
-            };
-
+            const action = (e) => { if(e) e.stopPropagation(); if(item.type === 'live') player.start(item.url, item.name, item.type, item.id); else app.openDetail(item); };
+            el.querySelector('.play-trigger').onclick = action; el.onclick = action;
+            el.querySelector('.fav-trigger').onclick = (e) => { e.stopPropagation(); app.toggleFav(item, e.currentTarget.querySelector('i')); };
             fragment.appendChild(el);
         });
-
-        DOM.grid.appendChild(fragment);
-        STATE.page++;
+        DOM.grid.appendChild(fragment); STATE.page++;
     },
-
     toggleFav: (item, icon) => {
         const idx = STATE.favorites.findIndex(f => f.name === item.name);
-        if (idx > -1) {
-            STATE.favorites.splice(idx, 1);
-            icon.classList.replace('fas', 'far');
-            icon.parentElement.classList.remove('text-red-500');
-            app.showToast('Eliminado de Favoritos');
-        } else {
-            STATE.favorites.push(item);
-            icon.classList.replace('far', 'fas');
-            icon.parentElement.classList.add('text-red-500');
-            app.showToast('Añadido a Favoritos');
-        }
+        if (idx > -1) { STATE.favorites.splice(idx, 1); icon.classList.replace('fas', 'far'); icon.parentElement.classList.remove('text-red-500'); app.showToast('Eliminado de Favoritos'); }
+        else { STATE.favorites.push(item); icon.classList.replace('far', 'fas'); icon.parentElement.classList.add('text-red-500'); app.showToast('Añadido a Favoritos'); }
         localStorage.setItem('sf_favorites', JSON.stringify(STATE.favorites));
-        if (STATE.view === 'favorites') app.nav('favorites');
+        if(STATE.view === 'favorites') app.nav('favorites');
     },
-
-    setHero: (item) => {
-        if (!item) {
-            DOM.hero.classList.add('hidden');
-            return;
-        }
-        const img = item.img || 'https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg';
-        DOM.heroImg.src = img;
-        DOM.heroTitle.innerText = item.name;
-        DOM.heroDesc.innerText = item.plot || "Disfruta de la mejor televisión, películas y series en alta definición.";
-        DOM.heroPlay.onclick = () => {
-            if (item.type === 'live') player.start(item.url, item.name, item.type, item.id);
-            else app.openDetail(item);
-        };
-        DOM.hero.classList.remove('hidden');
+    showToast: (msg) => {
+        const t = document.getElementById('toast'); t.innerText = msg;
+        t.classList.remove('hidden', 'opacity-0'); setTimeout(() => t.classList.add('opacity-0'), 2000); setTimeout(() => t.classList.add('hidden'), 2300);
     },
-
-    openSettings: () => {
-        DOM.settingsModal.classList.remove('hidden');
-        DOM.settingsModal.classList.add('flex');
-    },
-
-    closeSettings: () => {
-        DOM.settingsModal.classList.add('hidden');
-        DOM.settingsModal.classList.remove('flex');
-    },
-
-    showToast: (message) => {
-        const toast = document.getElementById('toast');
-        toast.innerText = message;
-        toast.classList.remove('hidden');
-        toast.style.opacity = 1;
-        setTimeout(() => {
-            toast.style.opacity = 0;
-            setTimeout(() => toast.classList.add('hidden'), 500);
-        }, 3000);
-    },
-
-    // Traduce un texto (simulado o no, dependiendo del proxy)
     translate: async (text) => {
-        // En una implementación real, aquí se llamaría a una API de traducción. 
-        // Por ahora, se devuelve el mismo texto.
-        return text; 
-    },
-
-    openDetail: async (item) => {
-        DOM.detailModal.classList.remove('hidden');
-        DOM.detailModal.classList.add('flex');
-        DOM.detailContent.innerHTML = '<div class="p-10 w-full text-center"><div class="loader mx-auto mb-4"></div><p class="text-gray-400">Cargando detalles...</p></div>';
-
+        if(!text || text.length < 5 || text.includes("Sin sinopsis")) return text;
         try {
-            const { s, u, p } = STATE.creds || {};
+            const res = await fetch(`https://miproxyiptv.onrender.com/https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(text)}`);
+            const data = await res.json();
+            return data && data[0] ? data[0].map(x => x[0]).join('') : text;
+        } catch(e) { return text; }
+    },
+    openDetail: async (item) => {
+        DOM.detailModal.classList.remove('hidden'); DOM.detailModal.classList.add('flex');
+        DOM.detailContent.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center space-y-4"><div class="loader"></div><p class="text-gray-400 text-sm">Cargando...</p></div>';
+        try {
             let htmlContent = '';
-
             if (STATE.sourceType === 'xtream') {
+                const { s, u, p } = STATE.creds;
                 if (item.type === 'series') {
                     const info = await (await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${item.id}`)).json();
-                    
                     let episodesHtml = '';
-                    const seasons = Object.values(info.episodes || {});
-                    seasons.sort((a, b) => parseInt(a[0].season_num) - parseInt(b[0].season_num));
-                    
-                    seasons.forEach(seasonEpisodes => {
-                        const seasonNum = seasonEpisodes[0].season_num;
-                        episodesHtml += `<h4 class="text-xl font-bold text-white mt-6 mb-3 border-b border-gray-700 pb-1">Temporada ${seasonNum}</h4><div class="space-y-2">`;
-                        seasonEpisodes.forEach(ep => {
-                            const playUrl = `${s}/series/${u}/${p}/${ep.id}.${ep.container_extension}`;
-                            episodesHtml += `<div onclick="player.start('${playUrl}', 'S${seasonNum}E${ep.episode_num} - ${ep.title.replace(/'/g, "\\'")}', 'series')" class="list-item group cursor-pointer hover:bg-gray-700/50 p-3 rounded flex items-center"><span class="text-gray-400 mr-4 font-mono">${ep.episode_num}</span><div class="flex-grow"><div class="font-medium group-hover:text-white text-gray-300">${ep.title}</div></div><i class="fas fa-play-circle text-2xl text-transparent group-hover:text-red-600"></i></div>`;
+                    for (const k in info.episodes) {
+                        episodesHtml += `<h3 class="text-lg font-bold mt-4 mb-2 text-gray-300">T${k}</h3><div class="space-y-1">`;
+                        info.episodes[k].forEach(ep => {
+                            episodesHtml += `<div onclick="player.start('${s}/series/${u}/${p}/${ep.id}.${ep.container_extension}', '${ep.title}', 'series')" class="flex items-center p-3 hover:bg-[#333] rounded cursor-pointer transition group"><span class="text-gray-400 mr-4 font-mono">${ep.episode_num}</span><div class="flex-grow"><div class="font-medium group-hover:text-white text-gray-300">${ep.title}</div></div><i class="fas fa-play-circle text-2xl text-transparent group-hover:text-red-600"></i></div>`;
                         });
                         episodesHtml += `</div>`;
-                    });
-
+                    }
                     const plot = await app.translate(info.info.plot || "Sin sinopsis.");
                     htmlContent = app.buildDetailHtml(info.info.cover || item.img, info.info.name, plot, episodesHtml, null);
-
                 } else {
                     const info = await (await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_vod_info&vod_id=${item.id}`)).json();
                     const plot = await app.translate(info.info.plot || "Sin descripción.");
@@ -1151,134 +1007,75 @@ const app = {
             } else {
                 htmlContent = app.buildDetailHtml(item.img, item.name, "Info no disponible en M3U.", '', item.url);
             }
-
             DOM.detailContent.innerHTML = htmlContent;
-
-        } catch (e) {
-            DOM.detailContent.innerHTML = '<div class="p-10 w-full text-center text-red-500">Error cargando detalles.</div>';
-        }
+        } catch (e) { DOM.detailContent.innerHTML = '<div class="p-10 w-full text-center text-red-500">Error cargando detalles.</div>'; }
     },
-
     buildDetailHtml: (img, title, desc, extraHtml, playUrl) => {
         const posterImg = img || 'https://via.placeholder.com/300x450/222/FFF?text=No+Poster';
         const playBtnHtml = playUrl ? `<button onclick="player.start('${playUrl}', '${title.replace(/'/g, "\\'")}', 'movie')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded flex items-center transition transform hover:scale-105"><i class="fas fa-play mr-3"></i> REPRODUCIR</button>` : '';
-
-        return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-8 overflow-y-auto"><h2 class="text-3xl font-bold mb-3 text-white">${title}</h2><p class="text-gray-400 mb-6">${desc}</p>${playBtnHtml}<div id="detailExtraContent">${extraHtml}</div></div>`;
-    }
+        return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col"><h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1><p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p><div class="mb-6">${playBtnHtml}</div><div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div></div>`;
+    },
+    closeDetail: () => { DOM.detailModal.classList.add('hidden'); DOM.detailModal.classList.remove('flex'); },
+    openSettings: () => { DOM.settingsModal.classList.remove('hidden'); DOM.settingsModal.classList.add('flex'); },
+    closeSettings: () => { DOM.settingsModal.classList.add('hidden'); DOM.settingsModal.classList.remove('flex'); }
 };
 
-// --- VIDEO PLAYER MODULE ---
 const player = {
-    url: null,
-    title: null,
-    type: null,
-    channelId: null,
-
-    start: (url, title, type, channelId = null) => {
-        player.url = url;
-        player.title = title;
-        player.type = type;
-        player.channelId = channelId;
-
-        // Reset HLS
-        if (STATE.hls) {
-            STATE.hls.destroy();
-            STATE.hls = null;
+    start: (url, title, type, id = null) => {
+        if(recorder.isRecording) {
+            if(!confirm("Hay una grabación activa. ¿Detenerla y cambiar de canal?")) return;
+            player.stopBackground();
         }
-        
-        // Cierra el modal de detalles si está abierto
-        if (!DOM.detailModal.classList.contains('hidden')) app.closeDetail();
 
+        STATE.currentStreamName = title;
+        app.closeDetail(); 
         DOM.overlay.classList.remove('hidden');
-        DOM.pTitle.innerText = title;
-        DOM.btnRecord.classList.add('hidden'); // Ocultar por defecto
+        DOM.recIndicator.classList.add('hidden'); 
 
-        if (Hls.isSupported() && url.endsWith('.m3u8')) {
-            STATE.hls = new Hls();
-            STATE.hls.loadSource(url);
-            STATE.hls.attachMedia(DOM.video);
-        } else if (DOM.video.canPlayType('application/vnd.apple.mpegurl')) {
-            DOM.video.src = url;
-        } else {
-            DOM.video.src = url;
-        }
+        DOM.pTitle.innerText = title; 
+        DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
         
-        DOM.video.volume = DOM.volSlider.value;
-        DOM.video.play().catch(e => console.error("Error al reproducir el video:", e));
+        if(type === 'live') DOM.btnRecord.classList.remove('hidden'); else DOM.btnRecord.classList.add('hidden');
         
-        // Mostrar botón de grabación solo para canales LIVE
-        if (type === 'live' && window.MediaRecorder && (window.showDirectoryPicker || STATE.driveToken)) {
-             DOM.btnRecord.classList.remove('hidden');
+        DOM.video.src = '';
+        if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+
+        if(Hls.isSupported() && url.includes('.m3u8')) {
+            STATE.hls = new Hls({ xhrSetup: xhr => { xhr.withCredentials = false; } }); 
+            STATE.hls.loadSource(url); 
+            STATE.hls.attachMedia(DOM.video); 
+            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
+        } else { 
+            DOM.video.src = url; 
+            DOM.video.play(); 
         }
 
-        // Obtener EPG actual si es LIVE y Xtream
-        if(STATE.sourceType === 'xtream' && type === 'live' && channelId) {
-            const { s, u, p } = STATE.creds;
-            const id = channelId;
-            // Llamar al endpoint para obtener el EPG completo (usando get_short_epg)
-            fetch(`https://miproxyiptv.onrender.com/${STATE.creds.s}/player_api.php?username=${STATE.creds.u}&password=${STATE.creds.p}&action=get_short_epg&stream_id=${id}`)
-                .then(r=>r.json()).then(d => {
-                    DOM.pEpg.innerText = d.epg_listings && d.epg_listings.length ? `AHORA: ${app.safeBase64Decode(d.epg_listings[0].title)}` : "Sin EPG";
-                }).catch(()=>DOM.pEpg.innerText = "");
-        }
-    },
-
-    togglePlay: () => {
-        if (DOM.video.paused) {
-            DOM.video.play();
-            DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            DOM.overlay.classList.remove('active-ui');
-            document.getElementById('centerPlayIcon').classList.remove('opacity-100');
-        } else {
-            DOM.video.pause();
-            DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>';
-            DOM.overlay.classList.add('active-ui');
-            document.getElementById('centerPlayIcon').classList.add('opacity-100');
-            setTimeout(() => document.getElementById('centerPlayIcon').classList.remove('opacity-100'), 500);
-        }
-    },
-
-    toggleFullscreen: () => {
-        if (!document.fullscreenElement) {
-            DOM.overlay.requestFullscreen();
-        } else {
-            document.exitFullscreen();
+        if (type === 'live' && id && STATE.creds) {
+            // Buscamos el EPG actual si lo tenemos almacenado
+            if(STATE.epgData[id] && STATE.epgData[id].listings.length > 0) {
+                 const now = new Date();
+                 const current = STATE.epgData[id].listings.find(p => p.start <= now && p.end >= now);
+                 if(current) DOM.pEpg.innerText = `AHORA: ${current.title}`;
+                 else DOM.pEpg.innerText = "Sin EPG Actual";
+            } else {
+                 // Fallback para obtener el actual si no se cargó el EPG completo (usando get_short_epg)
+                fetch(`https://miproxyiptv.onrender.com/${STATE.creds.s}/player_api.php?username=${STATE.creds.u}&password=${STATE.creds.p}&action=get_short_epg&stream_id=${id}`)
+                    .then(r=>r.json()).then(d => { DOM.pEpg.innerText = d.epg_listings && d.epg_listings.length ? `AHORA: ${app.safeBase64Decode(d.epg_listings[0].title)}` : "Sin EPG"; }).catch(()=>DOM.pEpg.innerText = "");
+            }
         }
     },
     
-    rewind: () => { DOM.video.currentTime -= 10; },
-    forward: () => { DOM.video.currentTime += 10; },
-
-    toggleRecording: () => {
-        if(recorder.isRecording) {
-            recorder.stop();
-            DOM.recDot.classList.remove('bg-red-600', 'animate-pulse');
-            DOM.recDot.classList.add('bg-gray-400');
-            DOM.recText.innerText = 'Grabar';
-            DOM.btnRecord.classList.remove('border-red-600');
-            app.showToast("Grabación Finalizada. Procesando...");
-        } else {
-            STATE.currentStreamName = player.title;
-            const stream = DOM.video.captureStream();
-            recorder.start(stream);
-            DOM.recDot.classList.add('bg-red-600', 'animate-pulse');
-            DOM.recDot.classList.remove('bg-gray-400');
-            DOM.recText.innerText = 'Grabando...';
-            DOM.btnRecord.classList.add('border-red-600');
-        }
-    },
-
-    close: () => {
+    close: () => { 
         if(recorder.isRecording) {
             DOM.overlay.classList.add('hidden');
             DOM.recBgTitle.innerText = STATE.currentStreamName;
             DOM.recIndicator.classList.remove('hidden');
             app.showToast("Grabación continuando en 2º plano");
         } else {
-            DOM.video.pause();
-            DOM.video.src = '';
-            if(STATE.hls) STATE.hls.destroy();
-            DOM.overlay.classList.add('hidden');
+            DOM.video.pause(); 
+            DOM.video.src = ''; 
+            if(STATE.hls) STATE.hls.destroy(); 
+            DOM.overlay.classList.add('hidden'); 
         }
     },
 
@@ -1289,92 +1086,56 @@ const player = {
 
     stopBackground: () => {
         recorder.stop();
-        DOM.video.pause();
-        DOM.video.src = '';
-        if(STATE.hls) STATE.hls.destroy();
+        DOM.video.pause(); 
+        DOM.video.src = ''; 
+        if(STATE.hls) STATE.hls.destroy(); 
         DOM.recIndicator.classList.add('hidden');
-        DOM.overlay.classList.add('hidden');
+    },
+
+    toggleRecording: () => {
+        if(!recorder.isRecording) {
+            try { 
+                const stream = DOM.video.captureStream();
+                recorder.start(stream); 
+            } catch (e) { 
+                console.error(e);
+                app.showToast("Error: El navegador bloquea la grabación de este formato (CORS)."); 
+            }
+        } else { 
+            recorder.stop(); 
+        }
+    },
+    togglePlay: () => {
+        if(DOM.video.paused) { DOM.video.play(); DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-play text-6xl animate-ping'; setTimeout(()=>document.getElementById('centerPlayIcon').className='fas fa-play text-6xl opacity-0 transition-opacity', 500); } 
+        else { DOM.video.pause(); DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-pause text-6xl opacity-100'; }
+    },
+    rewind: () => DOM.video.currentTime -= 10,
+    forward: () => DOM.video.currentTime += 10,
+    toggleFullscreen: () => { if (!document.fullscreenElement) DOM.overlay.requestFullscreen(); else document.exitFullscreen(); },
+    updateProgress: () => {
+        if(DOM.video.duration) {
+            const pct = (DOM.video.currentTime / DOM.video.duration) * 100; DOM.progFill.style.width = `${pct}%`;
+            DOM.timeDisp.innerText = `${Math.floor(DOM.video.currentTime/60)}:${Math.floor(DOM.video.currentTime%60).toString().padStart(2,'0')} / ${Math.floor(DOM.video.duration/60)}:${Math.floor(DOM.video.duration%60).toString().padStart(2,'0')}`;
+        }
     }
 };
 
-// --- EVENT LISTENERS & INIT ---
-app.init();
-
-// Player UI Listeners
-DOM.video.addEventListener('timeupdate', () => {
-    const time = DOM.video.currentTime;
-    const duration = DOM.video.duration || 0;
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    const totalMinutes = Math.floor(duration / 60);
-    const totalSeconds = Math.floor(duration % 60);
-
-    const timeString = duration ? 
-        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} / ${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}` :
-        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    DOM.timeDisp.innerText = timeString;
-    if (duration) {
-        DOM.progFill.style.width = `${(time / duration) * 100}%`;
-    }
-    
-    // Auto-pause if live stream and duration is available (VOD/Series)
-    if (duration > 0 && time >= duration && !DOM.video.paused) {
-        DOM.video.pause();
-        DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>';
-    }
-});
-
-DOM.video.addEventListener('loadedmetadata', () => {
-    // Para streams en vivo donde la duración es Infinity/NaN
-    if (DOM.video.duration === Infinity || isNaN(DOM.video.duration)) {
-        DOM.timeDisp.innerText = "LIVE";
-        DOM.progCont.classList.add('hidden');
-    } else {
-        DOM.progCont.classList.remove('hidden');
-    }
-});
-
-DOM.video.addEventListener('play', () => DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>');
-DOM.video.addEventListener('pause', () => DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>');
-DOM.video.addEventListener('seeking', () => DOM.spinner.classList.remove('hidden'));
-DOM.video.addEventListener('seeked', () => DOM.spinner.classList.add('hidden'));
+DOM.video.addEventListener('timeupdate', player.updateProgress);
 DOM.video.addEventListener('waiting', () => DOM.spinner.classList.remove('hidden'));
 DOM.video.addEventListener('playing', () => DOM.spinner.classList.add('hidden'));
 DOM.playBtn.addEventListener('click', player.togglePlay);
 DOM.video.addEventListener('click', player.togglePlay);
-DOM.progCont.addEventListener('click', (e) => { 
-    if (DOM.video.duration && !isNaN(DOM.video.duration)) {
-        const rect = DOM.progCont.getBoundingClientRect(); 
-        DOM.video.currentTime = ((e.clientX - rect.left) / rect.width) * DOM.video.duration; 
-    }
-});
-DOM.volSlider.addEventListener('input', (e) => { 
-    DOM.video.volume = e.target.value; 
-    DOM.muteBtn.innerHTML = e.target.value == 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; 
-});
-DOM.muteBtn.addEventListener('click', () => { 
-    DOM.video.muted = !DOM.video.muted; 
-    DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; 
-});
+DOM.progCont.addEventListener('click', (e) => { const rect = DOM.progCont.getBoundingClientRect(); DOM.video.currentTime = ((e.clientX - rect.left) / rect.width) * DOM.video.duration; });
+DOM.volSlider.addEventListener('input', (e) => { DOM.video.volume = e.target.value; DOM.muteBtn.innerHTML = e.target.value == 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; });
+DOM.muteBtn.addEventListener('click', () => { DOM.video.muted = !DOM.video.muted; DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; });
 
 let uiTimer;
-const resetUITimer = () => { 
-    DOM.overlay.classList.add('active-ui'); 
-    DOM.overlay.style.cursor = 'default'; 
-    clearTimeout(uiTimer); 
-    uiTimer = setTimeout(() => { 
-        if(!DOM.video.paused) { 
-            DOM.overlay.classList.remove('active-ui'); 
-            DOM.overlay.style.cursor = 'none'; 
-        } 
-    }, 5000); 
-};
-DOM.overlay.addEventListener('mousemove', resetUITimer); 
-DOM.overlay.addEventListener('click', (e) => {
-    if (e.target.id === 'videoOverlay') resetUITimer();
-});
+const resetUITimer = () => { DOM.overlay.classList.add('active-ui'); DOM.overlay.style.cursor = 'default'; clearTimeout(uiTimer); uiTimer = setTimeout(() => { if(!DOM.video.paused) { DOM.overlay.classList.remove('active-ui'); DOM.overlay.style.cursor = 'none'; } }, 5000); };
+DOM.overlay.addEventListener('mousemove', resetUITimer); DOM.overlay.addEventListener('click', resetUITimer);
+DOM.video.addEventListener('pause', () => { DOM.overlay.classList.add('active-ui'); clearTimeout(uiTimer); });
+DOM.video.addEventListener('play', resetUITimer);
 
+app.init();
 </script>
 </body>
 </html>
