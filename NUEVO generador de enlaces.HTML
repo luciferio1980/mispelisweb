@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Lista de Películas</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: auto; }
+        h2 { color: #1a73e8; text-align: center; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9em; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { resize: vertical; }
+        .buttons { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-generate { background-color: #28a745; color: white; }
+        .btn-generate:hover { background-color: #218838; }
+        .btn-copy { background-color: #007bff; color: white; }
+        .btn-copy:hover { background-color: #0069d9; }
+        .btn-clear { background-color: #dc3545; color: white; }
+        
+        #resultado-container { margin-top: 30px; }
+        #listaCodigos { 
+            width: 100%; 
+            height: 250px; 
+            background: #272822; 
+            color: #f8f8f2; 
+            padding: 15px; 
+            border-radius: 4px; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 13px;
+            overflow-y: auto;
+            white-space: pre;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Generador de Tarjetas</h2>
+
+    <div class="input-group">
+        <label>ENLACE PELÍCULA (AAAA)</label>
+        <input type="text" id="peli_link" placeholder="Ej: https://servidor.com/video.mp4">
+    </div>
+
+    <div class="input-group">
+        <label>SINOPSIS (BBBB)</label>
+        <textarea id="peli_sinopsis" rows="3" placeholder="Ej: Una aventura épica en el espacio..."></textarea>
+    </div>
+
+    <div class="input-group">
+        <label>LINK ICONO (CCCC)</label>
+        <input type="text" id="peli_icono" placeholder="Ej: https://web.com/poster.jpg">
+    </div>
+
+    <div class="input-group">
+        <label>TÍTULO PELÍCULA (DDDD)</label>
+        <input type="text" id="peli_titulo" placeholder="Ej: Interestelar">
+    </div>
+
+    <div class="buttons">
+        <button class="btn-generate" onclick="agregarPelicula()">GENERAR</button>
+        <button class="btn-clear" onclick="limpiarTodo()">BORRAR LISTA</button>
+    </div>
+
+    <div id="resultado-container">
+        <label>LISTA ACUMULADA:</label>
+        <div id="listaCodigos"></div>
+        <button class="btn-copy" style="margin-top:10px; width: 100%;" onclick="copiarAlPortapapeles()">COPIAR TODO EL CÓDIGO</button>
+    </div>
+</div>
+
+<script>
+    function agregarPelicula() {
+        // 1. Obtener valores
+        const aaaa = document.getElementById('peli_link').value.trim();
+        const bbbb = document.getElementById('peli_sinopsis').value.trim();
+        const cccc = document.getElementById('peli_icono').value.trim();
+        const dddd = document.getElementById('peli_titulo').value.trim();
+
+        // Validar que no estén vacíos
+        if (!aaaa || !bbbb || !cccc || !dddd) {
+            alert("Por favor, rellena todos los campos.");
+            return;
+        }
+
+        // 2. Crear la estructura
+        const nuevoCodigo = `<div class="movie-container" onclick="abrirDetalle(this)" data-link="${aaaa}"
+           data-synopsis="${bbbb}">
+        <img src="${cccc}" class="movie-icon" alt="${dddd}">
+        <div class="movie-title-card">${dddd}</div>
+      </div>\n\n`;
+
+        // 3. Añadir a la lista (acumular)
+        const visor = document.getElementById('listaCodigos');
+        visor.innerText += nuevoCodigo;
+
+        // 4. Limpiar los campos de texto
+        document.getElementById('peli_link').value = "";
+        document.getElementById('peli_sinopsis').value = "";
+        document.getElementById('peli_icono').value = "";
+        document.getElementById('peli_titulo').value = "";
+        
+        // Hacer scroll automático al final
+        visor.scrollTop = visor.scrollHeight;
+    }
+
+    function copiarAlPortapapeles() {
+        const codigo = document.getElementById('listaCodigos').innerText;
+        if (!codigo) {
+            alert("No hay nada que copiar.");
+            return;
+        }
+        navigator.clipboard.writeText(codigo).then(() => {
+            alert("¡Código copiado al portapapeles!");
+        });
+    }
+
+    function limpiarTodo() {
+        if(confirm("¿Seguro que quieres borrar toda la lista generada?")) {
+            document.getElementById('listaCodigos').innerText = "";
+        }
+    }
+</script>
+
+</body>
+</html>
