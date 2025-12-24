@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>🎬 Películas en Línea</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #login {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #FFD700;
+      color: #000;
+      font-weight: bold;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #contenido {
+      display: none;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #FFD700;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px #333;
+      margin-bottom: 40px;
+    }
+
+    /* Estilos para el buscador */
+    #buscador {
+      width: 50%;
+      max-width: 600px;
+      margin: 0 auto 40px auto;
+      display: block;
+      background-color: #222;
+      color: #fff;
+      border: 1px solid #FFD700;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 30px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .movie-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .movie-icon {
+      width: 100%;
+      max-width: 150px;
+      border-radius: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .movie-icon:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px #FFD700;
+    }
+
+    .movie-title {
+      color: #FFD700;
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 1em;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    a {
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="login">
+    <h2>Acceso restringido 🔐</h2>
+    <input type="text" id="usuario" placeholder="Usuario">
+    <input type="password" id="clave" placeholder="Contraseña">
+    
+    <div class="checkbox-container">
+      <input type="checkbox" id="recordar">
+      <label for="recordar">Recordar</label>
+    </div>
+
+    <button onclick="validar()">Entrar</button>
+    <p id="mensaje" style="color:red;"></p>
+  </div>
+
+  <div id="contenido">
+    <h1>🎬 Películas en Línea</h1>
+    
+    <input type="text" id="buscador" onkeyup="buscarPeliculas()" placeholder="Buscar películas por título...">
+
+    <div class="grid">
+       <div class="movie-container">
+      <a href="https://filemoon.to/e/00cpdum3fv2i" target="_blank">
+        <img src="https://online.tucineclasico.es/wp-content/uploads/2019/02/dfEQMuZMIcPgC7nt07D9uVQi7Tv-200x300.jpg" class="movie-icon" alt="El Padrino">
+        <div class="movie-title">El Padrino</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/anis55sq2rg5" target="_blank">
+        <img src="https://online.tucineclasico.es/wp-content/uploads/2020/06/iJqEycKV96JCBWqx2Ij38Ufa8EH-200x300.jpg" class="movie-icon" alt="El Padrino 2">
+        <div class="movie-title">El Padrino 2</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/r699vlwj4qq9" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_godfather_part_iii-171971720-mmed.jpg" class="movie-icon" alt="El Padrino 3">
+        <div class="movie-title">El Padrino 3</div>
+      </a>
+    </div>
+
+    <div class="movie-container">
+      <a href="https://filemoon.to/e/eq5lh8ikg7yf" target="_blank">
+        <img src="https://pics.filmaffinity.com/gladiator_ii-808387712-mmed.jpg" class="movie-icon" alt="Gladiator 2">
+        <div class="movie-title">Gladiator 2</div>
+      </a>
+    </div>
+
+    <div class="movie-container">
+      <a href="https://swhoi.com/e/rlvyxb2cbzrh" target="_blank">
+        <img src="https://image.tmdb.org/t/p/w780/mGuNJpSbaKcpsfDf05VAcN9h9vb.jpg" class="movie-icon" alt="Tarot de la muerte">
+        <div class="movie-title">Tarot de la muerte</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://swhoi.com/e/m2d6og3btiy7" target="_blank">
+        <img src="https://image.tmdb.org/t/p/w780/cI5C7NDOdEMWdoaECMX1LChwabd.jpg" class="movie-icon" alt="Ghostbusters: Apocalipsis fantasma">
+        <div class="movie-title">Ghostbusters: Apocalipsis fantasma</div>
+      </a>
+    </div>
+
+<div class="movie-container">
+      <a href="https://c1z39.com/bkg/fa54nxirnfvm?ref=playerkasjkajs.top" target="_blank">
+        <img src="https://image.tmdb.org/t/p/w780/3jl94swsJUViGmN8REgKMSXNW4L.jpg" class="movie-icon" alt="El fred que crema">
+        <div class="movie-title">El fred que crema</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://c1z39.com/bkg/d9krogoadypq?ref=playerkasjkajs.top" target="_blank">
+        <img src="https://image.tmdb.org/t/p/w780/bCw8DnIGtpDysqolmfWacBoiNtJ.jpg" class="movie-icon" alt="Horror Park">
+        <div class="movie-title">Horror Park</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/1utqgj7y9dvx" target="_blank">
+        <img src="https://image.tmdb.org/t/p/w780/yT2SUMGuI4inUmBsiFjHqGp2axZ.jpg" class="movie-icon" alt="El juego del ascensor">
+        <div class="movie-title">El juego del ascensor</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/091dnmneq0jy" target="_blank">
+        <img src="https://m.media-amazon.com/images/M/MV5BOWEwY2M3OGQtNjQ0NS00YjM5LWJmMWYtZmFlMGUyMDFmZDFjXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" class="movie-icon" alt="Sufre mamón">
+        <div class="movie-title">Sufre mamón</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/0xugvpld3stw" target="_blank">
+        <img src="https://pics.filmaffinity.com/braindead_dead_alive-229681366-mmed.jpg" class="movie-icon" alt="Tu madre se ha comido a mi perro">
+        <div class="movie-title">Tu madre se ha comido a mi perro</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/6668dygypf4j" target="_blank">
+        <img src="https://pics.filmaffinity.com/a_working_man-933343627-mmed.jpg" class="movie-icon" alt="A working man">
+        <div class="movie-title">A working man</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/5wwj8xmbfgm8" target="_blank">
+        <img src="https://es.web.img2.acsta.net/medias/nmedia/18/71/01/91/20097905.jpg" class="movie-icon" alt="Trainspotting">
+        <div class="movie-title">Trainspotting</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/kbydabk9844x" target="_blank">
+        <img src="https://pics.filmaffinity.com/t2_trainspotting-853336883-mmed.jpg" class="movie-icon" alt="Trainspotting 2">
+        <div class="movie-title">Trainspotting 2</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/gfam8gniq491" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_full_monty-890568928-large.jpg" class="movie-icon" alt="Full monty">
+        <div class="movie-title">Full monty</div>
+      </a>        
+      </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/pf6u3ybxbrym" target="_blank">
+        <img src="https://pics.filmaffinity.com/gremlins-305336656-mmed.jpg" class="movie-icon" alt="Gremlins">
+        <div class="movie-title">Gremlins</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/bcqcmq4v8o9t" target="_blank">
+        <img src="https://pics.filmaffinity.com/gremlins_2_the_new_batch-645513601-mmed.jpg" class="movie-icon" alt="Gremlins 2">
+        <div class="movie-title">Gremlins 2</div>
+      </a>        
+      </div>
+	  	  
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/jpaqonerhyvu" target="_blank">
+        <img src="https://online.tucineclasico.es/wp-content/uploads/2021/08/7tFJqfcmu7sAxwcRwQ0j9qnGrok-200x300.jpg" class="movie-icon" alt="Critters">
+        <div class="movie-title">Critters</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/8snft5tji9kw/Critters_2__BluRay_Rip_AC3_2.0_Espa_ol_Castellano_.avi" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Critters_two.jpg/250px-Critters_two.jpg" class="movie-icon" alt="Critters 2">
+        <div class="movie-title">Critters 2</div>
+      </a>        
+      </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/q5unixy70cc3" target="_blank">
+        <img src="https://pics.filmaffinity.com/critters_3-235700916-large.jpg" class="movie-icon" alt="Critters 3">
+        <div class="movie-title">Critters 3</div>
+      </a>        
+      </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/zwial2m2uzzi" target="_blank">
+        <img src="https://pics.filmaffinity.com/critters_4-236258022-large.jpg" class="movie-icon" alt="Critters 4">
+        <div class="movie-title">Critters 4</div>
+      </a>        
+      </div>
+	 
+	 <div class="movie-container">
+      <a href="https://filemoon.to/e/figdstf0s443" target="_blank">
+        <img src="https://pics.filmaffinity.com/critters_attack-854547931-large.jpg" class="movie-icon" alt="Critters al ataque">
+        <div class="movie-title">Critters al ataque</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/lperbml7d3h9" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_war_of_the_worlds-166963315-mmed.jpg" class="movie-icon" alt="La guerra de los mundos (1953)">
+        <div class="movie-title">La guerra de los mundos (1953)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/0c0z3ol11zan" target="_blank">
+        <img src="https://pics.filmaffinity.com/tron-524035754-mmed.jpg" class="movie-icon" alt="Tron (1982)">
+        <div class="movie-title">Tron (1982)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/rbm2ywenlymh" target="_blank">
+        <img src="https://pics.filmaffinity.com/reptilicus-452639330-large.jpg" class="movie-icon" alt="Reptilicus (1961)">
+        <div class="movie-title">Reptilicus (1961)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ys4jki2iiin4" target="_blank">
+        <img src="https://pics.filmaffinity.com/close_encounters_of_the_third_kind-537755230-mmed.jpg" class="movie-icon" alt="Encuentros en la tercera fase">
+        <div class="movie-title">Encuentros en la tercera fase</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/xyn0zo2p13xz" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_time_machine-336755840-large.jpg" class="movie-icon" alt="El tiempo en sus manos">
+        <div class="movie-title">El tiempo en sus manos</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/tmqpftzlrj5q" target="_blank">
+        <img src="https://pics.filmaffinity.com/back_to_the_future-100822308-large.jpg" class="movie-icon" alt="Regreso al futuro">
+        <div class="movie-title">Regreso al futuro</div>
+      </a>        
+      </div>
+	  	  
+		  <div class="movie-container">
+      <a href="https://filemoon.to/e/bdya4bq82veq" target="_blank">
+        <img src="https://pics.filmaffinity.com/back_to_the_future_part_ii-618825326-large.jpg" class="movie-icon" alt="Regreso al futuro 2">
+        <div class="movie-title">Regreso al futuro 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/k0cdc6q6wx82" target="_blank">
+        <img src="https://pics.filmaffinity.com/back_to_the_future_part_iii-223713634-large.jpg" class="movie-icon" alt="Regreso al futuro 3">
+        <div class="movie-title">Regreso al futuro 3</div>
+      </a>        
+      </div>
+	  	  
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/2296zpd7i1rs" target="_blank">
+        <img src="https://online.tucineclasico.es/wp-content/uploads/2021/01/1MIgL5ceaQ35tr9vtD2X8DEmdya-202x300.jpg" class="movie-icon" alt="Los chicos del maiz">
+        <div class="movie-title">Los chicos del maiz</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/6odg4ghvtdrm" target="_blank">
+        <img src="https://pics.filmaffinity.com/psycho-805182707-large.jpg" class="movie-icon" alt="Psicosis">
+        <div class="movie-title">Psicosis</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/p2w9k1onzubz" target="_blank">
+        <img src="https://pics.filmaffinity.com/alfred_hitchcock_s_the_birds-851609530-large.jpg" class="movie-icon" alt="Los pájaros">
+        <div class="movie-title">Los pájaros</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/dbrcmgalksbb" target="_blank">
+        <img src="https://pics.filmaffinity.com/rear_window-982923492-mmed.jpg" class="movie-icon" alt="La ventana indiscreta">
+        <div class="movie-title">La ventana indiscreta</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/le5ejiq0ragn" target="_blank">
+        <img src="https://pics.filmaffinity.com/north_by_northwest-370099340-mmed.jpg" class="movie-icon" alt="Con la muerte en los talones">
+        <div class="movie-title">Con la muerte en los talones</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/b5466oc19t62" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_man_who_knew_too_much-371594593-mmed.jpg" class="movie-icon" alt="El hombre que sabia demasiado">
+        <div class="movie-title">El hombre que sabia demasiado</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/7gf399qk50sg" target="_blank">
+        <img src="https://pics.filmaffinity.com/vertigo-154050178-msmall.jpg" class="movie-icon" alt="Vértigo (De entre los muertos)">
+        <div class="movie-title">Vértigo (De entre los muertos)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/4widlyor9z7r" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_incredible_shrinking_man-887914157-mmed.jpg" class="movie-icon" alt="El increible hombre menguante">
+        <div class="movie-title">El increible hombre menguante</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/75ccdo4xct0k" target="_blank">
+        <img src="https://pics.filmaffinity.com/creepshow-288675029-mmed.jpg" class="movie-icon" alt="Creepshow">
+        <div class="movie-title">Creepshow</div>
+      </a>        
+      </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/ma4brkkbn3m6" target="_blank">
+        <img src="https://pics.filmaffinity.com/creepshow_ii_dead_and_undead_creepshow_2-439621822-mmed.jpg" class="movie-icon" alt="Creepshow 2">
+        <div class="movie-title">Creepshow 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/x2kpk0fh9j2e" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_evil_dead-289583124-large.jpg" class="movie-icon" alt="Evil Dead">
+        <div class="movie-title">Evil Dead</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/epw3vsp9gzp1" target="_blank">
+        <img src="https://pics.filmaffinity.com/evil_dead_ii_evil_dead_2_dead_by_dawn-874071844-large.jpg" class="movie-icon" alt="Evil Dead 2">
+        <div class="movie-title">Evil Dead 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/f80v7qsnri0j" target="_blank">
+        <img src="https://pics.filmaffinity.com/army_of_darkness_evil_dead_3_aka_the_evil_dead_3_army_of_darkness-684900546-large.jpg" class="movie-icon" alt="El ejercito de las tinieblas">
+        <div class="movie-title">El ejercito de las tinieblas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/96ya1w8n48j2" target="_blank">
+        <img src="https://pics.filmaffinity.com/night_of_the_living_dead-198516797-large.jpg" class="movie-icon" alt="La noche de los muertos vivientes (1968) color">
+        <div class="movie-title">La noche de los muertos vivientes (1968) color</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/kjkczykiee8b" target="_blank">
+        <img src="https://pics.filmaffinity.com/night_of_the_living_dead-198516797-large.jpg" class="movie-icon" alt="La noche de los muertos vivientes (1968)">
+        <div class="movie-title">La noche de los muertos vivientes (1968)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/8j2kfcr1lmxc" target="_blank">
+        <img src="https://pics.filmaffinity.com/i_walked_with_a_zombie-655414636-large.jpg" class="movie-icon" alt="Yo anduve con un zombie (1943)">
+        <div class="movie-title">Yo anduve con un zombie (1943)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/rrbny31oe4ge" target="_blank">
+        <img src="https://pics.filmaffinity.com/dawn_of_the_dead-107012195-large.jpg" class="movie-icon" alt="Zombi (1978)">
+        <div class="movie-title">Zombi (1978)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/juosljok4132" target="_blank">
+        <img src="https://pics.filmaffinity.com/non_si_deve_profanare_il_sonno_dei_morti_don_t_open_the_window-992614613-large.jpg" class="movie-icon" alt="No profanar el sueño de los muertos">
+        <div class="movie-title">No profanar el sueño de los muertos</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/jso9euxy1xm8" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_return_of_the_living_dead-568776967-large.jpg" class="movie-icon" alt="El regreso de los muertos vivientes">
+        <div class="movie-title">El regreso de los muertos vivientes</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/oz7xucxnvx19" target="_blank">
+        <img src="https://pics.filmaffinity.com/shaun_of_the_dead-862150434-large.jpg" class="movie-icon" alt="Zombies party">
+        <div class="movie-title">Zombies party</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/fppcf30eng65" target="_blank">
+        <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street-973167305-large.jpg" class="movie-icon" alt="Pesadilla en Elm street">
+        <div class="movie-title">Pesadilla en Elm street</div>
+      </a>        
+      </div>	  	  	  
+	 	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/rtg5sntejyr4" target="_blank">
+        <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_2_freddy_s_revenge-329113889-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 2">
+        <div class="movie-title">Pesadilla en Elm street 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ok010j1z4c71" target="_blank">
+        <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_3_dream_warriors-725612823-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 3">
+        <div class="movie-title">Pesadilla en Elm street 3</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/60rlb0yptuvv" target="_blank">
+        <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_4_the_dream_master-374245138-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 4">
+        <div class="movie-title">Pesadilla en Elm street 4</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/8et025oipxrw" target="_blank">
+        <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_5_the_dream_child-776011595-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 5">
+        <div class="movie-title">Pesadilla en Elm street 5</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/mr5bz62jq2zn" target="_blank">
+        <img src="https://pics.filmaffinity.com/freddy_s_dead_the_final_nightmare_a_nightmare_on_elm_street_6-934501006-large.jpg" class="movie-icon" alt="Pesadilla final: La muerte de Freddy">
+        <div class="movie-title">Pesadilla final: La muerte de Freddy</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/srucey7pd9xd" target="_blank">
+        <img src="https://pics.filmaffinity.com/wes_craven_s_new_nightmare_aka_a_nightmare_on_elm_street_7-603261504-large.jpg" class="movie-icon" alt="La nueva pesadilla de wes craven">
+        <div class="movie-title">La nueva pesadilla de wes craven</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/dkbgw4xfonu9" target="_blank">
+        <img src="https://pics.filmaffinity.com/cat_s_eye-801892188-large.jpg" class="movie-icon" alt="Los ojos del gato">
+        <div class="movie-title">Los ojos del gato</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="apocalipsis.html" target="_blank">
+        <img src="https://m.media-amazon.com/images/I/81xxoe+bmXL._UF1000,1000_QL80_.jpg" class="movie-icon" alt="Apocalipsis">
+        <div class="movie-title">Apocalipsis</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/uk2m56rrud41" target="_blank">
+        <img src="https://pics.filmaffinity.com/dans_la_brume-105849636-mmed.jpg" class="movie-icon" alt="La bruma">
+        <div class="movie-title">La bruma</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/fx06xmplb4zx" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_mist-365301241-mmed.jpg" class="movie-icon" alt="La niebla">
+        <div class="movie-title">La niebla</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ldunjutgyqkw" target="_blank">
+        <img src="https://pics.filmaffinity.com/cell-791182012-mmed.jpg" class="movie-icon" alt="Cell">
+        <div class="movie-title">Cell</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/d12soa5vaasq" target="_blank">
+        <img src="https://pics.filmaffinity.com/pet_sematary-918812009-mmed.jpg" class="movie-icon" alt="Cementerio viviente">
+        <div class="movie-title">Cementerio viviente</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/b88t5nml72u3" target="_blank">
+        <img src="https://pics.filmaffinity.com/it-199479174-mmed.jpg" class="movie-icon" alt="It (1990)">
+        <div class="movie-title">It (1990)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/zo72rasng196" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_child-352887434-large.jpg" class="movie-icon" alt="La niña">
+        <div class="movie-title">La niña</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/dfyr6q1fmts8" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_shining-453129380-large.jpg" class="movie-icon" alt="El resplandor">
+        <div class="movie-title">El resplandor</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://ok.ru/videoembed/565146028625" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th-652224175-mmed.jpg" class="movie-icon" alt="Viernes 13">
+        <div class="movie-title">Viernes 13</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/lebduhhr5e0y" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_part_2-670243099-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 2">
+        <div class="movie-title">Viernes 13 Parte 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/lebduhhr5e0y" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_part_iii-215629959-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 3">
+        <div class="movie-title">Viernes 13 Parte 3</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/g9m70z2pwmpc" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_the_final_chapter-568639674-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 4: Último capitulo">
+        <div class="movie-title">Viernes 13 Parte 4: Último capitulo</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/h6uq3chyojpu" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_a_new_beginning-702495970-large.jpg" class="movie-icon" alt="Viernes 13 Parte 5: Un nuevo comienzo">
+        <div class="movie-title">Viernes 13 Parte 5: Un nuevo comienzo</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/e4u6uaj0m7tx" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_part_vi_jason_lives-331418976-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 6: Jason vive">
+        <div class="movie-title">Viernes 13 Parte 6: Jason vive</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/hi4xg96vfrdg" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_part_vii_the_new_blood-390140415-large.jpg" class="movie-icon" alt="Viernes 13 Parte 7: Sangre Nueva">
+        <div class="movie-title">Viernes 13 Parte 7: Sangre Nueva</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/qjbmnlb9xqei" target="_blank">
+        <img src="https://pics.filmaffinity.com/friday_the_13th_part_viii_jason_takes_manhattan-469804202-large.jpg" class="movie-icon" alt="Viernes 13 Parte 8: Jason vuelve... para siempre">
+        <div class="movie-title">Viernes 13 Parte 8: Jason vuelve... para siempre</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/5ixhh1uklbaz" target="_blank">
+        <img src="https://pics.filmaffinity.com/jason_goes_to_hell_the_final_friday-907908073-large.jpg" class="movie-icon" alt=" Viernes 13. El final: Jason va al Infierno ">
+        <div class="movie-title"> Viernes 13. El final: Jason va al Infierno </div>
+      </a>        
+      </div>
+	  	  	  	  
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/qjtd9jr7rop6" target="_blank">
+        <img src="https://pics.filmaffinity.com/schindler_s_list-473662617-mmed.jpg" class="movie-icon" alt="La lista de Schindler">
+        <div class="movie-title">La lista de Schindler</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/3i5gj3vrot91" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_boy_in_the_striped_pajamas-898809978-mmed.jpg" class="movie-icon" alt="El niño con el pijama de rayas">
+        <div class="movie-title">El niño con el pijama de rayas</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/vdxjtig4m3wf" target="_blank">
+        <img src="https://pics.filmaffinity.com/la_vita_e_bella-646167341-mmed.jpg" class="movie-icon" alt="La vida es bella">
+        <div class="movie-title">La vida es bella</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/8c9p8y1i8z1g" target="_blank">
+        <img src="https://pics.filmaffinity.com/die_unendliche_geschichte_the_neverending_story-636909335-mmed.jpg" class="movie-icon" alt="La historia interminable">
+        <div class="movie-title">La historia interminable</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ysti8539ainp" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_neverending_story_ii_the_next_chapter-274530965-large.jpg" class="movie-icon" alt="La historia interminable 2">
+        <div class="movie-title">La historia interminable 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/lkzeube9fj4t" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_goonies-301424062-large.jpg" class="movie-icon" alt="Los Goonies">
+        <div class="movie-title">Los Goonies</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/86745snno621" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_jacksons_an_american_dream-217087724-large.jpg" class="movie-icon" alt="Los Jackson - El sueño americano Parte 1">
+        <div class="movie-title">Los Jackson - El sueño americano Parte 1</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/8x3h12c67d7j" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_jacksons_an_american_dream-217087724-large.jpg" class="movie-icon" alt="Los Jackson - El sueño americano Parte 2">
+        <div class="movie-title">Los Jackson - El sueño americano Parte 2</div>
+      </a>        
+      </div>
+	
+	<div class="movie-container">
+      <a href="https://streamtape.com/e/6mBxy11xjZU93oD/La_Chaqueta_Metalica.mp4" target="_blank">
+        <img src="https://online.tucineclasico.es/wp-content/uploads/2019/02/AfJE8hQew1FD2zHRgDy2yY3ZHpS-235x300.jpg" class="movie-icon" alt="La chaqueta metálica">
+        <div class="movie-title">La chaqueta metálica</div>
+      </a>
+    </div>
+	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/seuxxbvhooh9" target="_blank">
+        <img src="https://pics.filmaffinity.com/2001_a_space_odyssey-322989452-large.jpg" class="movie-icon" alt="2001:una odisea en el espacio">
+        <div class="movie-title">2001:una odisea en el espacio</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/qb6dn747kmig" target="_blank">
+        <img src="https://pics.filmaffinity.com/duel-899280615-large.jpg" class="movie-icon" alt="El diablo sobre ruedas">
+        <div class="movie-title">El diablo sobre ruedas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/avq7xjs7x6t7" target="_blank">
+        <img src="https://pics.filmaffinity.com/deo_mun-579180002-large.jpg" class="movie-icon" alt="Rescate lunar">
+        <div class="movie-title">Rescate lunar</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/4w02w1p5aazr" target="_blank">
+        <img src="https://pics.filmaffinity.com/blade_runner-351607743-large.jpg" class="movie-icon" alt="Blade runner">
+        <div class="movie-title">Blade runner</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/93zz9t99mge4" target="_blank">
+        <img src="https://pics.filmaffinity.com/blade_runner_2049-681477614-large.jpg" class="movie-icon" alt="Blade runner 2049">
+        <div class="movie-title">Blade runner 2049</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/pm76jr7mlm26" target="_blank">
+        <img src="https://pics.filmaffinity.com/hackers-358996581-mmed.jpg" class="movie-icon" alt="Hackers">
+        <div class="movie-title">Hackers</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/4c7mdt8pmcvi" target="_blank">
+        <img src="https://pics.filmaffinity.com/trackdown_track_down_takedown-755372814-mmed.jpg" class="movie-icon" alt="Hackers 2">
+        <div class="movie-title">Hackers 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/8mijcm4fwwg7" target="_blank">
+        <img src="https://pics.filmaffinity.com/antitrust-457815769-mmed.jpg" class="movie-icon" alt="Hackers 3">
+        <div class="movie-title">Hackers 3</div>
+      </a>        
+      </div>
+		   	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/b9zjxd2ndxog" target="_blank">
+        <img src="https://pics.filmaffinity.com/apocalypse_now-915115475-mmed.jpg" class="movie-icon" alt="Apocalypse now Redux">
+        <div class="movie-title">Apocalypse now Redux</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/gqgth2eh1uve" target="_blank">
+        <img src="https://pics.filmaffinity.com/porky_s-806663050-large.jpg" class="movie-icon" alt="Porky´s">
+        <div class="movie-title">Porky´s</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/b5tawy7yod88" target="_blank">
+        <img src="https://pics.filmaffinity.com/porky_s_ii_the_next_day-290901622-large.jpg" class="movie-icon" alt="Porky´s 2">
+        <div class="movie-title">Porky´s 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/jhazc5oz2tsg" target="_blank">
+        <img src="https://pics.filmaffinity.com/perros_callejeros-905880297-mmed.jpg" class="movie-icon" alt="Perros callejeros">
+        <div class="movie-title">Perros callejeros</div>
+      </a>        
+      </div>
+	 	  	  
+	  	  	  	
+	<div class="movie-container">
+      <a href="https://filemoon.to/e/hhfca9v5u64z" target="_blank">
+        <img src="https://pics.filmaffinity.com/perros_callejeros_ii-446251839-mmed.jpg" class="movie-icon" alt="Peros callejeros 2">
+        <div class="movie-title">Perros callejeros 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/284edsao02yv" target="_blank">
+        <img src="https://pics.filmaffinity.com/los_ultimos_golpes_del_torete_perros_callejeros_iii-841462028-mmed.jpg" class="movie-icon" alt="Perros callejeros 3">
+        <div class="movie-title">Perros callejeros 3</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/4pggwbu1hfaf" target="_blank">
+        <img src="https://pics.filmaffinity.com/yo_el_vaquilla-384217416-large.jpg" class="movie-icon" alt="Yo el vaquilla">
+        <div class="movie-title">Yo el vaquilla</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/xpyj67z8woqn" target="_blank">
+        <img src="https://pics.filmaffinity.com/la_estanquera_de_vallecas-810298286-mmed.jpg" class="movie-icon" alt="La estanquera de Vallecas">
+        <div class="movie-title">La estanquera de Vallecas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/8y3d3rhq3exk" target="_blank">
+        <img src="https://pics.filmaffinity.com/deprisa_deprisa-601056487-large.jpg" class="movie-icon" alt="Deprisa, deprisa">
+        <div class="movie-title">Deprisa, deprisa</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/0hc2lye5kuk7" target="_blank">
+        <img src="https://pics.filmaffinity.com/navajeros-964056717-mmed.jpg" class="movie-icon" alt="Navajeros">
+        <div class="movie-title">Navajeros</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ba33s7994hhj" target="_blank">
+        <img src="https://pics.filmaffinity.com/chocolate-266358558-large.jpg" class="movie-icon" alt="Chocolate">
+        <div class="movie-title">Chocolate</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/nwg8zsxbjksd" target="_blank">
+        <img src="https://pics.filmaffinity.com/el_pico-830412697-large.jpg" class="movie-icon" alt="El pico">
+        <div class="movie-title">El pico</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/zfu2kxg0y8r8" target="_blank">
+        <img src="https://pics.filmaffinity.com/el_pico_2-195792563-large.jpg" class="movie-icon" alt="El pico 2">
+        <div class="movie-title">El pico 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/870qnbfhws05" target="_blank">
+        <img src="https://pics.filmaffinity.com/27_horas-974983321-large.jpg" class="movie-icon" alt="27 horas">
+        <div class="movie-title">27 horas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/wazfcjw75742" target="_blank">
+        <img src="https://pics.filmaffinity.com/7_virgenes-857681604-large.jpg" class="movie-icon" alt="7 vírgenes">
+        <div class="movie-title">7 vírgenes</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/p5v7ca8ixcdq" target="_blank">
+        <img src="https://pics.filmaffinity.com/el_bola-706926535-large.jpg" class="movie-icon" alt="El bola">
+        <div class="movie-title">El bola</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/d/3qye9l3w88vw" target="_blank">
+        <img src="https://pics.filmaffinity.com/barrio-878665000-large.jpg" class="movie-icon" alt="Barrio">
+        <div class="movie-title">Barrio</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/itqelgr2n0m3" target="_blank">
+        <img src="https://pics.filmaffinity.com/el_lute_camina_o_revienta-428761101-mmed.jpg" class="movie-icon" alt="El Lute, camina o revienta">
+        <div class="movie-title">El Lute, camina o revienta</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/pifsyq1r0zjw" target="_blank">
+        <img src="https://pics.filmaffinity.com/el_lute_ii_manana_sere_libre-781906865-large.jpg" class="movie-icon" alt="El Lute 2, mañana seré libre">
+        <div class="movie-title">El Lute 2, mañana seré libre</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/gmpukwbpv3lm" target="_blank">
+        <img src="https://pics.filmaffinity.com/altrimenti_ci_arrabbiamo-540801472-large.jpg" class="movie-icon" alt="Y si no, nos enfadamos">
+        <div class="movie-title">Y si no, nos enfadamos</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="http://ok.ru/videoembed/3840162532028" target="_blank">
+        <img src="https://pics.filmaffinity.com/la_guerra_de_papa-456370631-large.jpg" class="movie-icon" alt="La guerra de papá">
+        <div class="movie-title">La guerra de papá</div>
+      </a>        
+      </div>
+	  	  	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/q90b9fo9fwfi" target="_blank">
+        <img src="https://pics.filmaffinity.com/cria_cuervos-283282908-large.jpg" class="movie-icon" alt="Cría cuervos">
+        <div class="movie-title">Cría cuervos</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/jt8fbdsba99j" target="_blank">
+        <img src="https://pics.filmaffinity.com/la_guerra_de_los_ninos-759892010-large.jpg" class="movie-icon" alt="La guerra de los niños">
+        <div class="movie-title">La guerra de los niños</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/65decnoi8i3j" target="_blank">
+        <img src="https://pics.filmaffinity.com/la_2a_guerra_de_los_ninos-434791777-large.jpg" class="movie-icon" alt="La Segunda Guerra de los Niños">
+        <div class="movie-title">La Segunda Guerra de los Niños</div>
+      </a>        
+      </div>
+	  	  	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/o8liwsa3gj14" target="_blank">
+        <img src="https://pics.filmaffinity.com/parchis_entra_en_accion-809680883-large.jpg" class="movie-icon" alt="Parchís entra en acción">
+        <div class="movie-title">Parchís entra en acción</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/0arqvcj0kvub" target="_blank">
+        <img src="https://pics.filmaffinity.com/flashdance-362820133-large.jpg" class="movie-icon" alt="Flashdance (1983)">
+        <div class="movie-title">Flashdance (1983)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/zx7ninhtbzry" target="_blank">
+        <img src="https://images.justwatch.com/poster/17147903/s166/reservoir-dogs.avif" class="movie-icon" alt="Reservoir dogs">
+        <div class="movie-title">Reservoir dogs</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/mwg4thsefefe" target="_blank">
+        <img src="https://pics.filmaffinity.com/pulp_fiction-210382116-large.jpg" class="movie-icon" alt="Pulp fiction">
+        <div class="movie-title">Pulp fiction</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/gscsn59m6usy" target="_blank">
+        <img src="https://pics.filmaffinity.com/jackie_brown-733179988-large.jpg" class="movie-icon" alt="Jackie Brown">
+        <div class="movie-title">Jackie Brown</div>
+      </a>        
+      </div>
+	  	  	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/apl41o5gb0yj" target="_blank">
+        <img src="https://pics.filmaffinity.com/django_unchained-956246347-large.jpg" class="movie-icon" alt="Django">
+        <div class="movie-title">Django</div>
+      </a>        
+      </div>  	   	    
+	  	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/jcdbrgqjbr25" target="_blank">
+        <img src="https://pics.filmaffinity.com/blade-397609933-large.jpg" class="movie-icon" alt="Blade">
+        <div class="movie-title">Blade</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/d/8kqela8qklst" target="_blank">
+        <img src="https://pics.filmaffinity.com/blade_ii_blade_2-730287165-large.jpg" class="movie-icon" alt="Blade 2">
+        <div class="movie-title">Blade 2</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/d/opy0t7ixkigz" target="_blank">
+        <img src="https://pics.filmaffinity.com/blade_trinity_blade_3-956890691-large.jpg" class="movie-icon" alt="Blade Trinity">
+        <div class="movie-title">Blade Trinity</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://ok.ru/videoembed/4737246956149" target="_blank">
+        <img src="https://pics.filmaffinity.com/robocop-178512372-large.jpg" class="movie-icon" alt="Robocop (1987)">
+        <div class="movie-title">Robocop (1987)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/8ig7ev6yu4m1" target="_blank">
+        <img src="https://pics.filmaffinity.com/robocop_2-768486049-large.jpg" class="movie-icon" alt="Robocop 2(1990)">
+        <div class="movie-title">Robocop 2(1990)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ngdb5d343392" target="_blank">
+        <img src="https://pics.filmaffinity.com/robocop_3-758520258-large.jpg" class="movie-icon" alt="Robocop 3(1993)">
+        <div class="movie-title">Robocop 3(1993)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/aan3stn317zh" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_terminator-778052251-large.jpg" class="movie-icon" alt="Terminator">
+        <div class="movie-title">Terminator</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/b7362xfwmi56" target="_blank">
+        <img src="https://pics.filmaffinity.com/t2_terminator_2_judgment_day-825143697-large.jpg" class="movie-icon" alt="Terminator II">
+        <div class="movie-title">Terminator II</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/57u2j1v9nem9" target="_blank">
+        <img src="https://pics.filmaffinity.com/terminator_3_rise_of_the_machines_t3-788040850-large.jpg" class="movie-icon" alt="Terminator III: La Revelión de las Máquinas">
+        <div class="movie-title">Terminator III: La Revelión de las Máquinas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/98sxr6sar872" target="_blank">
+        <img src="https://pics.filmaffinity.com/terminator_salvation_the_future_begins_terminator_4-225185375-large.jpg" class="movie-icon" alt="Terminator IV: Salvation">
+        <div class="movie-title">Terminator IV: Salvation</div>
+      </a>
+    </div>
+	  	  	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/tp27eon9w9lf" target="_blank">
+        <img src="https://pics.filmaffinity.com/terminator_genisys_aka_terminator_5-844929699-large.jpg" class="movie-icon" alt="Terminator Génesis">
+        <div class="movie-title">Terminator Génesis</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/rpudphwob089" target="_blank">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT13o05IGGV7TMUEf9Cvp8VwMntUOVEIhnn76kBUgn_8BFyWYw6hQ0jgMg&usqp=CAE&s" class="movie-icon" alt="El creyente">
+        <div class="movie-title">El creyente</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/hoewyvsau5qi" target="_blank">
+        <img src="https://pics.filmaffinity.com/american_history_x-201185607-large.jpg" class="movie-icon" alt="American history X">
+        <div class="movie-title">American history X</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://ok.ru/videoembed/10460251097681" target="_blank">
+        <img src="https://pics.filmaffinity.com/midnight_cowboy-956238878-large.jpg" class="movie-icon" alt="Cowboy de medianoche">
+        <div class="movie-title">Cowboy de medianoche</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/qcf51yql3n4m" target="_blank">
+        <img src="https://pics.filmaffinity.com/mad_max-632940430-large.jpg" class="movie-icon" alt="Mad Max salvajes de autopista">
+        <div class="movie-title">Mad Max salvajes de autopista</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/yjd1mtq8jd1q" target="_blank">
+        <img src="https://pics.filmaffinity.com/mad_max_2_the_road_warrior-638819106-large.jpg" class="movie-icon" alt=" Mad Max 2. El guerrero de la carretera">
+        <div class="movie-title"> Mad Max 2. El guerrero de la carretera</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/vpdra010c5zh" target="_blank">
+        <img src="https://pics.filmaffinity.com/mad_max_beyond_thunderdome-591668589-large.jpg" class="movie-icon" alt="Mad Max 3- Más allá de la cúpula del trueno">
+        <div class="movie-title">Mad Max 3- Más allá de la cúpula del trueno</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/u1uff89vyi0i" target="_blank">
+        <img src="https://pics.filmaffinity.com/the_pelayos-617425604-large.jpg" class="movie-icon" alt="The Pelayos">
+        <div class="movie-title">The Pelayos</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="paco martinez soria.html" target="_blank">
+        <img src="https://www.cartv.es/thumbs/fullwidthtablet/podcast/2009-07/30_01080.jpg" class="movie-icon" alt="Ciclo Paco Martínez Soria">
+        <div class="movie-title">Ciclo Paco Martínez Soria</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/t6am8m1mqmlx" target="_blank">
+        <img src="https://pics.filmaffinity.com/torrente_el_brazo_tonto_de_la_ley-769153589-large.jpg" class="movie-icon" alt="Torrente: el brazo tonto de la ley">
+        <div class="movie-title">Torrente: el brazo tonto de la ley</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/80blxzn32w05" target="_blank">
+        <img src="https://pics.filmaffinity.com/torrente_2_mision_en_marbella-426650610-msmall.jpg" class="movie-icon" alt="Torrente 2: misión en Marbella">
+        <div class="movie-title">Torrente 2: misión en Marbella</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/3et3btr9nbxr" target="_blank">
+        <img src="https://pics.filmaffinity.com/torrente_3_el_protector-816745588-msmall.jpg" class="movie-icon" alt="Torrente 3: El Protector">
+        <div class="movie-title">Torrente 3: El Protector</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/aatojdqp52pc" target="_blank">
+        <img src="https://pics.filmaffinity.com/torrente_4_lethal_crisis_crisis_letal-850313152-mmed.jpg" class="movie-icon" alt="Torrente 4: Lethal Crisis">
+        <div class="movie-title">Torrente 4: Lethal Crisis</div>
+      </a>        
+      </div>
+	  
+	  	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/ctle2efullcb" target="_blank">
+        <img src="https://pics.filmaffinity.com/torrente_5_operacion_eurovegas-241259676-large.jpg" class="movie-icon" alt="Torrente 5: Operación Eurovegas">
+        <div class="movie-title">Torrente 5: Operación Eurovegas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="ruta.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/la_ruta-121734365-large.jpg" class="movie-icon" alt="Serie La ruta">
+        <div class="movie-title">Serie La ruta</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="Anatomina de un instante.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/anatomia_de_un_instante-122205180-mmed.jpg" class="movie-icon" alt="Serie Anatomia de un instante">
+        <div class="movie-title">Serie Anatomia de un instante</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="Stranger Things.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/stranger_things-875025085-large.jpg" class="movie-icon" alt="Serie Stranger Things">
+        <div class="movie-title">Serie Stranger Things</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="terror en estado puro.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/fear_itself-191215281-large.jpg" class="movie-icon" alt="Serie Terror en estado puro">
+        <div class="movie-title">Serie Terror en estado puro</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="historias de la cripta.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/tales_from_the_crypt-251612409-large.jpg" class="movie-icon" alt="Serie Historias de la cripta">
+        <div class="movie-title">Serie Historias de la cripta</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="initial d.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/initial_d_final_stage-113633162-mmed.jpg" class="movie-icon" alt="Serie Initial D">
+        <div class="movie-title">Serie Initial D</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="historias para no dormir.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/historias_para_no_dormir-873409417-large.jpg" class="movie-icon" alt="Serie Historias para no dormir">
+        <div class="movie-title">Serie Historias para no dormir</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="el juego del calamar.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/squid_game-688981365-large.jpg" class="movie-icon" alt="Serie El juego del calamar">
+        <div class="movie-title">Serie El juego del calamar</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="halt and catch fire.html" target="_blank">
+        <img src="https://pics.filmaffinity.com/halt_and_catch_fire-199307439-large.jpg" class="movie-icon" alt="Serie Halt and catch fire">
+        <div class="movie-title">Serie Halt and catch fire</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/maow8dz3hekw" target="_blank">
+        <img src="https://pics.filmaffinity.com/jobs-114979440-mmed.jpg" class="movie-icon" alt="Jobs">
+        <div class="movie-title">Jobs</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/7qbv6urtcwri" target="_blank">
+        <img src="https://pics.filmaffinity.com/steve_jobs-647763435-large.jpg" class="movie-icon" alt=" Steve Jobs">
+        <div class="movie-title"> Steve Jobs</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/3ukv1m96t300" target="_blank">
+        <img src="https://pics.filmaffinity.com/factotum-604301286-large.jpg" class="movie-icon" alt="Factotum">
+        <div class="movie-title">Factotum</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/y931wqq5np1g" target="_blank">
+        <img src="https://pics.filmaffinity.com/rich_flu-867602032-mmed.jpg" class="movie-icon" alt="La fiebre de los ricos">
+        <div class="movie-title">La fiebre de los ricos</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/29y2t2nalb4v" target="_blank">
+        <img src="https://pics.filmaffinity.com/warfare-534208810-large.jpg" class="movie-icon" alt=" Warfare: Tiempo de guerra">
+        <div class="movie-title"> Warfare: Tiempo de guerra</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/wo28poi8irlx" target="_blank">
+        <img src="https://pics.filmaffinity.com/sting-264068018-large.jpg" class="movie-icon" alt="Sting. Araña asesina">
+        <div class="movie-title">Sting. Araña asesina</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/kmht48fpztcm" target="_blank">
+        <img src="https://pics.filmaffinity.com/final_destination_bloodlines-790034090-large.jpg" class="movie-icon" alt="Destino final: Lazos de sangre">
+        <div class="movie-title">Destino final: Lazos de sangre</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/qbnhvuoy9z1d" target="_blank">
+        <img src="https://pics.filmaffinity.com/straw-315380817-large.jpg" class="movie-icon" alt="Harta">
+        <div class="movie-title">Harta</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/p4bqggloanm8" target="_blank">
+        <img src="https://pics.filmaffinity.com/until_dawn-880447124-large.jpg" class="movie-icon" alt="Until Dawn (2025)">
+        <div class="movie-title">Until Dawn (2025)</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/m8awxle642jn" target="_blank">
+        <img src="https://pics.filmaffinity.com/mikaela-727903164-large.jpg" class="movie-icon" alt="Mikaela">
+        <div class="movie-title">Mikaela</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://ok.ru/videoembed/9865535621795" target="_blank">
+        <img src="https://pics.filmaffinity.com/les_femmes_au_balcon-822260790-large.jpg" class="movie-icon" alt="Las chicas del balcón">
+        <div class="movie-title">Las chicas del balcón</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="http://ok.ru/videoembed/10107042269752" target="_blank">
+        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno-289733769-large.jpg" class="movie-icon" alt="Padre no hay mas que uno">
+        <div class="movie-title">Padre no hay mas que uno</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="http://ok.ru/videoembed/10107042335288" target="_blank">
+        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_2_la_llegada_de_la_suegra-719430009-large.jpg" class="movie-icon" alt="Padre no hay mas que uno 2: La llegada de la suegra">
+        <div class="movie-title">Padre no hay mas que uno 2: La llegada de la suegra</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="http://ok.ru/videoembed/10107042466360" target="_blank">
+        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_3-400727246-large.jpg" class="movie-icon" alt="Padre no hay mas que uno 3">
+        <div class="movie-title">Padre no hay mas que uno 3</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/vgt0skwwahr0" target="_blank">
+        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_4_campanas_de_boda-493339264-large.jpg" class="movie-icon" alt="Padre no hay más que uno 4: Campanas de boda">
+        <div class="movie-title">Padre no hay más que uno 4: Campanas de boda</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/tl9gsnivtoeo" target="_blank">
+        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_5_nido_repleto-219461623-mmed.jpg" class="movie-icon" alt="Padre no hay más que uno 5: Nido repleto">
+        <div class="movie-title">Padre no hay más que uno 5: Nido repleto</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/kwo130qp29jr" target="_blank">
+        <img src="https://pics.filmaffinity.com/como_dios_manda-689886286-large.jpg" class="movie-icon" alt=" Como Dios manda ">
+        <div class="movie-title"> Como Dios manda </div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/4xzajfglygc0" target="_blank">
+        <img src="https://pics.filmaffinity.com/vaya_vacaciones-957309987-large.jpg" class="movie-icon" alt=" ¡Vaya vacaciones! ">
+        <div class="movie-title"> ¡Vaya vacaciones! </div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/swemz0b3jdmi" target="_blank">
+        <img src="https://pics.filmaffinity.com/superagente_makey-249917287-large.jpg" class="movie-icon" alt=" Superagente Makey  ">
+        <div class="movie-title"> Superagente Makey </div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/x8r6kklclc3c" target="_blank">
+        <img src="https://pics.filmaffinity.com/un_lio_de_millones-709457374-large.jpg" class="movie-icon" alt="Un lío de millones">
+        <div class="movie-title">Un lío de millones</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/blyt002y8j9j" target="_blank">
+        <img src="https://pics.filmaffinity.com/el_mejor_verano_de_mi_vida-275334251-large.jpg" class="movie-icon" alt="El mejor verano de mi vida">
+        <div class="movie-title">El mejor verano de mi vida</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/d6ilu3znl1v9" target="_blank">
+        <img src="https://pics.filmaffinity.com/f1_the_movie-603739796-large.jpg" class="movie-icon" alt="F1 la pelicula">
+        <div class="movie-title">F1 la pelicula</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/id5157h0vkhc" target="_blank">
+        <img src="https://pics.filmaffinity.com/one_battle_after_another-992235034-mmed.jpg" class="movie-icon" alt="Una batalla tras otra">
+        <div class="movie-title">Una batalla tras otra</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/6478kukw8u45/Miedo_y_asco_en_las_vegas__1998__HDrip" target="_blank">
+        <img src="https://pics.filmaffinity.com/fear_and_loathing_in_las_vegas-268871395-mmed.jpg" class="movie-icon" alt="Miedo y asco en Las Vegas">
+        <div class="movie-title">Miedo y asco en Las Vegas</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="https://filemoon.to/e/1gl6y5urbhlc" target="_blank">
+        <img src="https://pics.filmaffinity.com/avatar-208925608-mmed.jpg" class="movie-icon" alt="Avatar 3D">
+        <div class="movie-title">Avatar 3D</div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="iptvprueba.html" target="_blank">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdUcvNbdlgliNQWT4_-ceA2ruLvo9uaOyNnYkywhwtPRytf61XPEgdKHiBSuaJK4UjlFM&usqp=CAU" class="movie-icon" alt="Reproductor IPTV">
+        <div class="movie-title">Reproductor IPTV </div>
+      </a>        
+      </div>
+	  
+	  <div class="movie-container">
+      <a href="iptv-player-app2.html" target="_blank">
+        <img src="data:image/jpeg;base64,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" class="movie-icon" alt="IPTV Pro">
+        <div class="movie-title">IPTV Pro </div>
+      </a>        
+      </div>
+	  
+	</div>
+  </div>
+
+  <script>
+    // Cargar usuario y contraseña si fueron recordados
+    window.onload = function () {
+      const savedUser = localStorage.getItem("usuario");
+      const savedPass = localStorage.getItem("clave");
+
+      if (savedUser && savedPass) {
+        document.getElementById("usuario").value = savedUser;
+        document.getElementById("clave").value = savedPass;
+        document.getElementById("recordar").checked = true;
+      }
+    };
+
+    function validar() {
+      const user = document.getElementById('usuario').value;
+      const pass = document.getElementById('clave').value;
+      const recordar = document.getElementById('recordar').checked;
+
+      // Cambia esto por tu usuario y contraseña reales
+      if (user === "apoyardao" && pass === "egabrense666") {
+        if (recordar) {
+          localStorage.setItem("usuario", user);
+          localStorage.setItem("clave", pass);
+        } else {
+          localStorage.removeItem("usuario");
+          localStorage.removeItem("clave");
+        }
+
+        document.getElementById("login").style.display = "none";
+        document.getElementById("contenido").style.display = "block";
+      } else {
+        document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos.";
+      }
+    }
+
+    // FUNCIÓN PARA BUSCAR PELÍCULAS AÑADIDA
+    function buscarPeliculas() {
+      const input = document.getElementById('buscador');
+      const filtro = input.value.toLowerCase();
+      const grid = document.querySelector('.grid');
+      const peliculas = grid.getElementsByClassName('movie-container');
+
+      for (let i = 0; i < peliculas.length; i++) {
+        const tituloDiv = peliculas[i].getElementsByClassName('movie-title')[0];
+        if (tituloDiv) {
+          const titulo = tituloDiv.textContent || tituloDiv.innerText;
+          if (titulo.toLowerCase().indexOf(filtro) > -1) {
+            peliculas[i].style.display = ""; // Muestra la película
+          } else {
+            peliculas[i].style.display = "none"; // Oculta la película
+          }
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
