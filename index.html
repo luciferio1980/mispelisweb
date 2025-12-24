@@ -2,1467 +2,602 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>🎬 Películas en Línea</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pelis Web - Profesional</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #e50914;
+      --bg: #0a0a0a;
+      --card-bg: rgba(31, 31, 31, 0.8);
+      --text: #ffffff;
+      --text-muted: #cccccc;
+    }
+
     body {
-      background-color: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
+      background-color: var(--bg);
+      background-image: 
+        linear-gradient(rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0.95)),
+        url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg');
+      background-attachment: fixed;
+      background-size: cover;
+      color: var(--text);
+      font-family: 'Roboto', sans-serif;
+      margin: 0; padding: 0;
     }
 
+    /* --- LOGIN --- */
     #login {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; backdrop-filter: blur(5px);
+    }
+    .login-box {
+      background: rgba(0, 0, 0, 0.8);
+      padding: 60px; border-radius: 8px; width: 100%; max-width: 400px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    .login-input {
+      width: 100%; padding: 15px; margin-bottom: 15px; background: #333;
+      border: none; color: white; border-radius: 4px; box-sizing: border-box;
+    }
+    .login-btn {
+      width: 100%; padding: 15px; background: var(--primary); color: white;
+      border: none; font-weight: bold; cursor: pointer; border-radius: 4px;
     }
 
-    input, button {
-      padding: 10px;
-      margin: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
+    /* --- CONTENIDO --- */
+    #contenido { display: none; padding: 20px 5%; }
+    
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 0; position: sticky; top: 0; z-index: 10;
+      background: rgba(10, 10, 10, 0.7); backdrop-filter: blur(10px); margin: 0 -5%; padding: 20px 5%;
     }
-
-    button {
-      cursor: pointer;
-      background-color: #FFD700;
-      color: #000;
-      font-weight: bold;
-    }
-
-    .checkbox-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    #contenido {
-      display: none;
-      padding: 40px 20px;
-    }
-
-    h1 {
-      text-align: center;
-      color: #FFD700;
-      font-size: 2.5em;
-      text-shadow: 2px 2px 4px #333;
-      margin-bottom: 40px;
-    }
-
-    /* Estilos para el buscador */
+    .logo { color: var(--primary); font-size: 2.2rem; font-weight: bold; }
     #buscador {
-      width: 50%;
-      max-width: 600px;
-      margin: 0 auto 40px auto;
-      display: block;
-      background-color: #222;
-      color: #fff;
-      border: 1px solid #FFD700;
-      text-align: center;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3);
+      color: white; padding: 10px 15px; width: 250px; border-radius: 20px;
+      transition: all 0.3s;
     }
+    #buscador:focus { width: 350px; background: rgba(255,255,255,0.2); outline: none; }
 
     .grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 30px;
-      max-width: 1200px;
-      margin: auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px; margin-top: 40px;
     }
 
     .movie-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
+      position: relative; cursor: pointer; transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    .movie-container:hover { transform: scale(1.1); z-index: 5; }
+    .movie-icon { width: 100%; height: 270px; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    .movie-title-card {
+      position: absolute; bottom: 0; background: linear-gradient(transparent, black);
+      width: 100%; padding: 20px 10px 10px; font-size: 0.85rem; text-align: center; border-radius: 0 0 6px 6px;
     }
 
-    .movie-icon {
-      width: 100%;
-      max-width: 150px;
-      border-radius: 10px;
-      transition: transform 0.2s, box-shadow 0.2s;
-      cursor: pointer;
+    /* --- MODAL --- */
+    #modal {
+      display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(10px);
     }
-
-    .movie-icon:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 10px #FFD700;
+    .modal-content {
+      background: #181818; width: 90%; max-width: 850px; display: flex;
+      border-radius: 12px; overflow: hidden; position: relative;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
     }
-
-    .movie-title {
-      color: #FFD700;
-      margin-top: 10px;
-      font-weight: bold;
-      font-size: 1em;
-      text-shadow: 1px 1px 2px #000;
+    .modal-left { width: 40%; }
+    .modal-left img { width: 100%; height: 100%; object-fit: cover; }
+    .modal-right { width: 60%; padding: 45px; display: flex; flex-direction: column; justify-content: center; }
+    .modal-title { font-size: 2.2rem; margin: 0 0 15px 0; color: white; }
+    .modal-synopsis { color: var(--text-muted); line-height: 1.6; margin-bottom: 30px; }
+    .play-button {
+      background: white; color: black; padding: 12px 35px; text-decoration: none;
+      font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; width: fit-content;
     }
+    .close { position: absolute; top: 20px; right: 20px; font-size: 30px; cursor: pointer; color: white; }
 
-    a {
-      text-decoration: none;
+    @media (max-width: 700px) {
+      .modal-content { flex-direction: column; }
+      .modal-left, .modal-right { width: 100%; }
+      .modal-left { height: 250px; }
     }
   </style>
 </head>
 <body>
 
   <div id="login">
-    <h2>Acceso restringido 🔐</h2>
-    <input type="text" id="usuario" placeholder="Usuario">
-    <input type="password" id="clave" placeholder="Contraseña">
-    
-    <div class="checkbox-container">
-      <input type="checkbox" id="recordar">
-      <label for="recordar">Recordar</label>
+    <div class="login-box">
+      <h2 style="text-align:center">Inicia sesión</h2>
+      <input type="text" id="usuario" class="login-input" placeholder="Usuario">
+      <input type="password" id="clave" class="login-input" placeholder="Contraseña">
+      <div style="margin-bottom: 20px; font-size: 0.9rem;">
+        <input type="checkbox" id="recordar"> <label for="recordar">Recuérdame</label>
+      </div>
+      <button onclick="validar()" class="login-btn">Entrar</button>
+      <p id="mensaje" style="color:var(--primary); text-align:center; margin-top:15px; font-weight:bold;"></p>
     </div>
-
-    <button onclick="validar()">Entrar</button>
-    <p id="mensaje" style="color:red;"></p>
   </div>
 
   <div id="contenido">
-    <h1>🎬 Películas en Línea</h1>
-    
-    <input type="text" id="buscador" onkeyup="buscarPeliculas()" placeholder="Buscar películas por título...">
+    <header>
+      <div class="logo">PELIS WEB</div>
+      <input type="text" id="buscador" onkeyup="buscarPeliculas()" placeholder="Buscar títulos...">
+    </header>
 
     <div class="grid">
-       <div class="movie-container">
-      <a href="https://filemoon.to/e/00cpdum3fv2i" target="_blank">
+      <div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/00cpdum3fv2i"
+           data-synopsis="América, años 40. Don Vito Corleone (Marlon Brando) es el respetado y temido jefe de una de las cinco familias de la mafia de Nueva York. Tiene cuatro hijos: Connie (Talia Shire), el impulsivo Sonny (James Caan), el pusilánime Fredo (John Cazale) y Michael (Al Pacino), que no quiere saber nada de los negocios de su padre. Cuando Corleone, en contra de los consejos de 'Il consigliere' Tom Hagen (Robert Duvall), se niega a participar en el negocio de las drogas, el jefe de otra banda ordena su asesinato. Empieza entonces una violenta y cruenta guerra entre las familias mafiosas.">
         <img src="https://online.tucineclasico.es/wp-content/uploads/2019/02/dfEQMuZMIcPgC7nt07D9uVQi7Tv-200x300.jpg" class="movie-icon" alt="El Padrino">
-        <div class="movie-title">El Padrino</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/anis55sq2rg5" target="_blank">
+        <div class="movie-title-card">El Padrino</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/anis55sq2rg5"
+           data-synopsis="Continuación de la historia de los Corleone por medio de dos historias paralelas: la elección de Michael como jefe de los negocios familiares y los orígenes del patriarca, Don Vito Corleone, primero en su Sicilia natal y posteriormente en Estados Unidos, donde, empezando desde abajo, llegó a ser un poderosísimo jefe de la mafia de Nueva York.">
         <img src="https://online.tucineclasico.es/wp-content/uploads/2020/06/iJqEycKV96JCBWqx2Ij38Ufa8EH-200x300.jpg" class="movie-icon" alt="El Padrino 2">
-        <div class="movie-title">El Padrino 2</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/r699vlwj4qq9" target="_blank">
+        <div class="movie-title-card">El Padrino 2</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/r699vlwj4qq9"
+           data-synopsis="Michael Corleone, heredero del imperio de don Vito Corleone, intenta rehabilitarse socialmente y legitimar todas las posesiones de la familia negociando con el Vaticano. Después de luchar toda su vida se encuentra cansado y centra todas sus esperanzas en encontrar un sucesor que se haga cargo de los negocios. Vincent, el hijo ilegítimo de su hermano Sonny, parece ser el elegido.">
         <img src="https://pics.filmaffinity.com/the_godfather_part_iii-171971720-mmed.jpg" class="movie-icon" alt="El Padrino 3">
-        <div class="movie-title">El Padrino 3</div>
-      </a>
-    </div>
+        <div class="movie-title-card">El Padrino 3</div>
+      </div>
 
-    <div class="movie-container">
-      <a href="https://filemoon.to/e/eq5lh8ikg7yf" target="_blank">
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/eq5lh8ikg7yf"
+           data-synopsis="Dieciséis años después de la muerte de Marco Aurelio, Roma está gobernada por los despiadados emperadores gemelos Geta y Caracalla. El nieto de Aurelio, Lucio Vero, vive bajo el seudónimo de Hanno con su esposa Arishat en el reino norteafricano de Numidia. El ejército romano dirigido por el general Acacio invade y conquista el reino, esclavizando a Lucio junto con otros supervivientes. Los esclavos son llevados a Ostia, donde Lucio es comprado por el maestro de cuadra Macrinus, que le promete la oportunidad de vengarse matando a Acacio si gana suficientes combates para llegar al Coliseo.">
         <img src="https://pics.filmaffinity.com/gladiator_ii-808387712-mmed.jpg" class="movie-icon" alt="Gladiator 2">
-        <div class="movie-title">Gladiator 2</div>
-      </a>
-    </div>
+        <div class="movie-title-card">Gladiator 2</div>
+      </div>
 
-    <div class="movie-container">
-      <a href="https://swhoi.com/e/rlvyxb2cbzrh" target="_blank">
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://swhoi.com/e/rlvyxb2cbzrh"
+           data-synopsis="Cuando un grupo de amigos infringe de manera imprudente la regla sagrada de la lectura de las cartas del Tarot -nunca se debe utilizar la baraja de otra persona-, desatan sin saberlo un mal atrapado en las cartas malditas. Uno a uno, se enfrentan cara a cara al destino y acaban en una carrera contra la muerte para escapar del futuro que las cartas predicen.">
         <img src="https://image.tmdb.org/t/p/w780/mGuNJpSbaKcpsfDf05VAcN9h9vb.jpg" class="movie-icon" alt="Tarot de la muerte">
-        <div class="movie-title">Tarot de la muerte</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://swhoi.com/e/m2d6og3btiy7" target="_blank">
-        <img src="https://image.tmdb.org/t/p/w780/cI5C7NDOdEMWdoaECMX1LChwabd.jpg" class="movie-icon" alt="Ghostbusters: Apocalipsis fantasma">
-        <div class="movie-title">Ghostbusters: Apocalipsis fantasma</div>
-      </a>
-    </div>
+        <div class="movie-title-card">Tarot de la muerte</div>
+      </div>
 
-<div class="movie-container">
-      <a href="https://c1z39.com/bkg/fa54nxirnfvm?ref=playerkasjkajs.top" target="_blank">
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://swhoi.com/e/m2d6og3btiy7"
+           data-synopsis="Cuando el descubrimiento de un antiguo artefacto desata una fuerza maligna, los Cazafantasmas nuevos y veteranos deben unir sus fuerzas para proteger su hogar y salvar al mundo de una segunda edad de hielo.">
+        <img src="https://image.tmdb.org/t/p/w780/cI5C7NDOdEMWdoaECMX1LChwabd.jpg" class="movie-icon" alt="Ghostbusters: Apocalipsis fantasma">
+        <div class="movie-title-card">Ghostbusters: Apocalipsis fantasma</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://c1z39.com/bkg/fa54nxirnfvm?ref=playerkasjkajs.top"
+           data-synopsis="Invierno de 1943 en los Pirineos. Sara y Antoni viven en un pequeño pueblo de Andorra. Todos los días reciben noticias de la Segunda Guerra Mundial. Un día, su amigo Sendo vino con unos judíos para esconderlos. La vida se complica cuando los alemanes llegan a la ciudad en busca de los judíos.">
         <img src="https://image.tmdb.org/t/p/w780/3jl94swsJUViGmN8REgKMSXNW4L.jpg" class="movie-icon" alt="El fred que crema">
-        <div class="movie-title">El fred que crema</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://c1z39.com/bkg/d9krogoadypq?ref=playerkasjkajs.top" target="_blank">
+        <div class="movie-title-card">El fred que crema</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://c1z39.com/bkg/d9krogoadypq?ref=playerkasjkajs.top"
+           data-synopsis="A Fiona, la encargada de un parque, le toca ocuparse de unos antiguos amigos de la escuela secundaria que han ganado una visita previa exclusiva de Halloween a un parque de atracciones, una noche entera, para ellos solos. Algodón de azúcar, palomitas de maíz y tiovivos se suceden unos detrás de otros, pero la diversión se convierte rápidamente en una auténtica pesadilla cuando se dan cuenta de que no están solos en el parque. Todos sus pecados del pasado vuelven cuando se dan cuenta de que solo haciéndoles frente podrán sobrevivir.">
         <img src="https://image.tmdb.org/t/p/w780/bCw8DnIGtpDysqolmfWacBoiNtJ.jpg" class="movie-icon" alt="Horror Park">
-        <div class="movie-title">Horror Park</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/1utqgj7y9dvx" target="_blank">
+        <div class="movie-title-card">Horror Park</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/1utqgj7y9dvx"
+           data-synopsis="Basada en el reto viral en internet del mismo nombre. Ryan descubre que su hermana, la noche en que desapareció, había jugado al "Juego del Ascensor", un ritual en el que los jugadores intentan viajar a otra dimensión siguiendo unas reglas muy concretas. Los participantes deben acatarlas si no quieren perderse para siempre en el otro mundo. Ryan, ignorando las advertencias, decide ir a buscarla.">
         <img src="https://image.tmdb.org/t/p/w780/yT2SUMGuI4inUmBsiFjHqGp2axZ.jpg" class="movie-icon" alt="El juego del ascensor">
-        <div class="movie-title">El juego del ascensor</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/091dnmneq0jy" target="_blank">
+        <div class="movie-title-card">El juego del ascensor</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/091dnmneq0jy"
+           data-synopsis="David, romántico y enamoradizo, es íntimo amigo de Javi, un gamberro compulsivo. Tras ser expulsados del colegio debido a sus bromas pesadas, ambos son admitidos en otro centro. Allí conocen a Dani y deciden crear un grupo musical: "Los Residuos". Por otro lado, David se enfrenta a un problema amoroso: Patty, su novia, está descaradamente interesada en Ricky Lacoste, un niño pijo que es el vocalista de "Fiebre Amarilla", el grupo rival. Mientras Patty juega a dos bandas, el grupo conoce a Rafa en la grabación de un programa de televisión y se incorpora al grupo. Nacen los "Hombres G" de manera definitiva y empiezan los éxitos.">
         <img src="https://m.media-amazon.com/images/M/MV5BOWEwY2M3OGQtNjQ0NS00YjM5LWJmMWYtZmFlMGUyMDFmZDFjXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" class="movie-icon" alt="Sufre mamón">
-        <div class="movie-title">Sufre mamón</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/0xugvpld3stw" target="_blank">
+        <div class="movie-title-card">Sufre mamón</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/0xugvpld3stw"
+           data-synopsis="Un científico descubre en Skull Island un ejemplar muy extraño de mono rata al que acompaña una terrible maldición, según los nativos. El ejemplar es trasladado a Nueva Zelanda para su estudio. Por otra parte, Lionel es un joven que vive con su insoportable madre, que no aprueba la relación que acaba de comenzar con Paquita, la hija del tendero. Cuando los dos enamorados realizan una visita al zoológico, ella les vigila en secreto, y será mordida por el animal encontrado en la isla. Poco a poco, la madre de Lionel se va convirtiendo en una especie de zombie, sedienta de carne, y que convierte en zombie a todo el que ataca.">
         <img src="https://pics.filmaffinity.com/braindead_dead_alive-229681366-mmed.jpg" class="movie-icon" alt="Tu madre se ha comido a mi perro">
-        <div class="movie-title">Tu madre se ha comido a mi perro</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/6668dygypf4j" target="_blank">
+        <div class="movie-title-card">Tu madre se ha comido a mi perro</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/6668dygypf4j"
+           data-synopsis="Levon Cade dejó su profesión para trabajar en la construcción. Pero cuando una chica de la localidad desaparece, se le pide que retome las habilidades que le convirtieron en una figura mítica en la lucha antiterrorista.">
         <img src="https://pics.filmaffinity.com/a_working_man-933343627-mmed.jpg" class="movie-icon" alt="A working man">
-        <div class="movie-title">A working man</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/5wwj8xmbfgm8" target="_blank">
+        <div class="movie-title-card">A working man</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/5wwj8xmbfgm8"
+           data-synopsis="Renton, profundamente inmerso en el mundo de las drogas en Edimburgo, trata de salirse del entorno a pesar de la mala influencia de los amigos.">
         <img src="https://es.web.img2.acsta.net/medias/nmedia/18/71/01/91/20097905.jpg" class="movie-icon" alt="Trainspotting">
-        <div class="movie-title">Trainspotting</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/kbydabk9844x" target="_blank">
+        <div class="movie-title-card">Trainspotting</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/kbydabk9844x"
+           data-synopsis="Después de 20 años en el extranjero, Mark Renton regresa a Escocia y se reúne con sus viejos amigos Sick Boy, Spud y Begbie.">
         <img src="https://pics.filmaffinity.com/t2_trainspotting-853336883-mmed.jpg" class="movie-icon" alt="Trainspotting 2">
-        <div class="movie-title">Trainspotting 2</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/gfam8gniq491" target="_blank">
+        <div class="movie-title-card">Trainspotting 2</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/gfam8gniq491"
+           data-synopsis="Seis trabajadores del sector del metal en paro, crean un striptease masculino.">
         <img src="https://pics.filmaffinity.com/the_full_monty-890568928-large.jpg" class="movie-icon" alt="Full monty">
-        <div class="movie-title">Full monty</div>
-      </a>        
+        <div class="movie-title-card">Full monty</div>
       </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/pf6u3ybxbrym" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/pf6u3ybxbrym"
+           data-synopsis="Un niño rompe inadvertidamente tres reglas importantes sobre su nueva mascota y provoca una horda de monstruos malévolos y traviesos en una pequeña ciudad.">
         <img src="https://pics.filmaffinity.com/gremlins-305336656-mmed.jpg" class="movie-icon" alt="Gremlins">
-        <div class="movie-title">Gremlins</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/bcqcmq4v8o9t" target="_blank">
+        <div class="movie-title-card">Gremlins</div>
+      </div>
+	  
+	  <div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/bcqcmq4v8o9t"
+           data-synopsis="Los Gremlins están de vuelta, y esta vez, han tomado el control del edificio de alta tecnología de un magnate de la ciudad de Nueva York.">
         <img src="https://pics.filmaffinity.com/gremlins_2_the_new_batch-645513601-mmed.jpg" class="movie-icon" alt="Gremlins 2">
-        <div class="movie-title">Gremlins 2</div>
-      </a>        
+        <div class="movie-title-card">Gremlins 2</div>
       </div>
-	  	  
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/jpaqonerhyvu" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/jpaqonerhyvu"
+           data-synopsis="Un grupo de pequeñas, pero feroces criaturas alienígenas llamadas Criaturas, escapan de una prisión alienígena y aterrizan cerca de un pequeño pueblo agrícola de la Tierra, siendo perseguidos por dos cazadores de recompensas mutantes.">
         <img src="https://online.tucineclasico.es/wp-content/uploads/2021/08/7tFJqfcmu7sAxwcRwQ0j9qnGrok-200x300.jpg" class="movie-icon" alt="Critters">
-        <div class="movie-title">Critters</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/8snft5tji9kw/Critters_2__BluRay_Rip_AC3_2.0_Espa_ol_Castellano_.avi" target="_blank">
+        <div class="movie-title-card">Critters</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/8snft5tji9kw/Critters_2__BluRay_Rip_AC3_2.0_Espa_ol_Castellano_.avi"
+           data-synopsis="Los huevos de las pequeñas pero voraces criaturas alienígenas llamadas Crites se quedan en la tierra y, después de la eclosión, abren el apetito en la pequeña ciudad agrícola de Grover's Bend.">
         <img src="https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Critters_two.jpg/250px-Critters_two.jpg" class="movie-icon" alt="Critters 2">
-        <div class="movie-title">Critters 2</div>
-      </a>        
+        <div class="movie-title-card">Critters 2</div>
       </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/q5unixy70cc3" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/q5unixy70cc3"
+           data-synopsis="Unas pequeñas bolas de pelo alienígenas que devoran cualquier cosa o persona a su paso se dirigen a una torre de apartamentos de Los Ángeles.">
         <img src="https://pics.filmaffinity.com/critters_3-235700916-large.jpg" class="movie-icon" alt="Critters 3">
-        <div class="movie-title">Critters 3</div>
-      </a>        
+        <div class="movie-title-card">Critters 3</div>
       </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/zwial2m2uzzi" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/zwial2m2uzzi"
+           data-synopsis="Cuando el alguacil Charlie McFadden está a punto de destruir los dos últimos huevos de Critters, recibe un mensaje en el que se le prohibe exterminar a una raza. Sus órdenes son depositar los huevos en un transbordador espacial, pero Charlie se queda dentro, vagando a partir de entonces por el espacio...">
         <img src="https://pics.filmaffinity.com/critters_4-236258022-large.jpg" class="movie-icon" alt="Critters 4">
-        <div class="movie-title">Critters 4</div>
-      </a>        
+        <div class="movie-title-card">Critters 4</div>
       </div>
-	 
-	 <div class="movie-container">
-      <a href="https://filemoon.to/e/figdstf0s443" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/figdstf0s443"
+           data-synopsis="Drea (Tashiana Washington) es una joven de 20 años que acepta a regañadientes convertirse en la niñera de una de sus profesoras de Universidad. En su intento por entretener a Trissy (Ava Preston) y a Jake (Jack Fulton), además de a su hermano pequeño Phillip (Jaeden Noel), Drea decide sacarlos de paseo por un sendero rural, sin saber que por él pulula una misteriosa raza alienígena que devora todo lo que encuentra a su paso.">
         <img src="https://pics.filmaffinity.com/critters_attack-854547931-large.jpg" class="movie-icon" alt="Critters al ataque">
-        <div class="movie-title">Critters al ataque</div>
-      </a>        
+        <div class="movie-title-card">Critters al ataque</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/lperbml7d3h9" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/lperbml7d3h9"
+           data-synopsis="Cerca de un pequeño pueblo de Estados Unidos cae algo que, a primera vista, parece ser un meteorito. Los vecinos acuden al lugar del acontecimiento y descubren que un extraño objeto de que emerge una especie de ojo que empieza a disparar un rayo mortal. Es una nave marciana que, junto con otras muchas, ha llegado a la Tierra para conquistarla. La invasión está teniendo lugar simultáneamente en todo el planeta y ni siquiera la bomba atómica podría detenerla. La humanidad está perdida.">
         <img src="https://pics.filmaffinity.com/the_war_of_the_worlds-166963315-mmed.jpg" class="movie-icon" alt="La guerra de los mundos (1953)">
-        <div class="movie-title">La guerra de los mundos (1953)</div>
-      </a>        
+        <div class="movie-title-card">La guerra de los mundos (1953)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/0c0z3ol11zan" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/0c0z3ol11zan"
+           data-synopsis="Un hacker es secuestrado en el mundo digital y obligado a participar en juegos de gladiadores donde la ayuda de un programa de seguridad heroico es su única oportunidad de escapar.">
         <img src="https://pics.filmaffinity.com/tron-524035754-mmed.jpg" class="movie-icon" alt="Tron (1982)">
-        <div class="movie-title">Tron (1982)</div>
-      </a>        
+        <div class="movie-title-card">Tron (1982)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/rbm2ywenlymh" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/rbm2ywenlymh"
+           data-synopsis="Después de que unos mineros del cobre descubran en Laponia un trozo de la cola congelada de un reptil prehistórico gigante, los científicos lo devuelven a la vida sin querer.">
         <img src="https://pics.filmaffinity.com/reptilicus-452639330-large.jpg" class="movie-icon" alt="Reptilicus (1961)">
-        <div class="movie-title">Reptilicus (1961)</div>
-      </a>        
+        <div class="movie-title-card">Reptilicus (1961)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ys4jki2iiin4" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/ys4jki2iiin4"
+           data-synopsis="Una noche, cerca de su casa, en Indiana, Roy Neary (Richard Dreyfuss) observa en el cielo unos misteriosos objetos voladores. Desde entonces vive tan obsesionado por comprender lo que ha visto que se distancia de su esposa (Teri Garr). Encuentra apoyo en una mujer que también ha sido testigo de los mismos hechos, y juntos intentan encontrar una respuesta al misterio que ha alterado sus vidas. Al mismo tiempo, un nutrido grupo de científicos internacionales comienza a investigar las apariciones de ovnis y otros extraños fenómenos en la zona.">
         <img src="https://pics.filmaffinity.com/close_encounters_of_the_third_kind-537755230-mmed.jpg" class="movie-icon" alt="Encuentros en la tercera fase">
-        <div class="movie-title">Encuentros en la tercera fase</div>
-      </a>        
+        <div class="movie-title-card">Encuentros en la tercera fase</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/xyn0zo2p13xz" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/xyn0zo2p13xz"
+           data-synopsis="Inglaterra, 1899. Un científico construye un vehículo que le permite viajar a través del tiempo. Con él emprende un alucinante viaje a través de los siglos y es testigo, entre otros acontecimientos, de la Segunda Guerra Mundial y de un holocausto atómico en 1966, del que sale ileso. Su último destino es un paradisíaco lugar del futuro, cuyas gentes viven en el año 802.701, donde le tocará vivir una increíble aventura.">
         <img src="https://pics.filmaffinity.com/the_time_machine-336755840-large.jpg" class="movie-icon" alt="El tiempo en sus manos">
-        <div class="movie-title">El tiempo en sus manos</div>
-      </a>        
+        <div class="movie-title-card">El tiempo en sus manos</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/tmqpftzlrj5q" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/tmqpftzlrj5q"
+           data-synopsis="Marty McFly, un estudiante de 17 años, es enviado accidentalmente treinta años al pasado en un artefacto inventado por su amigo.">
         <img src="https://pics.filmaffinity.com/back_to_the_future-100822308-large.jpg" class="movie-icon" alt="Regreso al futuro">
-        <div class="movie-title">Regreso al futuro</div>
-      </a>        
+        <div class="movie-title-card">Regreso al futuro</div>
       </div>
-	  	  
-		  <div class="movie-container">
-      <a href="https://filemoon.to/e/bdya4bq82veq" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/bdya4bq82veq"
+           data-synopsis="Tras visitar 2015, Marty McFly vuelve a 1955 para evitar los desastrosos cambios de 1985... sin interferir con su primer viaje.">
         <img src="https://pics.filmaffinity.com/back_to_the_future_part_ii-618825326-large.jpg" class="movie-icon" alt="Regreso al futuro 2">
-        <div class="movie-title">Regreso al futuro 2</div>
-      </a>        
+        <div class="movie-title-card">Regreso al futuro 2</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/k0cdc6q6wx82" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/k0cdc6q6wx82"
+           data-synopsis="En 1885, el Doctor Emmet Brown disfruta de una existencia apacible sin saber que está a punto de ser asesinado por Buford "Perro Loco" Tannen. Marty McFly regresa al pasado para salvar a su amigo.">
         <img src="https://pics.filmaffinity.com/back_to_the_future_part_iii-223713634-large.jpg" class="movie-icon" alt="Regreso al futuro 3">
-        <div class="movie-title">Regreso al futuro 3</div>
-      </a>        
+        <div class="movie-title-card">Regreso al futuro 3</div>
       </div>
-	  	  
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/2296zpd7i1rs" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/2296zpd7i1rs"
+           data-synopsis="Una pareja joven queda atrapada en un remoto pueblo donde un peligroso culto religiosos de niños cree que toda persona mayor de 18 años debe morir.">
         <img src="https://online.tucineclasico.es/wp-content/uploads/2021/01/1MIgL5ceaQ35tr9vtD2X8DEmdya-202x300.jpg" class="movie-icon" alt="Los chicos del maiz">
-        <div class="movie-title">Los chicos del maiz</div>
-      </a>        
+        <div class="movie-title-card">Los chicos del maiz</div>
       </div>
 	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/6odg4ghvtdrm" target="_blank">
+	  <div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/6odg4ghvtdrm"
+           data-synopsis="Marion Crane, una joven secretaria, tras cometer el robo de un dinero en su empresa, huye de la ciudad y, después de conducir durante horas, decide descansar en un pequeño y apartado motel de carretera regentado por un tímido joven, Norman Bates, que vive en la casa de al lado con su madre.">
         <img src="https://pics.filmaffinity.com/psycho-805182707-large.jpg" class="movie-icon" alt="Psicosis">
-        <div class="movie-title">Psicosis</div>
-      </a>        
+        <div class="movie-title-card">Psicosis</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/p2w9k1onzubz" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/p2w9k1onzubz"
+           data-synopsis="Melanie, una joven rica y snob de la alta sociedad de San Francisco, conoce casualmente en una pajarería al abogado Mitch Brenner. Él, que conoce por la prensa la alocada vida de Melanie, la trata con indiferencia y se va de la tienda dejándola bastante irritada. Ella, que no está acostumbrada a que la traten así, encarga unos periquitos y se presenta en la casa de la madre de Mitch, en Bodega Bay. En cuanto llega, los pájaros, enloquecidos, empiezan a atacar salvajemente a los habitantes del lugar. La situación se agrava a medida que avanzan las horas.">
         <img src="https://pics.filmaffinity.com/alfred_hitchcock_s_the_birds-851609530-large.jpg" class="movie-icon" alt="Los pájaros">
-        <div class="movie-title">Los pájaros</div>
-      </a>        
+        <div class="movie-title-card">Los pájaros</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/dbrcmgalksbb" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/dbrcmgalksbb"
+           data-synopsis="Un reportero fotográfico (Stewart) se ve obligado a permanecer en reposo con una pierna escayolada. A pesar de la compañía de su novia (Kelly) y de su enfermera (Ritter), procura escapar al tedio observando desde la ventana de su apartamento con unos prismáticos lo que ocurre en las viviendas de enfrente. Debido a una serie de extrañas circunstancias empieza a sospechar de un vecino cuya mujer ha desaparecido.">
         <img src="https://pics.filmaffinity.com/rear_window-982923492-mmed.jpg" class="movie-icon" alt="La ventana indiscreta">
-        <div class="movie-title">La ventana indiscreta</div>
-      </a>        
+        <div class="movie-title-card">La ventana indiscreta</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/le5ejiq0ragn" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/le5ejiq0ragn"
+           data-synopsis="Debido a un malentendido, a Roger O. Thornhill, un ejecutivo del mundo de la publicidad, unos espías lo confunden con un agente del gobierno llamado George Kaplan. Secuestrado por tres individuos y llevado a una mansión en la que es interrogado, consigue huir antes de que lo maten. Pero cuando al día siguiente regresa a la casa acompañado de la policía, le espera una sorpresa.">
         <img src="https://pics.filmaffinity.com/north_by_northwest-370099340-mmed.jpg" class="movie-icon" alt="Con la muerte en los talones">
-        <div class="movie-title">Con la muerte en los talones</div>
-      </a>        
+        <div class="movie-title-card">Con la muerte en los talones</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/b5466oc19t62" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/b5466oc19t62"
+           data-synopsis="Una familia americana, compuesta por el doctor Ben MacKenna (James Stewart), su mujer (Doris Day) y su hijo Hank, está pasando unas vacaciones en Marruecos. Tras la muerte de un espía en brazos de Ben, mientras visitaban el mercado de Marrakech, el matrimonio descubre que su hijo ha sido secuestrado. Sin saber en quién confiar, los MacKenna se ven envueltos en una angustiosa pesadilla que tiene que ver con una operación de espionaje internacional.">
         <img src="https://pics.filmaffinity.com/the_man_who_knew_too_much-371594593-mmed.jpg" class="movie-icon" alt="El hombre que sabia demasiado">
-        <div class="movie-title">El hombre que sabia demasiado</div>
-      </a>        
+        <div class="movie-title-card">El hombre que sabia demasiado</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/7gf399qk50sg" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/7gf399qk50sg"
+           data-synopsis="Scottie Fergusson (James Stewart) es un detective de la policía de San Francisco que padece de vértigo. Cuando un compañero cae al vacío desde una cornisa mientras persiguen a un delincuente, Scottie decide retirarse. Gavin Elster (Tom Helmore), un viejo amigo del colegio, lo contrata para un caso aparentemente muy simple: que vigile a su esposa Madeleine (Kim Novak), una bella mujer que está obsesionada con su pasado.">
         <img src="https://pics.filmaffinity.com/vertigo-154050178-msmall.jpg" class="movie-icon" alt="Vértigo (De entre los muertos)">
-        <div class="movie-title">Vértigo (De entre los muertos)</div>
-      </a>        
+        <div class="movie-title-card">Vértigo (De entre los muertos)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/4widlyor9z7r" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/4widlyor9z7r"
+           data-synopsis="Scott Carey (Grant Williams) navega con su mujer en una lancha motora y, mientras ella va a buscar una cerveza, se ve envuelto en una extraña nube. Unos meses después, empieza a notar extraños cambios en su cuerpo: poco a poco va perdiendo peso y altura hasta hacerse casi invisible. A partir de entonces, su vida será una pesadilla, una lucha constante por la supervivencia, en la que lo cotidiano (un gato, una araña) representa para él una amenaza mortal que sólo su ingenio puede conjurar.">
         <img src="https://pics.filmaffinity.com/the_incredible_shrinking_man-887914157-mmed.jpg" class="movie-icon" alt="El increible hombre menguante">
-        <div class="movie-title">El increible hombre menguante</div>
-      </a>        
+        <div class="movie-title-card">El increible hombre menguante</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/75ccdo4xct0k" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/75ccdo4xct0k"
+           data-synopsis="Cinco historias de terror creadas por Stephen King, enmarcadas dentro de las páginas de un cómic que un insensible padre le ha tirado a su hijo a la basura.">
         <img src="https://pics.filmaffinity.com/creepshow-288675029-mmed.jpg" class="movie-icon" alt="Creepshow">
-        <div class="movie-title">Creepshow</div>
-      </a>        
+        <div class="movie-title-card">Creepshow</div>
       </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/ma4brkkbn3m6" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/ma4brkkbn3m6"
+           data-synopsis="Billy, un niño de trece años, espera la llegada del último número de "Creepshow" y del espíritu macabro llamado Creep, quien nos contará tres historias de terror: ’El viejo jefe cabeza de madera’, donde el tótem de un viejo jefe indio cobra vida para castigar a unos asesinos; ’La balsa’, tres amigos que se bañan en un lago se encuentran atrapados por una masa negra gelatinosa y ’El autoestopista’, donde una mujer que atropella a un trabajador de carreteras se da a la fuga y comenzará a ser acosada por un mal abominable.">
         <img src="https://pics.filmaffinity.com/creepshow_ii_dead_and_undead_creepshow_2-439621822-mmed.jpg" class="movie-icon" alt="Creepshow 2">
-        <div class="movie-title">Creepshow 2</div>
-      </a>        
+        <div class="movie-title-card">Creepshow 2</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/x2kpk0fh9j2e" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/x2kpk0fh9j2e"
+           data-synopsis="Cinco chicos van a pasar el fin de semana a una cabaña perdida en un espeso bosque en las montañas de Tennessee. Una vez instalados, y cuando se encuentran cenando, la trampilla que da acceso al sótano se abre de golpe. Extrañados, deciden bajar a investigar. Allí encuentran un magnetófono, un extraño cuchillo ritual y un libro antiquísimo.">
         <img src="https://pics.filmaffinity.com/the_evil_dead-289583124-large.jpg" class="movie-icon" alt="Evil Dead">
-        <div class="movie-title">Evil Dead</div>
-      </a>        
+        <div class="movie-title-card">Evil Dead</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/epw3vsp9gzp1" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/epw3vsp9gzp1"
+           data-synopsis="El bueno de Ash se dispone a pasar un fin de semana en el bosque con su novia. Pero todo se va al traste cuando reproducen una cinta en la que un profesor había grabado varios pasajes del Necronomicon, el Libro de los Muertos. El hechizo convoca a una fuerza demoniaca que convierte a la compañera de Ash en un monstruo ávido de carne. Sin saberlo, él y sus compañeros se disponen a pasar una noche en una cabaña en medio del bosque con un demonio en casa.">
         <img src="https://pics.filmaffinity.com/evil_dead_ii_evil_dead_2_dead_by_dawn-874071844-large.jpg" class="movie-icon" alt="Evil Dead 2">
-        <div class="movie-title">Evil Dead 2</div>
-      </a>        
+        <div class="movie-title-card">Evil Dead 2</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/f80v7qsnri0j" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/f80v7qsnri0j"
+           data-synopsis="Inglaterra, siglo XIII. Las fuerzas del Mal ejercen su reinado en la Edad Media. Valerosos caballeros se disponen a entrar en desigual batalla, mientras los atemorizados campesinos se refugian tras los muros del castillo. Todo cambia con la inesperada llegada de un nuevo héroe, provisto de sofisticadas armas y que dice provenir del siglo XX.">
         <img src="https://pics.filmaffinity.com/army_of_darkness_evil_dead_3_aka_the_evil_dead_3_army_of_darkness-684900546-large.jpg" class="movie-icon" alt="El ejercito de las tinieblas">
-        <div class="movie-title">El ejercito de las tinieblas</div>
-      </a>        
+        <div class="movie-title-card">El ejercito de las tinieblas</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/96ya1w8n48j2" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/96ya1w8n48j2"
+           data-synopsis="Version en color.Las radiaciones procedentes de un satélite provocan un fenómeno terrorífico: los muertos salen de sus tumbas y atacan a los hombres para alimentarse. La acción comienza en un cementerio de Pennsylvania, donde Barbara, después de ser atacada por un muerto viviente, huye hacia una granja. Allí también se ha refugiado Ben. Ambos construirán barricadas para defenderse de una multitud de despiadados zombies que sólo pueden ser vencidos con un golpe en la cabeza.">
         <img src="https://pics.filmaffinity.com/night_of_the_living_dead-198516797-large.jpg" class="movie-icon" alt="La noche de los muertos vivientes (1968) color">
-        <div class="movie-title">La noche de los muertos vivientes (1968) color</div>
-      </a>        
+        <div class="movie-title-card">La noche de los muertos vivientes (1968) color</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/kjkczykiee8b" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/kjkczykiee8b"
+           data-synopsis="Las radiaciones procedentes de un satélite provocan un fenómeno terrorífico: los muertos salen de sus tumbas y atacan a los hombres para alimentarse. La acción comienza en un cementerio de Pennsylvania, donde Barbara, después de ser atacada por un muerto viviente, huye hacia una granja. Allí también se ha refugiado Ben. Ambos construirán barricadas para defenderse de una multitud de despiadados zombies que sólo pueden ser vencidos con un golpe en la cabeza.">
         <img src="https://pics.filmaffinity.com/night_of_the_living_dead-198516797-large.jpg" class="movie-icon" alt="La noche de los muertos vivientes (1968)">
-        <div class="movie-title">La noche de los muertos vivientes (1968)</div>
-      </a>        
+        <div class="movie-title-card">La noche de los muertos vivientes (1968)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/8j2kfcr1lmxc" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/8j2kfcr1lmxc"
+           data-synopsis="Vudú, zombies y magia negra se combinan en una isla misteriosa en este clásico de terror de serie B dirigido por Jacques Tourneur ("La mujer pantera"). Una producción de Val Lewton para uno de los títulos míticos del género.">
         <img src="https://pics.filmaffinity.com/i_walked_with_a_zombie-655414636-large.jpg" class="movie-icon" alt="Yo anduve con un zombie (1943)">
-        <div class="movie-title">Yo anduve con un zombie (1943)</div>
-      </a>        
+        <div class="movie-title-card">Yo anduve con un zombie (1943)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/rrbny31oe4ge" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/rrbny31oe4ge"
+           data-synopsis="Dos agentes de Filadelfia, un reportero de tráfico y su novia ejecutiva de televisión toman refugio en unos grandes almacenes cuando una pandemia zombi se desata.">
         <img src="https://pics.filmaffinity.com/dawn_of_the_dead-107012195-large.jpg" class="movie-icon" alt="Zombi (1978)">
-        <div class="movie-title">Zombi (1978)</div>
-      </a>        
+        <div class="movie-title-card">Zombi (1978)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/juosljok4132" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/juosljok4132"
+           data-synopsis="Los cadáveres de una morgue inglesa próxima a una abadía de Manchester vuelven a la vida a causa de un experimento del gobierno que utiliza ultrasonidos para combatir la contaminación. Pero el experimento consigue también que los insectos de la zona enloquezcan y se devoren unos a otros. Al mismo tiempo, los muertos salen de sus tumbas con hambre y sed de venganza.">
         <img src="https://pics.filmaffinity.com/non_si_deve_profanare_il_sonno_dei_morti_don_t_open_the_window-992614613-large.jpg" class="movie-icon" alt="No profanar el sueño de los muertos">
-        <div class="movie-title">No profanar el sueño de los muertos</div>
-      </a>        
+        <div class="movie-title-card">No profanar el sueño de los muertos</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/jso9euxy1xm8" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/jso9euxy1xm8"
+           data-synopsis="Frank y su aprendiz Freddy terminan su turno en un almacén de productos sanitarios. Charlando, Frank cuenta al joven que los hechos narrados en la película "La noche de los muertos vivientes" fueron reales, pero han sido ocultados por las autoridades. Para convencer al chico de que no miente, le lleva al sótano, donde le enseña un barril que contiene a uno de los zombies, y el gas que en su momento le devolvió la vida. Accidentalmente abren el barril, liberando tanto al muerto viviente como el gas, que alcanza un cementerio cercano. Sin saberlo, un grupo de jóvenes que han ido a pasar la noche al cementerio serán testigos del despertar de los muertos...">
         <img src="https://pics.filmaffinity.com/the_return_of_the_living_dead-568776967-large.jpg" class="movie-icon" alt="El regreso de los muertos vivientes">
-        <div class="movie-title">El regreso de los muertos vivientes</div>
-      </a>        
+        <div class="movie-title-card">El regreso de los muertos vivientes</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/oz7xucxnvx19" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/oz7xucxnvx19"
+           data-synopsis="Una comedia romántica... con zombies. La vida de Shaun (Simon Pegg) es un callejón sin salida. Se pasa la vida en la taberna local, The Winchester, con su íntimo amigo Ed (Nick Frost), discute con su madre y descuida a su novia, Liz (Kate Ashfield). Cuando Liz le deja plantado, Shaun decide, finalmente, poner su vida en orden: tiene que reconquistar el corazón de su novia, mejorar las relaciones con su madre y enfrentarse a las responsabilidades de un adulto. Pero, por desgracia, los muertos están volviendo a la vida, y tratan de devorar a los vivos. Así que Shaun tendrá que enfrentarse a un problema más. Armado con un palo de cricket y una pala, emprende una guerra sin cuartel contra una horda de zombies para rescatar a su madre, a su novia e incluso, aunque a regañadientes, a su padrastro, al de su novia... llevándolos a todos al lugar más seguro y protegido que conoce: The Winchester.">
         <img src="https://pics.filmaffinity.com/shaun_of_the_dead-862150434-large.jpg" class="movie-icon" alt="Zombies party">
-        <div class="movie-title">Zombies party</div>
-      </a>        
+        <div class="movie-title-card">Zombies party</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/fppcf30eng65" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/fppcf30eng65"
+           data-synopsis="Varios jóvenes de una pequeña localidad tienen habitualmente pesadillas en las que son perseguidos por un hombre deformado por el fuego y que usa un guante terminado en afiladas cuchillas. Algunos de ellos comienzan a ser asesinados mientras duermen por este ser que resulta ser Freddy Krueger, un hombre con un pasado abominable.">
         <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street-973167305-large.jpg" class="movie-icon" alt="Pesadilla en Elm street">
-        <div class="movie-title">Pesadilla en Elm street</div>
-      </a>        
-      </div>	  	  	  
-	 	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/rtg5sntejyr4" target="_blank">
+        <div class="movie-title-card">Pesadilla en Elm street</div>
+      </div>
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/rtg5sntejyr4"
+           data-synopsis="Una familia llega a una casa en la que cinco años antes se habían cometido varios crímenes. Poco después, el hijo comienza a tener unas horribles pesadillas que le empujan al asesinato.">
         <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_2_freddy_s_revenge-329113889-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 2">
-        <div class="movie-title">Pesadilla en Elm street 2</div>
-      </a>        
+        <div class="movie-title-card">Pesadilla en Elm street 2</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ok010j1z4c71" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/ok010j1z4c71"
+           data-synopsis="Años después de los incidentes en Elm Street, la joven Nancy se ha convertido en una psiquiatra especializada en terapia del sueño, pero Freddy también sigue en activo, y comienza a aparecerse en los sueños de varios de ellos. Nancy los reúne a todos en busca de una forma de parar al monstruo. Para ello, los pacientes aprenden a desarrollar habilidades especiales en sus sueños. Alguno puede ser un mago, otro un superforzudo, un maestro en artes marciales...">
         <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_3_dream_warriors-725612823-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 3">
-        <div class="movie-title">Pesadilla en Elm street 3</div>
-      </a>        
+        <div class="movie-title-card">Pesadilla en Elm street 3</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/60rlb0yptuvv" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/60rlb0yptuvv"
+           data-synopsis="Freddy Krueger vuelve a la vida después de su aparente muerte en la entrega anterior y comienza a matar a los chicos que viven en Elm Street. Pero, Kristen, capaz de atraer a los demás dentro de sus sueños, le concede este poder especial a su amiga Alice. Sin embargo, ésta se da cuenta de que Freddy está sacando partido a este extraño poder...">
         <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_4_the_dream_master-374245138-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 4">
-        <div class="movie-title">Pesadilla en Elm street 4</div>
-      </a>        
+        <div class="movie-title-card">Pesadilla en Elm street 4</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/8et025oipxrw" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/8et025oipxrw"
+           data-synopsis="Alice y Dan viven felices tras haber acabado con Freddy. Las pesadillas han terminado y Alice espera plácidamente que nazca su bebé. Sin embargo, Freddy planea apoderarse del alma del hijo que espera Alice...">
         <img src="https://pics.filmaffinity.com/a_nightmare_on_elm_street_5_the_dream_child-776011595-large.jpg" class="movie-icon" alt="Pesadilla en Elm street 5">
-        <div class="movie-title">Pesadilla en Elm street 5</div>
-      </a>        
+        <div class="movie-title-card">Pesadilla en Elm street 5</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/mr5bz62jq2zn" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/mr5bz62jq2zn"
+           data-synopsis="Después de diez años, Freddy Krueger vuelve a sembrar el pánico entre los adolescentes de Springwood. Utiliza para su venganza a un joven amnésico que le servirá para revitalizar sus poderes y localizar a su propia hija.">
         <img src="https://pics.filmaffinity.com/freddy_s_dead_the_final_nightmare_a_nightmare_on_elm_street_6-934501006-large.jpg" class="movie-icon" alt="Pesadilla final: La muerte de Freddy">
-        <div class="movie-title">Pesadilla final: La muerte de Freddy</div>
-      </a>        
+        <div class="movie-title-card">Pesadilla final: La muerte de Freddy</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/srucey7pd9xd" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/srucey7pd9xd"
+           data-synopsis="A diferencia de las partes anteriores de la saga, esta no ocurre a los personajes, sino a los actores que los interpretaron en la primera entrega. Wes Craven vuelve a reunir al elenco original de "Pesadilla en Elm Street" para filmar la última entrega de la saga, pero durante el rodaje, la actriz Heather Lagenkamp empezará a soñar con Freddy, como ocurría en las anteriores películas, pero se da cuenta de que un demonio ha adoptado la imagen del asesino para aterrorizar a los miembros del equipo.">
         <img src="https://pics.filmaffinity.com/wes_craven_s_new_nightmare_aka_a_nightmare_on_elm_street_7-603261504-large.jpg" class="movie-icon" alt="La nueva pesadilla de wes craven">
-        <div class="movie-title">La nueva pesadilla de wes craven</div>
-      </a>        
+        <div class="movie-title-card">La nueva pesadilla de wes craven</div>
       </div>
 	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/dkbgw4xfonu9" target="_blank">
+	  <div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/dkbgw4xfonu9"
+           data-synopsis="Tres diferentes historias escritas por Stephen King y entrelazadas por un gato. La primera relata la historia de un hombre que intenta dejar de fumar; la segunda gira en torno a una peligrosa apuesta; y la última, el único que puede salvar la vida de una niña de un duende diabólico es el mismo gato.">
         <img src="https://pics.filmaffinity.com/cat_s_eye-801892188-large.jpg" class="movie-icon" alt="Los ojos del gato">
-        <div class="movie-title">Los ojos del gato</div>
-      </a>        
+        <div class="movie-title-card">Los ojos del gato</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="apocalipsis.html" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="apocalipsis.html"
+           data-synopsis="4 episodios. Visión épica de un futuro apocalíptico. Los supervivientes de una terrible plaga mundial han de decidir si elegirán el bando del bien o del mal en una batalla definitiva, cuyo desenlace decidirá el destino de la humanidad. Los seguidores del diabólico Randall Flagg planean reconstruir el mundo de acuerdo con su tenebrosa concepción del mismo. Mientras tanto, un valiente cuarteto inicia una misión heroica contra Flagg y sus secuaces. Al enfrentarse a los más increíbles peligros, arriesgarán mucho más que sus vidas en un intento desesperado de resistir y derrotar al mal.">
         <img src="https://m.media-amazon.com/images/I/81xxoe+bmXL._UF1000,1000_QL80_.jpg" class="movie-icon" alt="Apocalipsis">
-        <div class="movie-title">Apocalipsis</div>
-      </a>        
+        <div class="movie-title-card">Apocalipsis</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/uk2m56rrud41" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/uk2m56rrud41"
+           data-synopsis="El día en que una extraña niebla letal surge en París, los supervivientes encuentran refugio en los pisos superiores de los edificios y en los tejados de la capital. Sin información, sin electricidad, sin agua ni comida, una familia con una hija enferma trata de sobrellevar este desastre.">
         <img src="https://pics.filmaffinity.com/dans_la_brume-105849636-mmed.jpg" class="movie-icon" alt="La bruma">
-        <div class="movie-title">La bruma</div>
-      </a>        
+        <div class="movie-title-card">La bruma</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/fx06xmplb4zx" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/fx06xmplb4zx"
+           data-synopsis="En un pequeño pueblo de Maine, estalla de repente una violenta tormenta que termina tan bruscamente como comenzó. Entonces surge una espesa niebla que va entrando en casas y supermercados, atrapando y matando a todos los que se ven envueltos por la oscuridad.">
         <img src="https://pics.filmaffinity.com/the_mist-365301241-mmed.jpg" class="movie-icon" alt="La niebla">
-        <div class="movie-title">La niebla</div>
-      </a>        
+        <div class="movie-title-card">La niebla</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ldunjutgyqkw" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/ldunjutgyqkw"
+           data-synopsis="Una misteriosa señal de teléfono móvil provoca un caos apocalíptico, un artista está decidido a reunirse con su hijo.">
         <img src="https://pics.filmaffinity.com/cell-791182012-mmed.jpg" class="movie-icon" alt="Cell">
-        <div class="movie-title">Cell</div>
-      </a>        
+        <div class="movie-title-card">Cell</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/d12soa5vaasq" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/d12soa5vaasq"
+           data-synopsis="El doctor Louis Creed, su esposa y sus dos niños se instalan en una vivienda próxima a una carretera con mucho tráfico. Cerca de la casa hay un sendero que lleva a un cementerio de animales y también a un antiguo cementerio indio; según la leyenda, los que sean enterrados allí volverán a la vida. Louis comprobará que es cierto cuando el gato de su hija es atropellado por un camión y un extraño vecino llamado Jud resucita al pequeño animal.">
         <img src="https://pics.filmaffinity.com/pet_sematary-918812009-mmed.jpg" class="movie-icon" alt="Cementerio viviente">
-        <div class="movie-title">Cementerio viviente</div>
-      </a>        
+        <div class="movie-title-card">Cementerio viviente</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/b88t5nml72u3" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/b88t5nml72u3"
+           data-synopsis="Un tranquilo y pequeño pueblo de Maine está siendo aterrorizado por una fuerza malévola oculta tras la máscara de un payaso, y que tan sólo se la conoce como "It". Tras sus primeras víctimas, una pandilla formada por siete amigos de la infancia dedicen volver a reunirse para atacar el mal y destruirlo, intentando librar así del terror a su pueblo natal.">
         <img src="https://pics.filmaffinity.com/it-199479174-mmed.jpg" class="movie-icon" alt="It (1990)">
-        <div class="movie-title">It (1990)</div>
-      </a>        
+        <div class="movie-title-card">It (1990)</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/zo72rasng196" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/zo72rasng196"
+           data-synopsis="Una institutriz es contratada para cuidar a Rosalie, una oscura y demoníaca niña con poderes sobrenaturales, que alimenta el cementerio donde está enterrada su madre con la carne fresca de animales y humanos. Un film de puro horror, cementerios envueltos en niebla, zombis putrefactos y un halo de locura durante todo el metraje.">
         <img src="https://pics.filmaffinity.com/the_child-352887434-large.jpg" class="movie-icon" alt="La niña">
-        <div class="movie-title">La niña</div>
-      </a>        
+        <div class="movie-title-card">La niña</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/dfyr6q1fmts8" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/dfyr6q1fmts8"
+           data-synopsis="Jack Torrance se traslada con su mujer y su hijo de siete años al impresionante hotel Overlook, en Colorado, para encargarse del mantenimiento de las instalaciones durante la temporada invernal, época en la que permanece cerrado y aislado por la nieve. Su objetivo es encontrar paz y sosiego para escribir una novela. Sin embargo, poco después de su llegada al hotel, al mismo tiempo que Jack empieza a padecer inquietantes trastornos de personalidad, se suceden extraños y espeluznantes fenómenos paranormales.">
         <img src="https://pics.filmaffinity.com/the_shining-453129380-large.jpg" class="movie-icon" alt="El resplandor">
-        <div class="movie-title">El resplandor</div>
-      </a>        
+        <div class="movie-title-card">El resplandor</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://ok.ru/videoembed/565146028625" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://ok.ru/videoembed/565146028625"
+           data-synopsis="Varios jóvenes pasan sus vacaciones en un campamento de verano, reabierto recientemente, y en el que unos años antes murió un joven ahogado en el lago. En poco tiempo, algunos de ellos son encontrados sin vida.">
         <img src="https://pics.filmaffinity.com/friday_the_13th-652224175-mmed.jpg" class="movie-icon" alt="Viernes 13">
-        <div class="movie-title">Viernes 13</div>
-      </a>        
+        <div class="movie-title-card">Viernes 13</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/lebduhhr5e0y" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/lebduhhr5e0y"
+           data-synopsis="Cinco años después del terrible baño de sangre del campamento de Cristal Lake, todo lo que queda es la leyenda de Jasón Voorhees y de su madre demente, que asesinaron a siete jóvenes. En un campamento cercano, nuevos veraneantes desoyen las advertencias de alejarse del tristemente famoso lugar. Despreocupados, los jóvenes recorren la zona... sin advertir una amenazadora presencia oculta.">
         <img src="https://pics.filmaffinity.com/friday_the_13th_part_2-670243099-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 2">
-        <div class="movie-title">Viernes 13 Parte 2</div>
-      </a>        
+        <div class="movie-title-card">Viernes 13 Parte 2</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/lebduhhr5e0y" target="_blank">
+
+<div class="movie-container" onclick="abrirDetalle(this)" data-link="https://filemoon.to/e/lebduhhr5e0y"
+           data-synopsis="Un idílico verano va a convertirse en la peor de las pesadillas para otro grupo de despreocupados jóvenes de vacaciones. Ignorando el legado de sangre del campamento de Crystal Lake, uno por uno van siendo víctimas del maníaco Jason, quien los acecha en cada momento.">
         <img src="https://pics.filmaffinity.com/friday_the_13th_part_iii-215629959-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 3">
-        <div class="movie-title">Viernes 13 Parte 3</div>
-      </a>        
+        <div class="movie-title-card">Viernes 13 Parte 3</div>
       </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/g9m70z2pwmpc" target="_blank">
-        <img src="https://pics.filmaffinity.com/friday_the_13th_the_final_chapter-568639674-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 4: Último capitulo">
-        <div class="movie-title">Viernes 13 Parte 4: Último capitulo</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/h6uq3chyojpu" target="_blank">
-        <img src="https://pics.filmaffinity.com/friday_the_13th_a_new_beginning-702495970-large.jpg" class="movie-icon" alt="Viernes 13 Parte 5: Un nuevo comienzo">
-        <div class="movie-title">Viernes 13 Parte 5: Un nuevo comienzo</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/e4u6uaj0m7tx" target="_blank">
-        <img src="https://pics.filmaffinity.com/friday_the_13th_part_vi_jason_lives-331418976-mmed.jpg" class="movie-icon" alt="Viernes 13 Parte 6: Jason vive">
-        <div class="movie-title">Viernes 13 Parte 6: Jason vive</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/hi4xg96vfrdg" target="_blank">
-        <img src="https://pics.filmaffinity.com/friday_the_13th_part_vii_the_new_blood-390140415-large.jpg" class="movie-icon" alt="Viernes 13 Parte 7: Sangre Nueva">
-        <div class="movie-title">Viernes 13 Parte 7: Sangre Nueva</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/qjbmnlb9xqei" target="_blank">
-        <img src="https://pics.filmaffinity.com/friday_the_13th_part_viii_jason_takes_manhattan-469804202-large.jpg" class="movie-icon" alt="Viernes 13 Parte 8: Jason vuelve... para siempre">
-        <div class="movie-title">Viernes 13 Parte 8: Jason vuelve... para siempre</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/5ixhh1uklbaz" target="_blank">
-        <img src="https://pics.filmaffinity.com/jason_goes_to_hell_the_final_friday-907908073-large.jpg" class="movie-icon" alt=" Viernes 13. El final: Jason va al Infierno ">
-        <div class="movie-title"> Viernes 13. El final: Jason va al Infierno </div>
-      </a>        
-      </div>
-	  	  	  	  
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/qjtd9jr7rop6" target="_blank">
-        <img src="https://pics.filmaffinity.com/schindler_s_list-473662617-mmed.jpg" class="movie-icon" alt="La lista de Schindler">
-        <div class="movie-title">La lista de Schindler</div>
-      </a>
+
+
+
     </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/3i5gj3vrot91" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_boy_in_the_striped_pajamas-898809978-mmed.jpg" class="movie-icon" alt="El niño con el pijama de rayas">
-        <div class="movie-title">El niño con el pijama de rayas</div>
-      </a>
+  </div>
+
+  <div id="modal">
+    <div class="modal-content">
+      <span class="close" onclick="cerrarDetalle()">&times;</span>
+      <div class="modal-left"><img id="m-img" src="" alt=""></div>
+      <div class="modal-right">
+        <h2 id="m-titulo" class="modal-title">Título</h2>
+        <p id="m-sinopsis" class="modal-synopsis">Sinopsis...</p>
+        <a id="m-btn" href="#" target="_blank" class="play-button">REPRODUCIR</a>
+      </div>
     </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/vdxjtig4m3wf" target="_blank">
-        <img src="https://pics.filmaffinity.com/la_vita_e_bella-646167341-mmed.jpg" class="movie-icon" alt="La vida es bella">
-        <div class="movie-title">La vida es bella</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/8c9p8y1i8z1g" target="_blank">
-        <img src="https://pics.filmaffinity.com/die_unendliche_geschichte_the_neverending_story-636909335-mmed.jpg" class="movie-icon" alt="La historia interminable">
-        <div class="movie-title">La historia interminable</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ysti8539ainp" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_neverending_story_ii_the_next_chapter-274530965-large.jpg" class="movie-icon" alt="La historia interminable 2">
-        <div class="movie-title">La historia interminable 2</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/lkzeube9fj4t" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_goonies-301424062-large.jpg" class="movie-icon" alt="Los Goonies">
-        <div class="movie-title">Los Goonies</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/86745snno621" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_jacksons_an_american_dream-217087724-large.jpg" class="movie-icon" alt="Los Jackson - El sueño americano Parte 1">
-        <div class="movie-title">Los Jackson - El sueño americano Parte 1</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/8x3h12c67d7j" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_jacksons_an_american_dream-217087724-large.jpg" class="movie-icon" alt="Los Jackson - El sueño americano Parte 2">
-        <div class="movie-title">Los Jackson - El sueño americano Parte 2</div>
-      </a>        
-      </div>
-	
-	<div class="movie-container">
-      <a href="https://streamtape.com/e/6mBxy11xjZU93oD/La_Chaqueta_Metalica.mp4" target="_blank">
-        <img src="https://online.tucineclasico.es/wp-content/uploads/2019/02/AfJE8hQew1FD2zHRgDy2yY3ZHpS-235x300.jpg" class="movie-icon" alt="La chaqueta metálica">
-        <div class="movie-title">La chaqueta metálica</div>
-      </a>
-    </div>
-	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/seuxxbvhooh9" target="_blank">
-        <img src="https://pics.filmaffinity.com/2001_a_space_odyssey-322989452-large.jpg" class="movie-icon" alt="2001:una odisea en el espacio">
-        <div class="movie-title">2001:una odisea en el espacio</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/qb6dn747kmig" target="_blank">
-        <img src="https://pics.filmaffinity.com/duel-899280615-large.jpg" class="movie-icon" alt="El diablo sobre ruedas">
-        <div class="movie-title">El diablo sobre ruedas</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/avq7xjs7x6t7" target="_blank">
-        <img src="https://pics.filmaffinity.com/deo_mun-579180002-large.jpg" class="movie-icon" alt="Rescate lunar">
-        <div class="movie-title">Rescate lunar</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/4w02w1p5aazr" target="_blank">
-        <img src="https://pics.filmaffinity.com/blade_runner-351607743-large.jpg" class="movie-icon" alt="Blade runner">
-        <div class="movie-title">Blade runner</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/93zz9t99mge4" target="_blank">
-        <img src="https://pics.filmaffinity.com/blade_runner_2049-681477614-large.jpg" class="movie-icon" alt="Blade runner 2049">
-        <div class="movie-title">Blade runner 2049</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/pm76jr7mlm26" target="_blank">
-        <img src="https://pics.filmaffinity.com/hackers-358996581-mmed.jpg" class="movie-icon" alt="Hackers">
-        <div class="movie-title">Hackers</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/4c7mdt8pmcvi" target="_blank">
-        <img src="https://pics.filmaffinity.com/trackdown_track_down_takedown-755372814-mmed.jpg" class="movie-icon" alt="Hackers 2">
-        <div class="movie-title">Hackers 2</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/8mijcm4fwwg7" target="_blank">
-        <img src="https://pics.filmaffinity.com/antitrust-457815769-mmed.jpg" class="movie-icon" alt="Hackers 3">
-        <div class="movie-title">Hackers 3</div>
-      </a>        
-      </div>
-		   	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/b9zjxd2ndxog" target="_blank">
-        <img src="https://pics.filmaffinity.com/apocalypse_now-915115475-mmed.jpg" class="movie-icon" alt="Apocalypse now Redux">
-        <div class="movie-title">Apocalypse now Redux</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/gqgth2eh1uve" target="_blank">
-        <img src="https://pics.filmaffinity.com/porky_s-806663050-large.jpg" class="movie-icon" alt="Porky´s">
-        <div class="movie-title">Porky´s</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/b5tawy7yod88" target="_blank">
-        <img src="https://pics.filmaffinity.com/porky_s_ii_the_next_day-290901622-large.jpg" class="movie-icon" alt="Porky´s 2">
-        <div class="movie-title">Porky´s 2</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/jhazc5oz2tsg" target="_blank">
-        <img src="https://pics.filmaffinity.com/perros_callejeros-905880297-mmed.jpg" class="movie-icon" alt="Perros callejeros">
-        <div class="movie-title">Perros callejeros</div>
-      </a>        
-      </div>
-	 	  	  
-	  	  	  	
-	<div class="movie-container">
-      <a href="https://filemoon.to/e/hhfca9v5u64z" target="_blank">
-        <img src="https://pics.filmaffinity.com/perros_callejeros_ii-446251839-mmed.jpg" class="movie-icon" alt="Peros callejeros 2">
-        <div class="movie-title">Perros callejeros 2</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/284edsao02yv" target="_blank">
-        <img src="https://pics.filmaffinity.com/los_ultimos_golpes_del_torete_perros_callejeros_iii-841462028-mmed.jpg" class="movie-icon" alt="Perros callejeros 3">
-        <div class="movie-title">Perros callejeros 3</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/4pggwbu1hfaf" target="_blank">
-        <img src="https://pics.filmaffinity.com/yo_el_vaquilla-384217416-large.jpg" class="movie-icon" alt="Yo el vaquilla">
-        <div class="movie-title">Yo el vaquilla</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/xpyj67z8woqn" target="_blank">
-        <img src="https://pics.filmaffinity.com/la_estanquera_de_vallecas-810298286-mmed.jpg" class="movie-icon" alt="La estanquera de Vallecas">
-        <div class="movie-title">La estanquera de Vallecas</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/8y3d3rhq3exk" target="_blank">
-        <img src="https://pics.filmaffinity.com/deprisa_deprisa-601056487-large.jpg" class="movie-icon" alt="Deprisa, deprisa">
-        <div class="movie-title">Deprisa, deprisa</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/0hc2lye5kuk7" target="_blank">
-        <img src="https://pics.filmaffinity.com/navajeros-964056717-mmed.jpg" class="movie-icon" alt="Navajeros">
-        <div class="movie-title">Navajeros</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ba33s7994hhj" target="_blank">
-        <img src="https://pics.filmaffinity.com/chocolate-266358558-large.jpg" class="movie-icon" alt="Chocolate">
-        <div class="movie-title">Chocolate</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/nwg8zsxbjksd" target="_blank">
-        <img src="https://pics.filmaffinity.com/el_pico-830412697-large.jpg" class="movie-icon" alt="El pico">
-        <div class="movie-title">El pico</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/zfu2kxg0y8r8" target="_blank">
-        <img src="https://pics.filmaffinity.com/el_pico_2-195792563-large.jpg" class="movie-icon" alt="El pico 2">
-        <div class="movie-title">El pico 2</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/870qnbfhws05" target="_blank">
-        <img src="https://pics.filmaffinity.com/27_horas-974983321-large.jpg" class="movie-icon" alt="27 horas">
-        <div class="movie-title">27 horas</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/wazfcjw75742" target="_blank">
-        <img src="https://pics.filmaffinity.com/7_virgenes-857681604-large.jpg" class="movie-icon" alt="7 vírgenes">
-        <div class="movie-title">7 vírgenes</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/p5v7ca8ixcdq" target="_blank">
-        <img src="https://pics.filmaffinity.com/el_bola-706926535-large.jpg" class="movie-icon" alt="El bola">
-        <div class="movie-title">El bola</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/d/3qye9l3w88vw" target="_blank">
-        <img src="https://pics.filmaffinity.com/barrio-878665000-large.jpg" class="movie-icon" alt="Barrio">
-        <div class="movie-title">Barrio</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/itqelgr2n0m3" target="_blank">
-        <img src="https://pics.filmaffinity.com/el_lute_camina_o_revienta-428761101-mmed.jpg" class="movie-icon" alt="El Lute, camina o revienta">
-        <div class="movie-title">El Lute, camina o revienta</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/pifsyq1r0zjw" target="_blank">
-        <img src="https://pics.filmaffinity.com/el_lute_ii_manana_sere_libre-781906865-large.jpg" class="movie-icon" alt="El Lute 2, mañana seré libre">
-        <div class="movie-title">El Lute 2, mañana seré libre</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/gmpukwbpv3lm" target="_blank">
-        <img src="https://pics.filmaffinity.com/altrimenti_ci_arrabbiamo-540801472-large.jpg" class="movie-icon" alt="Y si no, nos enfadamos">
-        <div class="movie-title">Y si no, nos enfadamos</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="http://ok.ru/videoembed/3840162532028" target="_blank">
-        <img src="https://pics.filmaffinity.com/la_guerra_de_papa-456370631-large.jpg" class="movie-icon" alt="La guerra de papá">
-        <div class="movie-title">La guerra de papá</div>
-      </a>        
-      </div>
-	  	  	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/q90b9fo9fwfi" target="_blank">
-        <img src="https://pics.filmaffinity.com/cria_cuervos-283282908-large.jpg" class="movie-icon" alt="Cría cuervos">
-        <div class="movie-title">Cría cuervos</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/jt8fbdsba99j" target="_blank">
-        <img src="https://pics.filmaffinity.com/la_guerra_de_los_ninos-759892010-large.jpg" class="movie-icon" alt="La guerra de los niños">
-        <div class="movie-title">La guerra de los niños</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/65decnoi8i3j" target="_blank">
-        <img src="https://pics.filmaffinity.com/la_2a_guerra_de_los_ninos-434791777-large.jpg" class="movie-icon" alt="La Segunda Guerra de los Niños">
-        <div class="movie-title">La Segunda Guerra de los Niños</div>
-      </a>        
-      </div>
-	  	  	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/o8liwsa3gj14" target="_blank">
-        <img src="https://pics.filmaffinity.com/parchis_entra_en_accion-809680883-large.jpg" class="movie-icon" alt="Parchís entra en acción">
-        <div class="movie-title">Parchís entra en acción</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/0arqvcj0kvub" target="_blank">
-        <img src="https://pics.filmaffinity.com/flashdance-362820133-large.jpg" class="movie-icon" alt="Flashdance (1983)">
-        <div class="movie-title">Flashdance (1983)</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/zx7ninhtbzry" target="_blank">
-        <img src="https://images.justwatch.com/poster/17147903/s166/reservoir-dogs.avif" class="movie-icon" alt="Reservoir dogs">
-        <div class="movie-title">Reservoir dogs</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/mwg4thsefefe" target="_blank">
-        <img src="https://pics.filmaffinity.com/pulp_fiction-210382116-large.jpg" class="movie-icon" alt="Pulp fiction">
-        <div class="movie-title">Pulp fiction</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/gscsn59m6usy" target="_blank">
-        <img src="https://pics.filmaffinity.com/jackie_brown-733179988-large.jpg" class="movie-icon" alt="Jackie Brown">
-        <div class="movie-title">Jackie Brown</div>
-      </a>        
-      </div>
-	  	  	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/apl41o5gb0yj" target="_blank">
-        <img src="https://pics.filmaffinity.com/django_unchained-956246347-large.jpg" class="movie-icon" alt="Django">
-        <div class="movie-title">Django</div>
-      </a>        
-      </div>  	   	    
-	  	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/jcdbrgqjbr25" target="_blank">
-        <img src="https://pics.filmaffinity.com/blade-397609933-large.jpg" class="movie-icon" alt="Blade">
-        <div class="movie-title">Blade</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/d/8kqela8qklst" target="_blank">
-        <img src="https://pics.filmaffinity.com/blade_ii_blade_2-730287165-large.jpg" class="movie-icon" alt="Blade 2">
-        <div class="movie-title">Blade 2</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/d/opy0t7ixkigz" target="_blank">
-        <img src="https://pics.filmaffinity.com/blade_trinity_blade_3-956890691-large.jpg" class="movie-icon" alt="Blade Trinity">
-        <div class="movie-title">Blade Trinity</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://ok.ru/videoembed/4737246956149" target="_blank">
-        <img src="https://pics.filmaffinity.com/robocop-178512372-large.jpg" class="movie-icon" alt="Robocop (1987)">
-        <div class="movie-title">Robocop (1987)</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/8ig7ev6yu4m1" target="_blank">
-        <img src="https://pics.filmaffinity.com/robocop_2-768486049-large.jpg" class="movie-icon" alt="Robocop 2(1990)">
-        <div class="movie-title">Robocop 2(1990)</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ngdb5d343392" target="_blank">
-        <img src="https://pics.filmaffinity.com/robocop_3-758520258-large.jpg" class="movie-icon" alt="Robocop 3(1993)">
-        <div class="movie-title">Robocop 3(1993)</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/aan3stn317zh" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_terminator-778052251-large.jpg" class="movie-icon" alt="Terminator">
-        <div class="movie-title">Terminator</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/b7362xfwmi56" target="_blank">
-        <img src="https://pics.filmaffinity.com/t2_terminator_2_judgment_day-825143697-large.jpg" class="movie-icon" alt="Terminator II">
-        <div class="movie-title">Terminator II</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/57u2j1v9nem9" target="_blank">
-        <img src="https://pics.filmaffinity.com/terminator_3_rise_of_the_machines_t3-788040850-large.jpg" class="movie-icon" alt="Terminator III: La Revelión de las Máquinas">
-        <div class="movie-title">Terminator III: La Revelión de las Máquinas</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/98sxr6sar872" target="_blank">
-        <img src="https://pics.filmaffinity.com/terminator_salvation_the_future_begins_terminator_4-225185375-large.jpg" class="movie-icon" alt="Terminator IV: Salvation">
-        <div class="movie-title">Terminator IV: Salvation</div>
-      </a>
-    </div>
-	  	  	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/tp27eon9w9lf" target="_blank">
-        <img src="https://pics.filmaffinity.com/terminator_genisys_aka_terminator_5-844929699-large.jpg" class="movie-icon" alt="Terminator Génesis">
-        <div class="movie-title">Terminator Génesis</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/rpudphwob089" target="_blank">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT13o05IGGV7TMUEf9Cvp8VwMntUOVEIhnn76kBUgn_8BFyWYw6hQ0jgMg&usqp=CAE&s" class="movie-icon" alt="El creyente">
-        <div class="movie-title">El creyente</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/hoewyvsau5qi" target="_blank">
-        <img src="https://pics.filmaffinity.com/american_history_x-201185607-large.jpg" class="movie-icon" alt="American history X">
-        <div class="movie-title">American history X</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://ok.ru/videoembed/10460251097681" target="_blank">
-        <img src="https://pics.filmaffinity.com/midnight_cowboy-956238878-large.jpg" class="movie-icon" alt="Cowboy de medianoche">
-        <div class="movie-title">Cowboy de medianoche</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/qcf51yql3n4m" target="_blank">
-        <img src="https://pics.filmaffinity.com/mad_max-632940430-large.jpg" class="movie-icon" alt="Mad Max salvajes de autopista">
-        <div class="movie-title">Mad Max salvajes de autopista</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/yjd1mtq8jd1q" target="_blank">
-        <img src="https://pics.filmaffinity.com/mad_max_2_the_road_warrior-638819106-large.jpg" class="movie-icon" alt=" Mad Max 2. El guerrero de la carretera">
-        <div class="movie-title"> Mad Max 2. El guerrero de la carretera</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/vpdra010c5zh" target="_blank">
-        <img src="https://pics.filmaffinity.com/mad_max_beyond_thunderdome-591668589-large.jpg" class="movie-icon" alt="Mad Max 3- Más allá de la cúpula del trueno">
-        <div class="movie-title">Mad Max 3- Más allá de la cúpula del trueno</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/u1uff89vyi0i" target="_blank">
-        <img src="https://pics.filmaffinity.com/the_pelayos-617425604-large.jpg" class="movie-icon" alt="The Pelayos">
-        <div class="movie-title">The Pelayos</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="paco martinez soria.html" target="_blank">
-        <img src="https://www.cartv.es/thumbs/fullwidthtablet/podcast/2009-07/30_01080.jpg" class="movie-icon" alt="Ciclo Paco Martínez Soria">
-        <div class="movie-title">Ciclo Paco Martínez Soria</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/t6am8m1mqmlx" target="_blank">
-        <img src="https://pics.filmaffinity.com/torrente_el_brazo_tonto_de_la_ley-769153589-large.jpg" class="movie-icon" alt="Torrente: el brazo tonto de la ley">
-        <div class="movie-title">Torrente: el brazo tonto de la ley</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/80blxzn32w05" target="_blank">
-        <img src="https://pics.filmaffinity.com/torrente_2_mision_en_marbella-426650610-msmall.jpg" class="movie-icon" alt="Torrente 2: misión en Marbella">
-        <div class="movie-title">Torrente 2: misión en Marbella</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/3et3btr9nbxr" target="_blank">
-        <img src="https://pics.filmaffinity.com/torrente_3_el_protector-816745588-msmall.jpg" class="movie-icon" alt="Torrente 3: El Protector">
-        <div class="movie-title">Torrente 3: El Protector</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/aatojdqp52pc" target="_blank">
-        <img src="https://pics.filmaffinity.com/torrente_4_lethal_crisis_crisis_letal-850313152-mmed.jpg" class="movie-icon" alt="Torrente 4: Lethal Crisis">
-        <div class="movie-title">Torrente 4: Lethal Crisis</div>
-      </a>        
-      </div>
-	  
-	  	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/ctle2efullcb" target="_blank">
-        <img src="https://pics.filmaffinity.com/torrente_5_operacion_eurovegas-241259676-large.jpg" class="movie-icon" alt="Torrente 5: Operación Eurovegas">
-        <div class="movie-title">Torrente 5: Operación Eurovegas</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="ruta.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/la_ruta-121734365-large.jpg" class="movie-icon" alt="Serie La ruta">
-        <div class="movie-title">Serie La ruta</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="Anatomina de un instante.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/anatomia_de_un_instante-122205180-mmed.jpg" class="movie-icon" alt="Serie Anatomia de un instante">
-        <div class="movie-title">Serie Anatomia de un instante</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="Stranger Things.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/stranger_things-875025085-large.jpg" class="movie-icon" alt="Serie Stranger Things">
-        <div class="movie-title">Serie Stranger Things</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="terror en estado puro.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/fear_itself-191215281-large.jpg" class="movie-icon" alt="Serie Terror en estado puro">
-        <div class="movie-title">Serie Terror en estado puro</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="historias de la cripta.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/tales_from_the_crypt-251612409-large.jpg" class="movie-icon" alt="Serie Historias de la cripta">
-        <div class="movie-title">Serie Historias de la cripta</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="initial d.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/initial_d_final_stage-113633162-mmed.jpg" class="movie-icon" alt="Serie Initial D">
-        <div class="movie-title">Serie Initial D</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="historias para no dormir.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/historias_para_no_dormir-873409417-large.jpg" class="movie-icon" alt="Serie Historias para no dormir">
-        <div class="movie-title">Serie Historias para no dormir</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="el juego del calamar.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/squid_game-688981365-large.jpg" class="movie-icon" alt="Serie El juego del calamar">
-        <div class="movie-title">Serie El juego del calamar</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="halt and catch fire.html" target="_blank">
-        <img src="https://pics.filmaffinity.com/halt_and_catch_fire-199307439-large.jpg" class="movie-icon" alt="Serie Halt and catch fire">
-        <div class="movie-title">Serie Halt and catch fire</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/maow8dz3hekw" target="_blank">
-        <img src="https://pics.filmaffinity.com/jobs-114979440-mmed.jpg" class="movie-icon" alt="Jobs">
-        <div class="movie-title">Jobs</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/7qbv6urtcwri" target="_blank">
-        <img src="https://pics.filmaffinity.com/steve_jobs-647763435-large.jpg" class="movie-icon" alt=" Steve Jobs">
-        <div class="movie-title"> Steve Jobs</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/3ukv1m96t300" target="_blank">
-        <img src="https://pics.filmaffinity.com/factotum-604301286-large.jpg" class="movie-icon" alt="Factotum">
-        <div class="movie-title">Factotum</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/y931wqq5np1g" target="_blank">
-        <img src="https://pics.filmaffinity.com/rich_flu-867602032-mmed.jpg" class="movie-icon" alt="La fiebre de los ricos">
-        <div class="movie-title">La fiebre de los ricos</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/29y2t2nalb4v" target="_blank">
-        <img src="https://pics.filmaffinity.com/warfare-534208810-large.jpg" class="movie-icon" alt=" Warfare: Tiempo de guerra">
-        <div class="movie-title"> Warfare: Tiempo de guerra</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/wo28poi8irlx" target="_blank">
-        <img src="https://pics.filmaffinity.com/sting-264068018-large.jpg" class="movie-icon" alt="Sting. Araña asesina">
-        <div class="movie-title">Sting. Araña asesina</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/kmht48fpztcm" target="_blank">
-        <img src="https://pics.filmaffinity.com/final_destination_bloodlines-790034090-large.jpg" class="movie-icon" alt="Destino final: Lazos de sangre">
-        <div class="movie-title">Destino final: Lazos de sangre</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/qbnhvuoy9z1d" target="_blank">
-        <img src="https://pics.filmaffinity.com/straw-315380817-large.jpg" class="movie-icon" alt="Harta">
-        <div class="movie-title">Harta</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/p4bqggloanm8" target="_blank">
-        <img src="https://pics.filmaffinity.com/until_dawn-880447124-large.jpg" class="movie-icon" alt="Until Dawn (2025)">
-        <div class="movie-title">Until Dawn (2025)</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/m8awxle642jn" target="_blank">
-        <img src="https://pics.filmaffinity.com/mikaela-727903164-large.jpg" class="movie-icon" alt="Mikaela">
-        <div class="movie-title">Mikaela</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://ok.ru/videoembed/9865535621795" target="_blank">
-        <img src="https://pics.filmaffinity.com/les_femmes_au_balcon-822260790-large.jpg" class="movie-icon" alt="Las chicas del balcón">
-        <div class="movie-title">Las chicas del balcón</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="http://ok.ru/videoembed/10107042269752" target="_blank">
-        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno-289733769-large.jpg" class="movie-icon" alt="Padre no hay mas que uno">
-        <div class="movie-title">Padre no hay mas que uno</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="http://ok.ru/videoembed/10107042335288" target="_blank">
-        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_2_la_llegada_de_la_suegra-719430009-large.jpg" class="movie-icon" alt="Padre no hay mas que uno 2: La llegada de la suegra">
-        <div class="movie-title">Padre no hay mas que uno 2: La llegada de la suegra</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="http://ok.ru/videoembed/10107042466360" target="_blank">
-        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_3-400727246-large.jpg" class="movie-icon" alt="Padre no hay mas que uno 3">
-        <div class="movie-title">Padre no hay mas que uno 3</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/vgt0skwwahr0" target="_blank">
-        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_4_campanas_de_boda-493339264-large.jpg" class="movie-icon" alt="Padre no hay más que uno 4: Campanas de boda">
-        <div class="movie-title">Padre no hay más que uno 4: Campanas de boda</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/tl9gsnivtoeo" target="_blank">
-        <img src="https://pics.filmaffinity.com/padre_no_hay_mas_que_uno_5_nido_repleto-219461623-mmed.jpg" class="movie-icon" alt="Padre no hay más que uno 5: Nido repleto">
-        <div class="movie-title">Padre no hay más que uno 5: Nido repleto</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/kwo130qp29jr" target="_blank">
-        <img src="https://pics.filmaffinity.com/como_dios_manda-689886286-large.jpg" class="movie-icon" alt=" Como Dios manda ">
-        <div class="movie-title"> Como Dios manda </div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/4xzajfglygc0" target="_blank">
-        <img src="https://pics.filmaffinity.com/vaya_vacaciones-957309987-large.jpg" class="movie-icon" alt=" ¡Vaya vacaciones! ">
-        <div class="movie-title"> ¡Vaya vacaciones! </div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/swemz0b3jdmi" target="_blank">
-        <img src="https://pics.filmaffinity.com/superagente_makey-249917287-large.jpg" class="movie-icon" alt=" Superagente Makey  ">
-        <div class="movie-title"> Superagente Makey </div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/x8r6kklclc3c" target="_blank">
-        <img src="https://pics.filmaffinity.com/un_lio_de_millones-709457374-large.jpg" class="movie-icon" alt="Un lío de millones">
-        <div class="movie-title">Un lío de millones</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/blyt002y8j9j" target="_blank">
-        <img src="https://pics.filmaffinity.com/el_mejor_verano_de_mi_vida-275334251-large.jpg" class="movie-icon" alt="El mejor verano de mi vida">
-        <div class="movie-title">El mejor verano de mi vida</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/d6ilu3znl1v9" target="_blank">
-        <img src="https://pics.filmaffinity.com/f1_the_movie-603739796-large.jpg" class="movie-icon" alt="F1 la pelicula">
-        <div class="movie-title">F1 la pelicula</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/id5157h0vkhc" target="_blank">
-        <img src="https://pics.filmaffinity.com/one_battle_after_another-992235034-mmed.jpg" class="movie-icon" alt="Una batalla tras otra">
-        <div class="movie-title">Una batalla tras otra</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/6478kukw8u45/Miedo_y_asco_en_las_vegas__1998__HDrip" target="_blank">
-        <img src="https://pics.filmaffinity.com/fear_and_loathing_in_las_vegas-268871395-mmed.jpg" class="movie-icon" alt="Miedo y asco en Las Vegas">
-        <div class="movie-title">Miedo y asco en Las Vegas</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="https://filemoon.to/e/1gl6y5urbhlc" target="_blank">
-        <img src="https://pics.filmaffinity.com/avatar-208925608-mmed.jpg" class="movie-icon" alt="Avatar 3D">
-        <div class="movie-title">Avatar 3D</div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="iptvprueba.html" target="_blank">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdUcvNbdlgliNQWT4_-ceA2ruLvo9uaOyNnYkywhwtPRytf61XPEgdKHiBSuaJK4UjlFM&usqp=CAU" class="movie-icon" alt="Reproductor IPTV">
-        <div class="movie-title">Reproductor IPTV </div>
-      </a>        
-      </div>
-	  
-	  <div class="movie-container">
-      <a href="iptv-player-app2.html" target="_blank">
-        <img src="data:image/jpeg;base64,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" class="movie-icon" alt="IPTV Pro">
-        <div class="movie-title">IPTV Pro </div>
-      </a>        
-      </div>
-	  
-	</div>
   </div>
 
   <script>
-    // Cargar usuario y contraseña si fueron recordados
-    window.onload = function () {
-      const savedUser = localStorage.getItem("usuario");
-      const savedPass = localStorage.getItem("clave");
+    function validar() {
+      const u = document.getElementById("usuario").value;
+      const c = document.getElementById("clave").value;
+      if (u === "apoyardao" && c === "egabrense666") {
+        if(document.getElementById("recordar").checked) {
+          localStorage.setItem("usuario", u); localStorage.setItem("clave", c);
+        }
+        document.getElementById("login").style.display = "none";
+        document.getElementById("contenido").style.display = "block";
+      } else {
+        document.getElementById("mensaje").innerText = "Acceso denegado.";
+      }
+    }
 
-      if (savedUser && savedPass) {
-        document.getElementById("usuario").value = savedUser;
-        document.getElementById("clave").value = savedPass;
+    window.onload = function() {
+      if(localStorage.getItem("usuario")) {
+        document.getElementById("usuario").value = localStorage.getItem("usuario");
+        document.getElementById("clave").value = localStorage.getItem("clave");
         document.getElementById("recordar").checked = true;
       }
     };
 
-    function validar() {
-      const user = document.getElementById('usuario').value;
-      const pass = document.getElementById('clave').value;
-      const recordar = document.getElementById('recordar').checked;
-
-      // Cambia esto por tu usuario y contraseña reales
-      if (user === "apoyardao" && pass === "egabrense666") {
-        if (recordar) {
-          localStorage.setItem("usuario", user);
-          localStorage.setItem("clave", pass);
-        } else {
-          localStorage.removeItem("usuario");
-          localStorage.removeItem("clave");
-        }
-
-        document.getElementById("login").style.display = "none";
-        document.getElementById("contenido").style.display = "block";
-      } else {
-        document.getElementById("mensaje").innerText = "Usuario o contraseña incorrectos.";
-      }
+    function abrirDetalle(el) {
+      document.getElementById("m-img").src = el.querySelector("img").src;
+      document.getElementById("m-titulo").innerText = el.querySelector(".movie-title-card").innerText;
+      document.getElementById("m-sinopsis").innerText = el.dataset.synopsis;
+      document.getElementById("m-btn").href = el.dataset.link;
+      document.getElementById("modal").style.display = "flex";
     }
 
-    // FUNCIÓN PARA BUSCAR PELÍCULAS AÑADIDA
-    function buscarPeliculas() {
-      const input = document.getElementById('buscador');
-      const filtro = input.value.toLowerCase();
-      const grid = document.querySelector('.grid');
-      const peliculas = grid.getElementsByClassName('movie-container');
+    function cerrarDetalle() { document.getElementById("modal").style.display = "none"; }
 
-      for (let i = 0; i < peliculas.length; i++) {
-        const tituloDiv = peliculas[i].getElementsByClassName('movie-title')[0];
-        if (tituloDiv) {
-          const titulo = tituloDiv.textContent || tituloDiv.innerText;
-          if (titulo.toLowerCase().indexOf(filtro) > -1) {
-            peliculas[i].style.display = ""; // Muestra la película
-          } else {
-            peliculas[i].style.display = "none"; // Oculta la película
-          }
-        }
+    function buscarPeliculas() {
+      const f = document.getElementById('buscador').value.toLowerCase();
+      const p = document.getElementsByClassName('movie-container');
+      for (let item of p) {
+        const t = item.innerText.toLowerCase();
+        item.style.display = t.includes(f) ? "" : "none";
       }
     }
   </script>
-
 </body>
 </html>
