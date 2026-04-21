@@ -69,6 +69,22 @@
         /* Estilos del indicador de grabación de fondo */
         #recordingIndicator { animation: slideUp 0.5s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* EPG – slots progresivos */
+        .epg-slot { border-radius: 8px; overflow: hidden; }
+        .epg-skeleton {
+            height: 82px; background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
+            background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        .epg-card-in { animation: epgPop 0.28s cubic-bezier(.22,1,.36,1) both; }
+        @keyframes epgPop { from{opacity:0;transform:translateY(8px) scale(.98)} to{opacity:1;transform:none} }
+        .epg-prog-now { border-left: 3px solid var(--accent); }
+        .loader-xs { display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.15);
+            border-left-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle; }
+        #epgBanner { background:rgba(10,10,10,.88);backdrop-filter:blur(6px);
+            border:1px solid rgba(255,255,255,.08);transition:opacity .4s; }
+        #epgBanner.done { opacity:0; pointer-events:none; }
     </style>
 </head>
 <body class="flex h-screen w-screen bg-black">
@@ -949,13 +965,12 @@ const app = {
             DOM.epgList.innerHTML = '<div class="text-gray-500 text-center mt-10 p-6 bg-gray-900/50 rounded-lg"><i class="fas fa-tv text-4xl mb-3 block"></i>No se encontraron canales en vivo.<br><small>Accede primero a "TV en Vivo" para cargar los canales.</small></div>';
             return;
         }
-
         if (STATE.sourceType === 'm3u') {
             DOM.epgList.innerHTML = '<div class="text-yellow-400 p-4 bg-yellow-900/30 rounded-lg border border-yellow-700"><i class="fas fa-info-circle mr-2"></i>La Guía EPG solo está disponible con credenciales <strong>Xtream Codes</strong>.</div>';
             return;
         }
 
-        // ── Helpers de calidad ─────────────────────────────────────────────────
+        // ── Helpers ────────────────────────────────────────────────────────────
         const qualityScore = (name) => {
             const n = (name || '').toUpperCase();
             if (n.includes('4K') || n.includes('UHD'))  return 4;
@@ -963,18 +978,13 @@ const app = {
             if (/[\s|([{]HD[\s|)\]}]/.test(' ' + n + ' ')) return 2;
             if (n.includes(' HD') || n.endsWith('HD'))   return 2;
             if (n.includes(' SD') || n.includes('|SD') || n.includes('[SD]')) return 0;
-            return 1; // sin etiqueta de calidad
+            return 1;
         };
-
         const baseName = (name) => (name || '')
             .replace(/[\s|([{\-]*(4K|UHD|FHD|HD|SD)[\s|)\]}\-]*/gi, ' ')
-            .replace(/^\s*[\|:\-]+\s*/, '')   // quitar prefijos tipo "| ES |"
-            .replace(/\s*[\|:\-]+\s*$/, '')   // quitar sufijos
-            .replace(/\s+/g, ' ')
-            .trim()
-            .toLowerCase();
+            .replace(/^\s*[\|:\-]+\s*/, '').replace(/\s*[\|:\-]+\s*$/, '')
+            .replace(/\s+/g, ' ').trim().toLowerCase();
 
-        // ── Filtrado de canales en español ─────────────────────────────────────
         const ES_KEYWORDS = [
             'españa','espana','spain','spanish','español','espanol','castellano',
             '| es |','|es|','[es]','(es)','es: ','tve','antena 3','telecinco',
@@ -983,87 +993,188 @@ const app = {
             'paramount es','discovery es','fox es','mega','trece','energy es','nova'
         ];
         const isSpanish = (ch) => {
-            const n = (ch.name || '').toLowerCase();
-            const c = (ch.cat  || '').toLowerCase();
+            const n = (ch.name || '').toLowerCase(), c = (ch.cat || '').toLowerCase();
             return ES_KEYWORDS.some(kw => n.includes(kw) || c.includes(kw));
         };
 
         let pool = STATE.data.live.filter(isSpanish);
         const foundSpanish = pool.length > 0;
-        if (!foundSpanish) pool = STATE.data.live; // sin filtro si no detecta español
+        if (!foundSpanish) pool = STATE.data.live;
 
-        // ── Deduplicar: agrupar por nombre base y ordenar por calidad ──────────
-        const groups = new Map(); // baseName → [{ch, score}, ...]
+        // ── Deduplicar ─────────────────────────────────────────────────────────
+        const groups = new Map();
         pool.forEach(ch => {
-            const key   = baseName(ch.name);
-            const score = qualityScore(ch.name);
+            const key = baseName(ch.name), score = qualityScore(ch.name);
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push({ ch, score });
         });
-        // Ordenar cada grupo de mejor a peor calidad
         groups.forEach(g => g.sort((a, b) => b.score - a.score));
 
-        const uniqueGroups  = Array.from(groups.values()); // array de arrays
-        const totalGroups   = uniqueGroups.length;
-        const totalOriginal = pool.length;
-
-        const epgCountEl = document.getElementById('epgChannelCount');
-        if (epgCountEl) epgCountEl.textContent =
-            `${totalGroups} canales únicos (de ${totalOriginal}${foundSpanish ? ' en español' : ''})`;
-
-        const { s, u, p } = STATE.creds;
-        const BATCH = 5;
-        let loaded = 0;
-
-        const showProgress = () => {
-            loaded++;
-            const pct = Math.round((loaded / totalGroups) * 100);
-            DOM.epgList.innerHTML = `
-                <div class="text-center p-10">
-                    <div class="loader mx-auto mb-4"></div>
-                    <p class="text-gray-400 mb-1">Cargando EPG: <strong class="text-white">${loaded} / ${totalGroups}</strong> canales únicos</p>
-                    <p class="text-gray-500 text-xs mb-3">Probando mejor calidad disponible con EPG...</p>
-                    <div class="w-64 bg-gray-700 rounded-full h-2 mx-auto">
-                        <div class="bg-red-600 h-2 rounded-full transition-all" style="width:${pct}%"></div>
-                    </div>
-                    <p class="text-gray-500 text-xs mt-2">${pct}%</p>
-                </div>`;
+        // ── Orden TDT: primero nacionales por número de dial ───────────────────
+        const TDT_ORDER = [
+            ['la 1','la1','tve 1','tve1','la primera','primera cadena'],
+            ['la 2','la2','tve 2','tve2','la dos','segundo canal'],
+            ['antena 3','antena3',' a3 ','|a3|'],
+            ['cuatro'],
+            ['telecinco','tele 5','tele5'],
+            ['la sexta','lasexta',' sexta'],
+            ['neox'],
+            ['nova'],
+            ['mega'],
+            ['fdf','factoria de ficcion','factoría de ficción'],
+            ['atreseries','atreserie'],
+            ['energy'],
+            ['boing'],
+            ['clan','clan tve'],
+            ['trece'],
+            ['ten ','| ten','[ten]'],
+            ['dmax'],
+            ['paramount'],
+            ['be mad','bemad'],
+            ['tdp','teledeporte'],
+            ['24h','24 horas'],
+            ['tv3','tv 3','tv-3'],
+            ['canal sur','canalsur'],
+            ['telemadrid'],
+            ['aragon tv','aragón tv'],
+            ['eitb','etb'],
+            ['tvg'],
+            ['canal 9','canal9','a punt'],
+            ['rtve'],
+        ];
+        const tdtIndex = (variants) => {
+            const name = ' ' + baseName(variants[0].ch.name) + ' ';
+            for (let i = 0; i < TDT_ORDER.length; i++)
+                if (TDT_ORDER[i].some(kw => name.includes(kw))) return i;
+            return TDT_ORDER.length;
         };
 
-        // Función que intenta los distintos niveles de calidad para un grupo
-        const fetchBestEPG = async (variants) => {
+        // Ordenar: TDT primero por dial, resto alfabético
+        const uniqueGroups = Array.from(groups.values()).sort((a, b) => {
+            const ia = tdtIndex(a), ib = tdtIndex(b);
+            if (ia !== ib) return ia - ib;
+            return baseName(a[0].ch.name).localeCompare(baseName(b[0].ch.name), 'es');
+        });
+
+        const totalGroups = uniqueGroups.length;
+        const epgCountEl  = document.getElementById('epgChannelCount');
+        if (epgCountEl) epgCountEl.textContent =
+            `${totalGroups} canales únicos (de ${pool.length}${foundSpanish ? ' en español' : ''})`;
+
+        // ── Estructura: banner de progreso + un slot por canal (en orden ya fijo) ──
+        // Cada slot empieza como skeleton; se rellena en cuanto llega su EPG.
+        DOM.epgList.innerHTML = `
+            <div id="epgBanner" class="sticky top-0 z-10 mb-3 px-4 py-3 rounded-lg flex items-center gap-3 flex-wrap">
+                <span class="loader-xs"></span>
+                <span id="epgBannerTxt" class="text-sm text-gray-300 flex-grow">Iniciando carga EPG…</span>
+                <span id="epgBannerCnt" class="text-xs text-gray-500 flex-shrink-0">0 / ${totalGroups}</span>
+                <div class="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div id="epgBannerBar" class="h-full bg-red-600 rounded-full transition-all duration-300" style="width:0%"></div>
+                </div>
+            </div>
+            <div id="epgSlots" class="space-y-2 pb-20">
+                ${uniqueGroups.map((_, i) =>
+                    `<div id="epg-slot-${i}" class="epg-slot epg-skeleton"></div>`
+                ).join('')}
+            </div>`;
+
+        const bannerTxt = document.getElementById('epgBannerTxt');
+        const bannerCnt = document.getElementById('epgBannerCnt');
+        const bannerBar = document.getElementById('epgBannerBar');
+        const now        = new Date();
+        const curHour    = now.getHours();
+        let loaded       = 0;
+
+        // ── Construir tarjeta EPG para la hora actual ──────────────────────────
+        const buildCard = (data) => {
+            const t0 = new Date(now); t0.setHours(curHour, 0, 0, 0);
+            const t1 = new Date(now); t1.setHours(curHour + 1, 0, 0, -1);
+            const progs = data.listings
+                .filter(p => p.start < t1 && p.end > t0)
+                .sort((a, b) => a.start - b.start);
+            if (!progs.length) return null;
+
+            const logo = data.channel.img && data.channel.img.length > 5
+                ? data.channel.img : 'https://via.placeholder.com/100?text=TV';
+
+            const card = document.createElement('div');
+            card.className = 'epg-card-in list-item flex flex-col md:flex-row md:items-center bg-gray-800/70 p-4 rounded-lg transition';
+            card.innerHTML = `
+                <div class="flex-shrink-0 mb-3 md:mb-0 mr-4 flex items-center w-full md:w-auto">
+                    <img src="${logo}" class="w-12 h-12 object-contain rounded mr-3" loading="lazy"
+                         onerror="this.src='https://via.placeholder.com/100?text=TV'">
+                    <div class="flex-grow">
+                        <div class="font-bold text-white text-base leading-tight">${data.channel.name}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${data.channel.cat || 'General'}</div>
+                    </div>
+                </div>
+                <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2 border-l-0 md:border-l border-gray-600 md:pl-4">
+                    ${progs.slice(0, 3).map(p => {
+                        const isNow = p.start <= now && p.end >= now;
+                        return `<div class="p-2 rounded-md ${isNow ? 'bg-red-900/40 epg-prog-now' : 'bg-gray-700/50 hover:bg-gray-700'} transition cursor-pointer"
+                            onclick="player.start('${data.channel.url}','${data.channel.name} - ${p.title.replace(/'/g,"\\'")}','live','${data.channel.id}')"
+                            title="${p.title}: ${p.desc}">
+                            <span class="text-xs font-medium ${isNow ? 'text-red-400 font-bold' : 'text-red-400'}">${p.start.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} – ${p.end.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}${isNow ? ' ●' : ''}</span>
+                            <div class="text-white text-sm font-bold truncate mt-0.5">${p.title}</div>
+                        </div>`;
+                    }).join('')}
+                    ${progs.length > 3 ? `<div class="text-center text-gray-500 text-sm flex items-center justify-center">+${progs.length - 3} más</div>` : ''}
+                </div>
+                <div class="flex-shrink-0 ml-4 hidden md:flex">
+                    <button onclick="player.start('${data.channel.url}','${data.channel.name}','live','${data.channel.id}')"
+                            class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full"><i class="fas fa-play"></i></button>
+                </div>`;
+            return card;
+        };
+
+        // ── Fetch + rellena su slot exacto en cuanto llega ─────────────────────
+        const { s, u, p } = STATE.creds;
+        const BATCH = 10;
+
+        const fetchSlot = async (variants, slotIndex) => {
             for (const { ch } of variants) {
                 await app.fetchChannelEPG(ch, s, u, p);
-                if (STATE.epgData[ch.id]) return; // encontró EPG → para
+                if (STATE.epgData[ch.id]) {
+                    const slot = document.getElementById(`epg-slot-${slotIndex}`);
+                    if (slot) {
+                        const card = buildCard(STATE.epgData[ch.id]);
+                        // Si hay programas en esta hora → sustituir skeleton por tarjeta
+                        // Si no hay programas → quitar el skeleton (sin dejar hueco)
+                        if (card) slot.replaceWith(card);
+                        else      slot.remove();
+                    }
+                    break; // canal encontrado, no seguir con variantes
+                }
             }
-            // Ninguna calidad tiene EPG → no se añade nada
+            // Si ninguna variante tuvo EPG, eliminar el skeleton vacío
+            document.getElementById(`epg-slot-${slotIndex}`)?.remove();
+
+            // Actualizar barra de progreso
+            loaded++;
+            const pct = Math.round((loaded / totalGroups) * 100);
+            bannerBar.style.width  = pct + '%';
+            bannerCnt.textContent  = `${loaded} / ${totalGroups}`;
+            bannerTxt.textContent  = `Cargando EPG… ${loaded} de ${totalGroups} canales`;
         };
 
-        // Procesar en lotes de 5 grupos simultáneos
         for (let i = 0; i < totalGroups; i += BATCH) {
-            const batch = uniqueGroups.slice(i, i + BATCH);
-            await Promise.all(batch.map(async variants => {
-                await fetchBestEPG(variants);
-                showProgress();
-            }));
+            await Promise.all(
+                uniqueGroups.slice(i, i + BATCH).map((variants, j) => fetchSlot(variants, i + j))
+            );
         }
 
+        // ── Finalizar ──────────────────────────────────────────────────────────
         const withData = Object.keys(STATE.epgData).length;
+        const banner   = document.getElementById('epgBanner');
 
         if (withData === 0) {
-            DOM.epgList.innerHTML = `
-                <div class="text-center p-8 bg-gray-900/50 rounded-lg border border-gray-700">
-                    <i class="fas fa-exclamation-triangle text-yellow-400 text-4xl mb-3 block"></i>
-                    <p class="text-yellow-400 font-bold mb-2">Sin datos EPG</p>
-                    <p class="text-gray-400 text-sm">El servidor no devolvió programación para los ${totalGroups} canales consultados.</p>
-                </div>`;
-            app.generateHourSelectors(new Date().getHours());
-            return;
+            if (banner) banner.innerHTML = `<div class="w-full text-center text-yellow-400 py-2">
+                <i class="fas fa-exclamation-triangle mr-2"></i>Sin datos EPG para los ${totalGroups} canales.</div>`;
+        } else {
+            if (banner) { banner.classList.add('done'); setTimeout(() => banner?.remove(), 450); }
+            if (epgCountEl) epgCountEl.textContent = `${withData} canales con EPG${foundSpanish ? ' (español)' : ''}`;
+            app.showToast(`EPG lista: ${withData} canales`);
         }
-
-        if (epgCountEl) epgCountEl.textContent = `${withData} canales con EPG${foundSpanish ? ' (español)' : ''}`;
-        app.showToast(`EPG lista: ${withData} canales únicos con programación`);
-        app.filterEPGByHour(new Date().getHours());
     },
     // FIN MODIFICACIÓN EPG
 
