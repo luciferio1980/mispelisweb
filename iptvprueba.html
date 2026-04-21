@@ -682,16 +682,16 @@ const app = {
 
         if (view === 'home') {
             DOM.gridSection.classList.remove('hidden');
-            DOM.title.innerText = "Tendencias & Recomendados";
+            DOM.title.innerText = "Películas";
             DOM.hero.classList.remove('hidden');
-            const pool = [...STATE.data.movie, ...STATE.data.series];
+            const pool = [...STATE.data.movie];
             if(pool.length > 0) {
                 const random = pool[Math.floor(Math.random() * pool.length)];
                 DOM.heroImg.src = random.img || 'https://via.placeholder.com/1920x1080?text=StreamFlix';
                 DOM.heroTitle.innerText = random.name;
                 DOM.heroPlay.onclick = () => app.openDetail(random);
             }
-            STATE.renderList = [...STATE.data.movie.slice(0,40), ...STATE.data.series.slice(0,40), ...STATE.data.live.slice(0,20)].sort(() => 0.5 - Math.random());
+            STATE.renderList = [...STATE.data.movie].sort(() => 0.5 - Math.random());
             app.renderMore();
         } else if (view === 'live') {
             DOM.gridSection.classList.remove('hidden');
