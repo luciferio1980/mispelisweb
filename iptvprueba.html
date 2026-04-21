@@ -150,7 +150,18 @@
                 </div>
 
                 <div id="epgSection" class="px-6 lg:px-10 hidden">
-                    <h2 class="text-xl font-bold mb-4 text-white">Guía de Programación (EPG)</h2>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                        <h2 class="text-xl font-bold text-white">Guía de Programación (EPG)</h2>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center bg-black/50 border border-gray-700 rounded-full px-3 py-1">
+                                <i class="fas fa-search text-gray-400 text-sm"></i>
+                                <input type="text" id="epgChannelSearch" placeholder="Buscar canal..." 
+                                    class="bg-transparent border-none text-white px-2 py-1 outline-none text-sm w-36"
+                                    oninput="app.filterEPGByChannel(this.value)">
+                            </div>
+                            <span id="epgChannelCount" class="text-xs text-gray-500 whitespace-nowrap"></span>
+                        </div>
+                    </div>
                     <div id="epgControls" class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-6 p-3 rounded-lg bg-gray-900/50 overflow-x-auto hide-scroll">
                         <button id="daySelector" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold text-white flex-shrink-0">Hoy</button>
                         <div id="hourSelector" class="flex overflow-x-auto space-x-2 hide-scroll flex-grow">
@@ -564,7 +575,10 @@ const app = {
             else if(e.target.value.length === 0) app.nav(STATE.view);
         });
         document.getElementById('contentArea').addEventListener('scroll', (e) => {
-            if (e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 200) app.renderMore();
+            if (e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 200) {
+                app.renderMore();
+                if (STATE.view === 'series') setTimeout(() => app.initSeriesCoverObserver(), 300);
+            }
         });
         setInterval(() => {
             document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -623,7 +637,16 @@ const app = {
                     // Aseguramos que los canales Xtream tengan un ID para EPG
                     STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon, url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
                     STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon || x.cover, url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
-                    STATE.data.series = ser.map(x => ({ id: x.series_id, name: x.name, img: x.cover || (Array.isArray(x.backdrop_path) ? x.backdrop_path[0] : x.backdrop_path) || x.stream_icon || '', url: null, type: 'series', plot: x.plot }));
+                    const resolveImg = (url) => {
+                        if (!url || url.length < 5 || url === '0') return '';
+                        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                        if (url.startsWith('/')) return s + url;
+                        return s + '/' + url;
+                    };
+                    STATE.data.series = ser.map(x => {
+                        const rawImg = x.cover || (Array.isArray(x.backdrop_path) ? x.backdrop_path[0] : x.backdrop_path) || x.stream_icon || '';
+                        return { id: x.series_id, name: x.name, img: resolveImg(rawImg), url: null, type: 'series', plot: x.plot };
+                    });
                     
                     localStorage.setItem('sf_creds', JSON.stringify({ type: 'xtream', server:s, username:u, password:p }));
                     STATE.sourceType = 'xtream';
@@ -711,6 +734,7 @@ const app = {
             DOM.title.innerText = view === 'movies' ? "Películas" : "Series";
             STATE.renderList = STATE.data[view === 'movies' ? 'movie' : 'series'];
             app.renderMore();
+            if (view === 'series') setTimeout(() => app.initSeriesCoverObserver(), 300);
         }
     },
 
@@ -734,7 +758,53 @@ const app = {
     // FIN NUEVA FUNCIÓN
     // ------------------------------------
     
-    // NUEVO: Generar botones de hora (00:00 a 23:00)
+    filterEPGByChannel: (term) => {
+        if (!term || term.trim().length < 2) {
+            // Sin filtro: mostrar la hora activa
+            const activeBtn = document.getElementById('hourSelector').querySelector('.cat-chip.active');
+            const hour = activeBtn ? parseInt(activeBtn.dataset.hour) : new Date().getHours();
+            app.filterEPGByHour(hour);
+            return;
+        }
+        term = term.toLowerCase();
+        DOM.epgList.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        let count = 0;
+
+        Object.values(STATE.epgData).forEach(data => {
+            if (!data.channel.name.toLowerCase().includes(term)) return;
+            count++;
+            const logo = data.channel.img && data.channel.img.length > 5 ? data.channel.img : 'https://via.placeholder.com/100?text=TV';
+            const item = document.createElement('div');
+            item.className = 'list-item flex flex-col md:flex-row md:items-center bg-gray-800/70 p-4 rounded-lg transition';
+            const programs = data.listings.slice(0, 4);
+            item.innerHTML = `
+                <div class="flex-shrink-0 mb-3 md:mb-0 mr-4 flex items-center w-full md:w-auto">
+                    <img src="${logo}" class="w-12 h-12 object-contain rounded mr-3" onerror="this.src='https://via.placeholder.com/100?text=TV'">
+                    <div><div class="font-bold text-white text-lg">${data.channel.name}</div><div class="text-sm text-gray-400">${data.channel.cat || 'General'}</div></div>
+                </div>
+                <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2 border-l-0 md:border-l border-gray-600 md:pl-4">
+                    ${programs.map(p => `
+                        <div class="p-2 rounded-md bg-gray-700/50 hover:bg-gray-700 transition cursor-pointer"
+                             onclick="player.start('${data.channel.url}','${data.channel.name} - ${p.title.replace(/'/g,"\\'")}','live','${data.channel.id}')">
+                            <span class="text-xs font-medium text-red-400">${p.start.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${p.end.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+                            <div class="text-white text-sm font-bold truncate">${p.title}</div>
+                        </div>`).join('')}
+                </div>
+                <div class="flex-shrink-0 ml-4 hidden md:flex">
+                    <button onclick="player.start('${data.channel.url}','${data.channel.name}','live','${data.channel.id}')" class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full"><i class="fas fa-play"></i></button>
+                </div>`;
+            fragment.appendChild(item);
+        });
+
+        if (count === 0) {
+            DOM.epgList.innerHTML = `<div class="text-gray-500 text-center mt-10 p-4 bg-gray-900/50 rounded-lg">No se encontró ningún canal con "<strong>${term}</strong>"</div>`;
+        } else {
+            DOM.epgList.appendChild(fragment);
+        }
+    },
+
+
     generateHourSelectors: (initialHour) => {
         const selector = document.getElementById('hourSelector');
         selector.innerHTML = '';
@@ -829,64 +899,171 @@ const app = {
     },
 
 
-    // MODIFICADO: Función para renderizar la EPG
-    renderEPG: async () => {
-        DOM.epgList.innerHTML = '<div class="text-center p-10"><div class="loader mx-auto mb-4"></div><p class="text-gray-400">Cargando Guía EPG (máximo 50 canales)...</p></div>';
+    // Función para parsear timestamps de EPG (soporta Unix timestamp y string de fecha)
+    parseEPGTime: (tsField, dateField) => {
+        if (tsField && !isNaN(tsField)) return new Date(parseInt(tsField) * 1000);
+        if (dateField) return new Date(String(dateField).replace(' ', 'T') + '+00:00');
+        return new Date();
+    },
 
-        // 1. Inicializar la navegación por horas y el estado
+    // Fetch EPG de un canal con timeout y doble intento (get_short_epg / get_simple_epg)
+    fetchChannelEPG: async (channel, s, u, p) => {
+        const tryFetch = async (action) => {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 10000); // 10s timeout
+            try {
+                const res = await fetch(
+                    `https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=${action}&stream_id=${channel.id}&limit=24`,
+                    { signal: ctrl.signal }
+                );
+                const data = await res.json();
+                return data.epg_listings || data.epg_listing || [];
+            } catch(e) {
+                return [];
+            } finally {
+                clearTimeout(timer);
+            }
+        };
+
+        let listings = await tryFetch('get_short_epg');
+        if (!listings.length) listings = await tryFetch('get_simple_epg'); // intento alternativo
+
+        if (listings.length > 0) {
+            STATE.epgData[channel.id] = {
+                channel,
+                listings: listings.map(item => ({
+                    title: app.safeBase64Decode(item.title),
+                    start: app.parseEPGTime(item.start_timestamp, item.start),
+                    end:   app.parseEPGTime(item.stop_timestamp || item.end_timestamp, item.end || item.stop),
+                    desc:  item.description ? app.safeBase64Decode(item.description) : 'Sin descripción'
+                }))
+            };
+        }
+    },
+
+    renderEPG: async () => {
         STATE.epgData = {};
         app.generateHourSelectors();
-        
-        const liveChannels = STATE.data.live.slice(0, 50); // Limitar a 50 canales por rendimiento
 
-        if (liveChannels.length === 0) {
-            DOM.epgList.innerHTML = '<div class="text-gray-500 text-center mt-10">No se encontraron canales en vivo.</div>';
+        if (STATE.data.live.length === 0) {
+            DOM.epgList.innerHTML = '<div class="text-gray-500 text-center mt-10 p-6 bg-gray-900/50 rounded-lg"><i class="fas fa-tv text-4xl mb-3 block"></i>No se encontraron canales en vivo.<br><small>Accede primero a "TV en Vivo" para cargar los canales.</small></div>';
             return;
         }
 
         if (STATE.sourceType === 'm3u') {
-            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-info-circle mr-2"></i>La información EPG (Programación Futura) solo está disponible con credenciales de **Xtream Codes**.</p>';
+            DOM.epgList.innerHTML = '<div class="text-yellow-400 p-4 bg-yellow-900/30 rounded-lg border border-yellow-700"><i class="fas fa-info-circle mr-2"></i>La Guía EPG solo está disponible con credenciales <strong>Xtream Codes</strong>.</div>';
             return;
         }
+
+        // ── Helpers de calidad ─────────────────────────────────────────────────
+        const qualityScore = (name) => {
+            const n = (name || '').toUpperCase();
+            if (n.includes('4K') || n.includes('UHD'))  return 4;
+            if (n.includes('FHD'))                       return 3;
+            if (/[\s|([{]HD[\s|)\]}]/.test(' ' + n + ' ')) return 2;
+            if (n.includes(' HD') || n.endsWith('HD'))   return 2;
+            if (n.includes(' SD') || n.includes('|SD') || n.includes('[SD]')) return 0;
+            return 1; // sin etiqueta de calidad
+        };
+
+        const baseName = (name) => (name || '')
+            .replace(/[\s|([{\-]*(4K|UHD|FHD|HD|SD)[\s|)\]}\-]*/gi, ' ')
+            .replace(/^\s*[\|:\-]+\s*/, '')   // quitar prefijos tipo "| ES |"
+            .replace(/\s*[\|:\-]+\s*$/, '')   // quitar sufijos
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+
+        // ── Filtrado de canales en español ─────────────────────────────────────
+        const ES_KEYWORDS = [
+            'españa','espana','spain','spanish','español','espanol','castellano',
+            '| es |','|es|','[es]','(es)','es: ','tve','antena 3','telecinco',
+            'cuatro','la sexta','rtve','canal sur','telemadrid','tv3','canal 9',
+            'aragón tv','aragon tv','eitb','tvg','bein','movistar','dmax es',
+            'paramount es','discovery es','fox es','mega','trece','energy es','nova'
+        ];
+        const isSpanish = (ch) => {
+            const n = (ch.name || '').toLowerCase();
+            const c = (ch.cat  || '').toLowerCase();
+            return ES_KEYWORDS.some(kw => n.includes(kw) || c.includes(kw));
+        };
+
+        let pool = STATE.data.live.filter(isSpanish);
+        const foundSpanish = pool.length > 0;
+        if (!foundSpanish) pool = STATE.data.live; // sin filtro si no detecta español
+
+        // ── Deduplicar: agrupar por nombre base y ordenar por calidad ──────────
+        const groups = new Map(); // baseName → [{ch, score}, ...]
+        pool.forEach(ch => {
+            const key   = baseName(ch.name);
+            const score = qualityScore(ch.name);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({ ch, score });
+        });
+        // Ordenar cada grupo de mejor a peor calidad
+        groups.forEach(g => g.sort((a, b) => b.score - a.score));
+
+        const uniqueGroups  = Array.from(groups.values()); // array de arrays
+        const totalGroups   = uniqueGroups.length;
+        const totalOriginal = pool.length;
+
+        const epgCountEl = document.getElementById('epgChannelCount');
+        if (epgCountEl) epgCountEl.textContent =
+            `${totalGroups} canales únicos (de ${totalOriginal}${foundSpanish ? ' en español' : ''})`;
 
         const { s, u, p } = STATE.creds;
+        const BATCH = 5;
+        let loaded = 0;
 
-        // 2. Fetch de EPG simple para cada canal (obtiene un rango de programas)
-        const epgPromises = liveChannels.map(channel => {
-            // Usamos get_simple_epg para obtener una lista de programas futuros
-            return fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_simple_epg&stream_id=${channel.id}&limit=100`)
-                .then(r => r.json())
-                .then(data => {
-                    if(data.epg_listings && data.epg_listings.length > 0) {
-                        STATE.epgData[channel.id] = { 
-                            channel: channel, 
-                            listings: data.epg_listings.map(item => ({
-                                title: app.safeBase64Decode(item.title), // <--- USO DE DECODIFICADOR SEGURO
-                                start: new Date(item.start_timestamp * 1000),
-                                end: new Date(item.stop_timestamp * 1000),
-                                desc: item.description ? app.safeBase64Decode(item.description) : 'Sin descripción' // <--- USO DE DECODIFICADOR SEGURO
-                            }))
-                        };
-                    }
-                })
-                .catch(e => console.error(`Error EPG ${channel.id}:`, e));
-        });
+        const showProgress = () => {
+            loaded++;
+            const pct = Math.round((loaded / totalGroups) * 100);
+            DOM.epgList.innerHTML = `
+                <div class="text-center p-10">
+                    <div class="loader mx-auto mb-4"></div>
+                    <p class="text-gray-400 mb-1">Cargando EPG: <strong class="text-white">${loaded} / ${totalGroups}</strong> canales únicos</p>
+                    <p class="text-gray-500 text-xs mb-3">Probando mejor calidad disponible con EPG...</p>
+                    <div class="w-64 bg-gray-700 rounded-full h-2 mx-auto">
+                        <div class="bg-red-600 h-2 rounded-full transition-all" style="width:${pct}%"></div>
+                    </div>
+                    <p class="text-gray-500 text-xs mt-2">${pct}%</p>
+                </div>`;
+        };
 
-        await Promise.all(epgPromises);
-        
-        // 3. Verificación de resultados y Renderizado inicial
-        const now = new Date().getHours();
+        // Función que intenta los distintos niveles de calidad para un grupo
+        const fetchBestEPG = async (variants) => {
+            for (const { ch } of variants) {
+                await app.fetchChannelEPG(ch, s, u, p);
+                if (STATE.epgData[ch.id]) return; // encontró EPG → para
+            }
+            // Ninguna calidad tiene EPG → no se añade nada
+        };
 
-        const totalPrograms = Object.values(STATE.epgData).reduce((acc, data) => acc + data.listings.length, 0);
-        
-        if (totalPrograms === 0) {
-            // Mensaje explícito si no hay EPG de ningún canal
-            DOM.epgList.innerHTML = '<p class="text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded"><i class="fas fa-exclamation-triangle mr-2"></i>El servidor Xtream no devolvió ninguna programación EPG (Guía) para los canales solicitados. Puede que no esté disponible o la lista de canales no tenga metadatos EPG.</p>';
-            app.generateHourSelectors(now);
+        // Procesar en lotes de 5 grupos simultáneos
+        for (let i = 0; i < totalGroups; i += BATCH) {
+            const batch = uniqueGroups.slice(i, i + BATCH);
+            await Promise.all(batch.map(async variants => {
+                await fetchBestEPG(variants);
+                showProgress();
+            }));
+        }
+
+        const withData = Object.keys(STATE.epgData).length;
+
+        if (withData === 0) {
+            DOM.epgList.innerHTML = `
+                <div class="text-center p-8 bg-gray-900/50 rounded-lg border border-gray-700">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 text-4xl mb-3 block"></i>
+                    <p class="text-yellow-400 font-bold mb-2">Sin datos EPG</p>
+                    <p class="text-gray-400 text-sm">El servidor no devolvió programación para los ${totalGroups} canales consultados.</p>
+                </div>`;
+            app.generateHourSelectors(new Date().getHours());
             return;
         }
 
-        app.filterEPGByHour(now); 
+        if (epgCountEl) epgCountEl.textContent = `${withData} canales con EPG${foundSpanish ? ' (español)' : ''}`;
+        app.showToast(`EPG lista: ${withData} canales únicos con programación`);
+        app.filterEPGByHour(new Date().getHours());
     },
     // FIN MODIFICACIÓN EPG
 
@@ -942,14 +1119,18 @@ const app = {
                     </div>`;
             } else {
                 el.className = 'poster-card group';
+                if (item.type === 'series' && item.id) el.dataset.sid = item.id;
                 const objFitClass = item.type === 'live' ? 'object-contain p-2' : 'object-cover';
+                const onErrFn = (item.type === 'series' && item.id && STATE.sourceType === 'xtream')
+                    ? `app.fetchSeriesCover(this,'${item.id}')`
+                    : `this.classList.add('img-error')`;
                 const typeIcon = item.type === 'series' ? 'fa-tv' : (item.type === 'movie' ? 'fa-film' : 'fa-broadcast-tower');
                 el.innerHTML = `
                     <div class="poster-fallback" style="flex-direction:column;gap:8px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)">
                         <i class="fas ${typeIcon}" style="font-size:2rem;color:#666;flex-shrink:0"></i>
                         <span>${item.name}</span>
                     </div>
-                    ${hasImg ? `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" onerror="this.classList.add('img-error')">` : ''}
+                    ${hasImg ? `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" onerror="${onErrFn}">` : ''}
                     <div class="poster-overlay">
                         <h4 class="font-bold text-white text-sm leading-tight mb-2 line-clamp-2">${item.name}</h4>
                         <div class="flex justify-between items-center">
@@ -1019,6 +1200,55 @@ const app = {
         const playBtnHtml = playUrl ? `<button onclick="player.start('${playUrl}', '${title.replace(/'/g, "\\'")}', 'movie')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded flex items-center transition transform hover:scale-105"><i class="fas fa-play mr-3"></i> REPRODUCIR</button>` : '';
         return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col"><h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1><p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p><div class="mb-6">${playBtnHtml}</div><div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div></div>`;
     },
+    fetchSeriesCover: async (imgEl, sid) => {
+        imgEl.classList.add('img-error');
+        if (STATE.sourceType !== 'xtream' || !STATE.creds) return;
+        const { s, u, p } = STATE.creds;
+        try {
+            const info = await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`).then(r => r.json());
+            const cover = info.info?.cover;
+            if (cover && cover.length > 5 && imgEl.isConnected) {
+                imgEl.src = cover;
+                imgEl.classList.remove('img-error');
+            }
+        } catch(e) {}
+    },
+
+    initSeriesCoverObserver: () => {
+        if (STATE.sourceType !== 'xtream' || !STATE.creds) return;
+        const { s, u, p } = STATE.creds;
+        const contentArea = document.getElementById('contentArea');
+        const observer = new IntersectionObserver(async (entries) => {
+            for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+                const card = entry.target;
+                observer.unobserve(card);
+                // Si ya tiene imagen visible, no hacer nada
+                if (card.querySelector('.poster-img:not(.img-error)')) continue;
+                const sid = card.dataset.sid;
+                if (!sid) continue;
+                try {
+                    const info = await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`).then(r => r.json());
+                    const cover = info.info?.cover;
+                    if (cover && cover.length > 5 && card.isConnected) {
+                        const oldErr = card.querySelector('.img-error');
+                        if (oldErr) oldErr.remove();
+                        const img = document.createElement('img');
+                        img.src = cover;
+                        img.className = 'poster-img object-cover';
+                        img.loading = 'lazy';
+                        img.onerror = () => img.classList.add('img-error');
+                        card.appendChild(img);
+                    }
+                } catch(e) {}
+            }
+        }, { root: contentArea, rootMargin: '300px' });
+
+        document.querySelectorAll('.poster-card[data-sid]').forEach(card => {
+            if (!card.querySelector('.poster-img:not(.img-error)')) observer.observe(card);
+        });
+    },
+
     closeDetail: () => { DOM.detailModal.classList.add('hidden'); DOM.detailModal.classList.remove('flex'); },
     openSettings: () => { DOM.settingsModal.classList.remove('hidden'); DOM.settingsModal.classList.add('flex'); },
     closeSettings: () => { DOM.settingsModal.classList.add('hidden'); DOM.settingsModal.classList.remove('flex'); }
