@@ -540,6 +540,8 @@ const recorder = {
     },
 
     stop: () => {
+        // Cancelar el loop de canvas si estaba activo
+        if (recorder._cancelDraw) { recorder._cancelDraw(); recorder._cancelDraw = null; }
         if(recorder.mediaRecorder && recorder.mediaRecorder.state !== 'inactive') {
             recorder.mediaRecorder.stop();
         }
@@ -1640,15 +1642,56 @@ const player = {
 
     toggleRecording: () => {
         if(!recorder.isRecording) {
-            try { 
-                const stream = DOM.video.captureStream();
-                recorder.start(stream); 
-            } catch (e) { 
+            try {
+                const video = DOM.video;
+
+                // ── Canvas capture ──────────────────────────────────────────
+                // captureStream() sobre vídeo HLS/MSE devuelve frames negros
+                // en la mayoría de navegadores. Dibujamos manualmente en canvas.
+                const canvas = document.createElement('canvas');
+                canvas.width  = video.videoWidth  || 1280;
+                canvas.height = video.videoHeight || 720;
+                const ctx = canvas.getContext('2d');
+
+                let rafId;
+                const drawLoop = () => {
+                    // Actualizar dimensiones si cambian (p.ej. cambio de calidad)
+                    if (video.videoWidth  > 0 && canvas.width  !== video.videoWidth)  canvas.width  = video.videoWidth;
+                    if (video.videoHeight > 0 && canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    rafId = requestAnimationFrame(drawLoop);
+                };
+                drawLoop();
+                recorder._cancelDraw = () => cancelAnimationFrame(rafId);
+
+                const canvasStream = canvas.captureStream(30); // 30 fps
+
+                // ── Audio capture via AudioContext ───────────────────────────
+                // Reutilizamos el contexto si ya existe para la misma sesión
+                // (createMediaElementSource solo puede llamarse UNA vez por elemento)
+                if (!recorder._audioCtx) {
+                    recorder._audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+                    recorder._audioSrc   = recorder._audioCtx.createMediaElementSource(video);
+                    recorder._audioDest  = recorder._audioCtx.createMediaStreamDestination();
+                    recorder._audioSrc.connect(recorder._audioDest);
+                    recorder._audioSrc.connect(recorder._audioCtx.destination); // seguir oyendo el audio
+                }
+                // Reanudar contexto si estaba suspendido (política autoplay)
+                if (recorder._audioCtx.state === 'suspended') recorder._audioCtx.resume();
+
+                const combinedStream = new MediaStream([
+                    ...canvasStream.getVideoTracks(),
+                    ...recorder._audioDest.stream.getAudioTracks()
+                ]);
+
+                recorder.start(combinedStream);
+            } catch (e) {
                 console.error(e);
-                app.showToast("Error: El navegador bloquea la grabación de este formato (CORS)."); 
+                app.showToast("Error al iniciar grabación: " + e.message);
             }
-        } else { 
-            recorder.stop(); 
+        } else {
+            if (recorder._cancelDraw) { recorder._cancelDraw(); recorder._cancelDraw = null; }
+            recorder.stop();
         }
     },
     togglePlay: () => {
