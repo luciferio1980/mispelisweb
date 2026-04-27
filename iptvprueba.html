@@ -540,30 +540,30 @@ const recorder = {
     },
 
     stop: async () => {
-        // ─── Stop modo HLS ────────────────────────────────────────────────
-        if (recorder._mode === 'hls') {
+        // ─── Stop modo HLS o stream directo ──────────────────────────────────
+        if (recorder._mode === 'hls' || recorder._mode === 'direct') {
             recorder.isRecording = false;
             DOM.recDot.classList.remove('rec-dot');
             DOM.recText.innerText = "Grabar";
             DOM.recIndicator.classList.add('hidden');
 
-            // Des-registrar el listener
             if (recorder._fragHandler && STATE.hls) {
                 STATE.hls.off(Hls.Events.FRAG_LOADED, recorder._fragHandler);
             }
-            recorder._fragHandler  = null;
-            recorder._fetchedUrls  = null;
-            recorder._mode         = null;
+            recorder._fragHandler = null;
+            recorder._fetchedUrls = null;
+            const mode = recorder._mode;
+            recorder._mode = null;
 
             const segments = recorder._segments || [];
             recorder._segments = [];
 
             if (!segments.length) {
-                app.showToast('No se capturaron segmentos. Comprueba la consola.');
+                app.showToast('No se capturaron datos. El servidor puede no tener CORS activado.');
                 return;
             }
 
-            app.showToast(`Procesando grabación (${segments.length} segmentos)...`);
+            app.showToast(`Procesando grabación (${segments.length} fragmentos)...`);
             const blob     = new Blob(segments, { type: 'video/mp2t' });
             const fileName = `streamflix_${Date.now()}.ts`;
 
@@ -583,7 +583,7 @@ const recorder = {
             return;
         }
 
-        // ─── Stop modo canvas+audio (MediaRecorder) ───────────────────────
+        // ─── Stop modo MediaRecorder (legacy) ────────────────────────────────
         if (recorder._cancelDraw) { recorder._cancelDraw(); recorder._cancelDraw = null; }
         if (recorder.mediaRecorder && recorder.mediaRecorder.state !== 'inactive') {
             recorder.mediaRecorder.stop();
@@ -706,7 +706,7 @@ const app = {
                     if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
 
                     // Aseguramos que los canales Xtream tengan un ID para EPG
-                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon), _origImg: x.stream_icon || '', url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
+                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon), _origImg: x.stream_icon || '', url: `${s}/live/${u}/${p}/${x.stream_id}.m3u8`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
                     STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon || x.cover), _origImg: x.stream_icon || x.cover || '', url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
                     const resolveImg = (url) => {
                         if (!url || url.length < 5 || url === '0') return '';
@@ -1690,16 +1690,13 @@ const player = {
             return;
         }
 
-        // ─── MODO HLS: captura de segmentos via fetch ─────────────────────────
-        // Escuchamos FRAG_LOADED. Si el payload ya está disponible (hls.js antiguo)
-        // lo usamos directamente; si está vacío (hls.js moderno lo transfirió al
-        // worker), hacemos un fetch independiente del mismo URL.
-        // Este método funciona con cualquier stream IPTV sin restricciones CORS.
+        // ─── MODO HLS: captura de segmentos via FRAG_LOADED + fetch ───────────
+        // Activado cuando la URL contiene .m3u8 y hls.js está gestionando el stream.
         if (STATE.hls) {
-            recorder._segments   = [];
+            recorder._segments    = [];
             recorder._fetchedUrls = new Set();
-            recorder._mode       = 'hls';
-            recorder.isRecording = true;
+            recorder._mode        = 'hls';
+            recorder.isRecording  = true;
 
             recorder._fragHandler = async (event, data) => {
                 if (!recorder.isRecording || !data || !data.frag) return;
@@ -1707,71 +1704,70 @@ const player = {
                 if (!url || recorder._fetchedUrls.has(url)) return;
                 recorder._fetchedUrls.add(url);
 
-                // Intento 1: usar el payload que ya tiene hls.js en memoria
+                // Intento 1: payload en memoria (hls.js antiguo)
                 try {
                     const p = data.payload;
                     if (p && p.byteLength > 0) {
                         recorder._segments.push(new Uint8Array(p.slice(0)));
                         return;
                     }
-                } catch (_) { /* no hay payload */ }
+                } catch (_) {}
 
-                // Intento 2: re-descargar el segmento con fetch
+                // Intento 2: re-fetch del segmento (hls.js moderno transfiere al worker)
                 try {
                     const res = await fetch(url, { credentials: 'omit' });
                     if (res.ok) {
                         const buf = await res.arrayBuffer();
-                        if (buf.byteLength > 0 && recorder.isRecording) {
+                        if (buf.byteLength > 0 && recorder.isRecording)
                             recorder._segments.push(new Uint8Array(buf));
-                        }
                     }
                 } catch (e) { console.warn('Frag fetch failed:', url, e); }
             };
 
             STATE.hls.on(Hls.Events.FRAG_LOADED, recorder._fragHandler);
-
             DOM.recDot.classList.add('rec-dot');
             const where = STATE.driveToken ? 'NUBE (Drive)' : (recorder.dirHandle ? 'DISCO LOCAL' : 'MEMORIA');
             DOM.recText.innerText = `GRABANDO (${where})`;
-            app.showToast(`Grabando en: ${where} — formato .ts`);
+            app.showToast(`Grabando HLS → .ts en: ${where}`);
             return;
         }
 
-        // ─── FALLBACK canvas+audio para streams directos (no HLS) ────────────
-        try {
-            const video = DOM.video;
-            const canvas = document.createElement('canvas');
-            canvas.width  = video.videoWidth  || 1280;
-            canvas.height = video.videoHeight || 720;
-            const ctx = canvas.getContext('2d');
-            let rafId;
-            const drawLoop = () => {
-                if (video.videoWidth > 0 && canvas.width !== video.videoWidth)   canvas.width  = video.videoWidth;
-                if (video.videoHeight > 0 && canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                rafId = requestAnimationFrame(drawLoop);
-            };
-            drawLoop();
-            recorder._cancelDraw = () => cancelAnimationFrame(rafId);
-            const canvasStream = canvas.captureStream(30);
-            if (!recorder._audioCtx) {
-                recorder._audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
-                recorder._audioSrc  = recorder._audioCtx.createMediaElementSource(video);
-                recorder._audioDest = recorder._audioCtx.createMediaStreamDestination();
-                recorder._audioSrc.connect(recorder._audioDest);
-                recorder._audioSrc.connect(recorder._audioCtx.destination);
-            }
-            if (recorder._audioCtx.state === 'suspended') recorder._audioCtx.resume();
-            const combinedStream = new MediaStream([
-                ...canvasStream.getVideoTracks(),
-                ...recorder._audioDest.stream.getAudioTracks()
-            ]);
-            recorder._mode = 'mediarecorder';
-            recorder.start(combinedStream);
-        } catch (e) {
-            console.error(e);
-            app.showToast('Error al grabar: ' + e.message);
+        // ─── MODO STREAM DIRECTO: fetch continuo del src del video ───────────
+        // Para streams M3U con URL directa .ts sin hls.js (requiere CORS en servidor)
+        if (DOM.video.src && !DOM.video.src.startsWith('blob:')) {
+            const directUrl = DOM.video.src;
+            recorder._segments    = [];
+            recorder._mode        = 'direct';
+            recorder.isRecording  = true;
+            DOM.recDot.classList.add('rec-dot');
+            const where = STATE.driveToken ? 'NUBE (Drive)' : (recorder.dirHandle ? 'DISCO LOCAL' : 'MEMORIA');
+            DOM.recText.innerText = `GRABANDO (${where})`;
+            app.showToast(`Grabando stream directo → .ts en: ${where}`);
+
+            (async () => {
+                try {
+                    const res = await fetch(directUrl, { credentials: 'omit' });
+                    if (!res.ok || !res.body) throw new Error('No se puede leer el stream');
+                    const reader = res.body.getReader();
+                    while (recorder.isRecording) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        if (value) recorder._segments.push(value);
+                    }
+                    reader.cancel();
+                } catch (e) {
+                    console.error('Direct stream capture failed:', e);
+                    app.showToast('No se puede grabar: el servidor no permite CORS.');
+                    recorder.isRecording = false;
+                    recorder._mode = null;
+                    DOM.recDot.classList.remove('rec-dot');
+                    DOM.recText.innerText = 'Grabar';
+                }
+            })();
+            return;
         }
+
+        app.showToast('No hay stream activo para grabar.');
     },
     togglePlay: () => {
         if(DOM.video.paused) { DOM.video.play(); DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-play text-6xl animate-ping'; setTimeout(()=>document.getElementById('centerPlayIcon').className='fas fa-play text-6xl opacity-0 transition-opacity', 500); } 
