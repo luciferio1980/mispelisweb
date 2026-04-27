@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFlix Player - Cloud Recording v5.3.1 (EPG Fix)</title>
+    <title>StreamFlix Player - Cloud Recording v5.4.4 (Translated Synopsis Match)</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -111,7 +111,7 @@
             <div id="loginStatus" class="mt-4 text-sm text-center text-gray-400 min-h-[20px]"></div>
             <div class="mt-6 pt-4 border-t border-gray-700 flex justify-between text-xs text-gray-500">
                 <button onclick="app.clearData()" class="hover:text-white underline">Borrar Datos</button>
-                <span>v5.3.1 CloudRec</span>
+                <span>v5.4.4 CloudRec</span>
             </div>
         </div>
     </div>
@@ -309,7 +309,19 @@
 <script>
 /**
  * STREAMFLIX CORE ENGINE
- * V5.3.1 - EPG Data Decoding Fix
+ * V5.4.4 - Translated Synopsis Match
+ *  · Carátulas de series desde Cinemeta (Stremio): HTTPS, sin clave, sin ORB.
+ *  · Matching en tres pasos:
+ *      1) NOMBRE: F1 sobre tokens normalizados, bonus por año, umbral 0.6.
+ *      2) SINOPSIS ORIGINAL (idioma del Xtream): tokens distintivos
+ *         (nombres propios + números). Bueno cuando hay personajes/lugares
+ *         no traducidos (Walter White, Hawkins, 1983…).
+ *      3) SINOPSIS TRADUCIDA AL INGLÉS: si la fase 2 no llega al umbral,
+ *         se traduce el plot al inglés (Google Translate) y se reintenta.
+ *         Útil para series donde TODO se traduce ("El Profesor" ↔ "The Professor").
+ *  · Las descripciones de los candidatos se descargan en paralelo.
+ *  · Cache en memoria por sid, nombre limpio, imdb_id y traducciones.
+ *  · Si nada cuadra: placeholder estilizado (mejor eso que carátula errónea).
  */
 
 // --- TU CLIENT ID DE GOOGLE CONFIGURADO ---
@@ -651,8 +663,8 @@ const app = {
                     if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
 
                     // Aseguramos que los canales Xtream tengan un ID para EPG
-                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon, url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
-                    STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: x.stream_icon || x.cover, url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
+                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon), _origImg: x.stream_icon || '', url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
+                    STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon || x.cover), _origImg: x.stream_icon || x.cover || '', url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
                     const resolveImg = (url) => {
                         if (!url || url.length < 5 || url === '0') return '';
                         if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -661,7 +673,8 @@ const app = {
                     };
                     STATE.data.series = ser.map(x => {
                         const rawImg = x.cover || (Array.isArray(x.backdrop_path) ? x.backdrop_path[0] : x.backdrop_path) || x.stream_icon || '';
-                        return { id: x.series_id, name: x.name, img: resolveImg(rawImg), url: null, type: 'series', plot: x.plot };
+                        const resolved = resolveImg(rawImg);
+                        return { id: x.series_id, name: x.name, img: app.proxyImg(resolved), _origImg: resolved, url: null, type: 'series', plot: x.plot };
                     });
                     
                     localStorage.setItem('sf_creds', JSON.stringify({ type: 'xtream', server:s, username:u, password:p }));
@@ -700,6 +713,43 @@ const app = {
         }
     },
     clearData: () => { localStorage.clear(); location.reload(); },
+
+    // Enruta imágenes HTTP a través de un proxy HTTPS (el mismo proxy CORS que ya
+     // usa la app para las llamadas API), evitando "mixed content" y ORB.
+    // - URLs HTTPS: se devuelven sin tocar.
+    // - URLs HTTP: se enrutan por https://miproxyiptv.onrender.com/<url>.
+    // - URLs vacías o '0': devuelven '' para que hasImg sea false.
+    proxyImg: (url) => {
+        if (!url || typeof url !== 'string') return '';
+        url = url.trim();
+        if (url.length < 5 || url === '0') return '';
+        if (/^https:\/\//i.test(url)) return url;
+        if (/^http:\/\//i.test(url)) {
+            return 'https://miproxyiptv.onrender.com/' + url;
+        }
+        return url;
+    },
+
+    // Fallback en cascada cuando una imagen <img> dispara onerror.
+    // Stage 0 → probar con weserv.nl como segundo proxy.
+    // Stage 1 → marcar img-error y, si es serie, reobservar la card para usar get_series_info.
+    imgFallback: (img) => {
+        if (!img) return;
+        const stage = parseInt(img.dataset.stage || '0', 10);
+        const orig  = img.dataset.orig || '';
+        try { console.warn('[StreamFlix] Imagen falló (stage ' + stage + '):', img.src); } catch(e) {}
+
+        if (stage === 0 && orig && /^https?:\/\//i.test(orig)) {
+            img.dataset.stage = '1';
+            const stripped = orig.replace(/^https?:\/\//i, '');
+            img.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(stripped);
+            return;
+        }
+        // Sin más fallbacks de URL: marcamos error y delegamos al observer si es serie.
+        img.classList.add('img-error');
+        const card = img.closest('.poster-card');
+        if (card && card.dataset.sid) app._observeSeriesCard(card);
+    },
     
     nav: (view) => {
         STATE.view = view;
@@ -1232,16 +1282,15 @@ const app = {
                 el.className = 'poster-card group';
                 if (item.type === 'series' && item.id) el.dataset.sid = item.id;
                 const objFitClass = item.type === 'live' ? 'object-contain p-2' : 'object-cover';
-                const onErrFn = (item.type === 'series' && item.id && STATE.sourceType === 'xtream')
-                    ? `app.fetchSeriesCover(this,'${item.id}')`
-                    : `this.classList.add('img-error')`;
                 const typeIcon = item.type === 'series' ? 'fa-tv' : (item.type === 'movie' ? 'fa-film' : 'fa-broadcast-tower');
+                // Guardamos la URL original sin proxy en data-orig para permitir cascada de fallbacks.
+                const escapedOrig = (item._origImg || imgUrl || '').replace(/"/g, '&quot;');
                 el.innerHTML = `
                     <div class="poster-fallback" style="flex-direction:column;gap:8px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)">
                         <i class="fas ${typeIcon}" style="font-size:2rem;color:#666;flex-shrink:0"></i>
                         <span>${item.name}</span>
                     </div>
-                    ${hasImg ? `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" onerror="${onErrFn}">` : ''}
+                    ${hasImg ? `<img src="${imgUrl}" loading="lazy" class="poster-img ${objFitClass}" data-orig="${escapedOrig}" onerror="app.imgFallback(this)">` : ''}
                     <div class="poster-overlay">
                         <h4 class="font-bold text-white text-sm leading-tight mb-2 line-clamp-2">${item.name}</h4>
                         <div class="flex justify-between items-center">
@@ -1284,7 +1333,24 @@ const app = {
             if (STATE.sourceType === 'xtream') {
                 const { s, u, p } = STATE.creds;
                 if (item.type === 'series') {
+                    // Resolver la cover para el modal:
+                    //   1) cache _seriesCoverCache (ya rellenada si la serie estaba visible en la grid)
+                    //   2) Cinemeta por nombre + sinopsis (HTTPS, sin proxy, sin ORB)
+                    //   3) cover del Xtream (con proxyImg) o item.img como último recurso
+                    let coverUrl = '';
+                    if (app._seriesCoverCache[item.id]) {
+                        coverUrl = app._seriesCoverCache[item.id];
+                    } else {
+                        coverUrl = await app.fetchSeriesCoverFromMeta(item.name, item.plot || '');
+                        if (coverUrl) app._seriesCoverCache[item.id] = coverUrl;
+                    }
+
                     const info = await (await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${item.id}`)).json();
+
+                    if (!coverUrl) {
+                        coverUrl = app.proxyImg(info.info.cover) || item.img || '';
+                    }
+
                     let episodesHtml = '';
                     for (const k in info.episodes) {
                         episodesHtml += `<h3 class="text-lg font-bold mt-4 mb-2 text-gray-300">T${k}</h3><div class="space-y-1">`;
@@ -1294,11 +1360,11 @@ const app = {
                         episodesHtml += `</div>`;
                     }
                     const plot = await app.translate(info.info.plot || "Sin sinopsis.");
-                    htmlContent = app.buildDetailHtml(info.info.cover || item.img, info.info.name, plot, episodesHtml, null);
+                    htmlContent = app.buildDetailHtml(coverUrl, info.info.name, plot, episodesHtml, null);
                 } else {
                     const info = await (await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_vod_info&vod_id=${item.id}`)).json();
                     const plot = await app.translate(info.info.plot || "Sin descripción.");
-                    htmlContent = app.buildDetailHtml(info.info.movie_image, info.info.name, plot, '', `${s}/movie/${u}/${p}/${info.movie_data.stream_id}.${info.movie_data.container_extension}`);
+                    htmlContent = app.buildDetailHtml(app.proxyImg(info.info.movie_image), info.info.name, plot, '', `${s}/movie/${u}/${p}/${info.movie_data.stream_id}.${info.movie_data.container_extension}`);
                 }
             } else {
                 htmlContent = app.buildDetailHtml(item.img, item.name, "Info no disponible en M3U.", '', item.url);
@@ -1312,51 +1378,436 @@ const app = {
         return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col"><h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1><p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p><div class="mb-6">${playBtnHtml}</div><div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div></div>`;
     },
     fetchSeriesCover: async (imgEl, sid) => {
+        // Función mantenida por compatibilidad. Marca la imagen como errónea y delega al observer.
+        if (imgEl) imgEl.classList.add('img-error');
+        const card = imgEl ? imgEl.closest('.poster-card') : null;
+        if (card && card.dataset.sid) app._observeSeriesCard(card);
+    },
+
+    // Marca una imagen de serie como errónea y reobserva su card para que el observer reintente.
+    markSeriesImageError: (imgEl) => {
+        if (!imgEl) return;
         imgEl.classList.add('img-error');
-        if (STATE.sourceType !== 'xtream' || !STATE.creds) return;
-        const { s, u, p } = STATE.creds;
-        try {
-            const info = await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`).then(r => r.json());
-            const cover = info.info?.cover;
-            if (cover && cover.length > 5 && imgEl.isConnected) {
-                imgEl.src = cover;
-                imgEl.classList.remove('img-error');
+        const card = imgEl.closest('.poster-card');
+        if (card && card.dataset.sid) app._observeSeriesCard(card);
+    },
+
+    // Cache de covers ya buscados por sid para evitar peticiones duplicadas.
+    _seriesCoverCache: {},
+
+    // Observa una sola card con el observer global de series (lo crea si no existe).
+    _observeSeriesCard: (card) => {
+        if (!card || !card.dataset.sid) return;
+        if (!STATE._seriesObserver) app._buildSeriesObserver();
+        if (STATE._seriesObserver) STATE._seriesObserver.observe(card);
+    },
+
+    // Construye (una sola vez) el IntersectionObserver para covers de series.
+    _buildSeriesObserver: () => {
+        if (STATE._seriesObserver) return;
+        const contentArea = document.getElementById('contentArea');
+        if (!contentArea) return;
+
+        STATE._seriesObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const card = entry.target;
+                STATE._seriesObserver.unobserve(card);
+                app._loadSeriesCover(card);
+            });
+        }, { root: contentArea, rootMargin: '300px' });
+    },
+
+    // Limpia el nombre de una serie (quita tags, sufijos, idioma, calidad, año, etc.)
+    // para mejorar el match al buscar metadatos en servicios externos.
+    _cleanSeriesName: (name) => {
+        if (!name || typeof name !== 'string') return '';
+        return name
+            .replace(/\s*[\[\(].*?[\]\)]\s*/g, ' ')                 // [HD], (2008), etc.
+            .replace(/\s*-\s*S\d+(\s*E\d+)?.*$/i, '')               // - S01, S01E01
+            .replace(/\s+S\d+(\s*E\d+)?\s*$/i, '')                  // S01 al final
+            .replace(/\s*\|.*$/, '')                                // | algo (multi, etc.)
+            .replace(/\s*-\s*\d+ª?\s*temporada.*$/i, '')            // - 1ª Temporada
+            .replace(/\s*-\s*temporada.*$/i, '')                    // - Temporada x
+            .replace(/\s*-\s*season.*$/i, '')                       // - Season x
+            .replace(/\s*-\s*\d{4}\s*$/, '')                        // - 2020 al final
+            .replace(/\s+(HD|FHD|UHD|4K|SD|VOSE|VO|LATINO|CASTELLANO|ESPAÑOL|ESPANOL|SUB|DUAL)\s*$/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+
+    // Normaliza una cadena para comparación robusta:
+    //  · minúsculas
+    //  · sin acentos / diacríticos
+    //  · sin puntuación
+    //  · sin artículos comunes (el, la, the, le, der, etc.)
+    _normalizeForMatch: (s) => {
+        if (!s) return '';
+        return String(s)
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/&/g, ' and ')
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .replace(/\b(the|el|la|los|las|le|les|der|die|das|a|an|los|un|una|il)\b/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+
+    // Score F1 de similitud entre dos nombres tokenizados (0..1).
+    // Equilibra recall (todos los tokens del query están en el match)
+    // y precision (el match no tiene muchos tokens extra).
+    _nameMatchScore: (queryName, candidateName) => {
+        const qNorm = app._normalizeForMatch(queryName);
+        const cNorm = app._normalizeForMatch(candidateName);
+        if (!qNorm || !cNorm) return 0;
+        if (qNorm === cNorm) return 1;
+
+        const qTokens = qNorm.split(' ').filter(t => t.length > 1);
+        const cTokens = cNorm.split(' ').filter(t => t.length > 1);
+        if (qTokens.length === 0 || cTokens.length === 0) return 0;
+
+        const qSet = new Set(qTokens);
+        const cSet = new Set(cTokens);
+        let inter = 0;
+        qSet.forEach(t => { if (cSet.has(t)) inter++; });
+        if (inter === 0) return 0;
+
+        const recall    = inter / qSet.size;
+        const precision = inter / cSet.size;
+        return (2 * recall * precision) / (recall + precision);
+    },
+
+    // Elige el meta de Cinemeta cuyo nombre se parece más al query.
+    // Bonus si el año coincide. Devuelve null si ninguno supera el umbral mínimo.
+    _pickBestMetaMatch: (metas, queryName, queryYear) => {
+        if (!Array.isArray(metas) || metas.length === 0) return null;
+        const MIN_SCORE = 0.6;
+        let best = null;
+        let bestScore = 0;
+
+        for (const m of metas) {
+            if (!m || !m.name) continue;
+            let score = app._nameMatchScore(queryName, m.name);
+
+            // Bonus si el año del query coincide con el año de Cinemeta (releaseInfo: "2008" o "2008-2013")
+            if (queryYear && m.releaseInfo) {
+                const metaYear = parseInt(String(m.releaseInfo).match(/\d{4}/) || ['0'], 10);
+                if (metaYear && Math.abs(metaYear - queryYear) <= 1) score += 0.15;
+                else if (metaYear) score -= 0.10; // penaliza si el año es muy distinto
             }
-        } catch(e) {}
+
+            if (score > bestScore) { bestScore = score; best = m; }
+        }
+        return bestScore >= MIN_SCORE ? best : null;
+    },
+
+    // Devuelve los metas con sus scores de nombre (+ bonus de año), ordenados desc.
+    _scoreMetas: (metas, queryName, queryYear) => {
+        return (metas || []).map(m => {
+            let score = app._nameMatchScore(queryName, m && m.name ? m.name : '');
+            if (queryYear && m && m.releaseInfo) {
+                const metaYear = parseInt(String(m.releaseInfo).match(/\d{4}/) || ['0'], 10);
+                if (metaYear && Math.abs(metaYear - queryYear) <= 1) score += 0.15;
+                else if (metaYear) score -= 0.10;
+            }
+            return { meta: m, score };
+        }).sort((a, b) => b.score - a.score);
+    },
+
+    // Extrae tokens DISTINTIVOS de un texto (nombres propios y números).
+    // Estos tokens tienden a mantenerse iguales entre idiomas (Walter, White, 1985, NASA).
+    _extractKeywords: (text) => {
+        const out = new Set();
+        if (!text || typeof text !== 'string') return out;
+
+        // Nombres propios: palabras que empiezan por mayúscula (incluye acentos y Ñ).
+        const props = text.match(/[A-ZÁÉÍÓÚÑÜ][\wáéíóúñü]{2,}/gu) || [];
+        const stopCap = new Set([
+            // ES (palabras al inicio de oración)
+            'el','la','los','las','un','una','unos','unas','del','con','por','sin','para','sobre','entre',
+            'que','este','esta','estos','estas','sus','tras','ante','bajo','desde','hasta','segun',
+            'aunque','cuando','donde','como','porque','pero','sino','mientras','siempre','nunca',
+            'tambien','despues','luego','antes','muy','mas','menos','solo','algunos','todos','todas',
+            'durante','tras','sera','fue','son','esta','estan','han','tiene','hace','dice','vez',
+            'asi','aqui','alli','alla','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez',
+            // EN
+            'the','a','an','this','that','these','those','his','her','its','their','our','your','my',
+            'some','any','all','every','many','few','much','most','more','less','from','with','about',
+            'after','before','during','through','between','among','within','without','against','because',
+            'although','though','since','until','unless','while','where','when','why','how','what',
+            'who','they','them','were','been','have','will','would','could','should','must',
+            'one','two','three','four','five','six','seven','eight','nine','ten'
+        ]);
+        props.forEach(p => {
+            const norm = p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (norm.length >= 3 && !stopCap.has(norm)) out.add(norm);
+        });
+
+        // Números de al menos 2 dígitos (años, edades, capítulos).
+        const nums = text.match(/\b\d{2,}\b/g) || [];
+        nums.forEach(n => out.add(n));
+
+        return out;
+    },
+
+    // Similitud entre dos sinopsis (overlap coefficient sobre tokens distintivos).
+    // Se usa overlap (no Jaccard) porque las sinopsis suelen tener longitudes muy distintas
+    // entre idiomas y el solapamiento sobre el conjunto más pequeño es más informativo.
+    _synopsisSimilarity: (a, b) => {
+        const ta = app._extractKeywords(a);
+        const tb = app._extractKeywords(b);
+        const minSize = Math.min(ta.size, tb.size);
+        if (minSize < 2) return 0;
+        let inter = 0;
+        ta.forEach(t => { if (tb.has(t)) inter++; });
+        if (inter === 0) return 0;
+        return inter / minSize;
+    },
+
+    // Cache de traducciones al inglés (clave = primeros 200 chars del texto).
+    _plotTranslateCache: {},
+
+    // Traduce un texto al inglés vía Google Translate (auto-detect → en).
+    // Devuelve el texto traducido o '' si falla. Resultados cacheados.
+    _translateToEnglish: async (text) => {
+        if (!text || typeof text !== 'string' || text.length < 10) return '';
+        const key = text.substring(0, 200);
+        if (app._plotTranslateCache[key] !== undefined) return app._plotTranslateCache[key] || '';
+        try {
+            const ctrl  = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 7000);
+            const url   = 'https://miproxyiptv.onrender.com/https://translate.googleapis.com/translate_a/single' +
+                          '?client=gtx&sl=auto&tl=en&dt=t&q=' + encodeURIComponent(text);
+            const res   = await fetch(url, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if (!res.ok) { app._plotTranslateCache[key] = null; return ''; }
+            const data = await res.json();
+            const translated = data && data[0] ? data[0].map(x => x[0]).join('') : '';
+            app._plotTranslateCache[key] = translated || null;
+            return translated || '';
+        } catch(e) {
+            app._plotTranslateCache[key] = null;
+            return '';
+        }
+    },
+
+    // Cache de descripciones de Cinemeta por imdb_id (para no repetir peticiones).
+    _metaDescCache: {},
+
+    // Obtiene la descripción y el poster de un meta de Cinemeta por imdb_id.
+    _fetchMetaFull: async (imdbId) => {
+        if (!imdbId) return null;
+        if (app._metaDescCache[imdbId] !== undefined) return app._metaDescCache[imdbId];
+        try {
+            const ctrl  = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 6000);
+            const url   = 'https://v3-cinemeta.strem.io/meta/series/' + encodeURIComponent(imdbId) + '.json';
+            const res   = await fetch(url, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if (!res.ok) { app._metaDescCache[imdbId] = null; return null; }
+            const data = await res.json();
+            const meta = data && data.meta ? data.meta : null;
+            app._metaDescCache[imdbId] = meta;
+            return meta;
+        } catch(e) {
+            app._metaDescCache[imdbId] = null;
+            return null;
+        }
+    },
+
+    // Cache de búsquedas de Cinemeta para no repetir consultas por nombre.
+    _metaSearchCache: {},
+
+    // Busca la cover de una serie en Cinemeta (Stremio) - HTTPS, sin clave, con CORS abierto.
+    // Estrategia:
+    //   1) Match por nombre (umbral ≥ 0.6 con bonus por año).
+    //   2) Si no hay match y disponemos de plot, comparar sinopsis (tokens distintivos)
+    //      con los top candidatos del search (≥ 0.25 de score por nombre).
+    //   3) Si nada cuadra, devolver '' para que se vea el placeholder.
+    fetchSeriesCoverFromMeta: async (name, plot) => {
+        const cleaned = app._cleanSeriesName(name);
+        if (!cleaned) return '';
+        const key = cleaned.toLowerCase();
+        if (app._metaSearchCache[key] !== undefined) return app._metaSearchCache[key] || '';
+
+        // Año explícito en el nombre original (ej. "Foo (2018)")
+        const yearMatch = name.match(/\b(19|20)\d{2}\b/);
+        const year = yearMatch ? parseInt(yearMatch[0], 10) : null;
+
+        try {
+            const ctrl  = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 8000);
+            const url   = 'https://v3-cinemeta.strem.io/catalog/series/top/search=' + encodeURIComponent(cleaned) + '.json';
+            const res   = await fetch(url, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if (!res.ok) { app._metaSearchCache[key] = null; return ''; }
+            const data = await res.json();
+            if (!data || !Array.isArray(data.metas) || data.metas.length === 0) {
+                app._metaSearchCache[key] = null;
+                return '';
+            }
+
+            // 1) Intento rápido por NOMBRE
+            const best = app._pickBestMetaMatch(data.metas, cleaned, year);
+            if (best) {
+                const poster = best.poster || best.background || '';
+                app._metaSearchCache[key] = poster || null;
+                return poster || '';
+            }
+
+            // 2) Fallback por SINOPSIS (solo si tenemos plot del Xtream)
+            if (plot && typeof plot === 'string' && plot.length > 30) {
+                const candidates = app._scoreMetas(data.metas, cleaned, year)
+                    .filter(c => c.score >= 0.25)
+                    .slice(0, 4);
+
+                if (candidates.length > 0) {
+                    // Cargamos las descripciones de los candidatos en paralelo.
+                    const fullMetas = await Promise.all(
+                        candidates.map(c => app._fetchMetaFull(c.meta.id))
+                    );
+                    const candWithDesc = fullMetas.filter(m => m && m.description);
+
+                    let bestSyn = null;
+                    let bestSynScore = 0;
+                    let matchedVia = '';
+
+                    // 2a) Comparar con la sinopsis ORIGINAL del Xtream (en su idioma).
+                    for (const m of candWithDesc) {
+                        const sim = app._synopsisSimilarity(plot, m.description);
+                        if (sim > bestSynScore) { bestSynScore = sim; bestSyn = m; matchedVia = 'orig'; }
+                    }
+
+                    // 2b) Si no llega al umbral, traducir la sinopsis al inglés y reintentar.
+                    //     Útil cuando los nombres propios están traducidos en el Xtream
+                    //     (ej. "El Profesor" en español ↔ "The Professor" en Cinemeta).
+                    if (bestSynScore < 0.30 && candWithDesc.length > 0) {
+                        const plotEn = await app._translateToEnglish(plot);
+                        if (plotEn && plotEn.length > 30 && plotEn !== plot) {
+                            for (const m of candWithDesc) {
+                                const sim = app._synopsisSimilarity(plotEn, m.description);
+                                if (sim > bestSynScore) { bestSynScore = sim; bestSyn = m; matchedVia = 'translated'; }
+                            }
+                        }
+                    }
+
+                    if (bestSyn && bestSynScore >= 0.30) {
+                        const poster = bestSyn.poster || bestSyn.background || '';
+                        app._metaSearchCache[key] = poster || null;
+                        if (poster) {
+                            try { console.info('[StreamFlix] Match por sinopsis (' +
+                                Math.round(bestSynScore * 100) + '% ' + matchedVia + '): "' + cleaned +
+                                '" → "' + bestSyn.name + '"'); } catch(_) {}
+                        }
+                        return poster || '';
+                    }
+                }
+            }
+
+            app._metaSearchCache[key] = null;
+            return '';
+        } catch(e) {
+            try { console.warn('[StreamFlix] Cinemeta falló para "' + cleaned + '":', e.message); } catch(_) {}
+        }
+        app._metaSearchCache[key] = null;
+        return '';
+    },
+
+    // Obtiene la cover de una serie (con cache) y la pinta en la card.
+    // Estrategia:
+    //   1) Cinemeta (HTTPS, sin proxy, sin ORB) buscando por nombre limpio.
+    //   2) Fallback: get_series_info del Xtream (si Cinemeta no encuentra match).
+    _loadSeriesCover: async (card) => {
+        if (!card || !card.isConnected) return;
+        const sid = card.dataset.sid;
+        if (!sid) return;
+
+        // Si ya tiene una imagen cargada y visible, salir.
+        const current = card.querySelector('.poster-img:not(.img-error)');
+        if (current && current.complete && current.naturalWidth > 0) return;
+
+        // Helper para asignar la cover al card (reusa <img> existente o inserta uno antes del overlay)
+        const applyCover = (coverUrl) => {
+            if (!coverUrl || !card.isConnected) return;
+            let img = card.querySelector('.poster-img');
+            if (img) {
+                img.onerror = function() { this.classList.add('img-error'); };
+                img.onload  = function() { this.classList.remove('img-error'); };
+                img.classList.remove('img-error');
+                if (img.src !== coverUrl) img.src = coverUrl;
+            } else {
+                img = document.createElement('img');
+                img.className = 'poster-img object-cover';
+                img.loading = 'lazy';
+                img.onerror = function() { this.classList.add('img-error'); };
+                img.src = coverUrl;
+                const overlay = card.querySelector('.poster-overlay');
+                if (overlay && overlay.parentNode === card) card.insertBefore(img, overlay);
+                else card.appendChild(img);
+            }
+        };
+
+        // 1) Cache hit (cover ya resuelta para este sid)
+        if (app._seriesCoverCache[sid] !== undefined) {
+            const cached = app._seriesCoverCache[sid];
+            if (cached) applyCover(cached);
+            return;
+        }
+
+        // 2) Buscar el nombre y la sinopsis de la serie
+        const seriesItem = (STATE.data.series || []).find(s => String(s.id) === String(sid));
+        const seriesName = seriesItem ? seriesItem.name : '';
+        const seriesPlot = seriesItem ? (seriesItem.plot || '') : '';
+
+        // 3) Intentar primero con Cinemeta (Stremio) - HTTPS y sin issues de CORS/ORB.
+        //    Si el match por nombre falla, usa la sinopsis como segundo criterio.
+        let cover = '';
+        if (seriesName) {
+            cover = await app.fetchSeriesCoverFromMeta(seriesName, seriesPlot);
+        }
+
+        // 4) Fallback: get_series_info del Xtream (si está disponible)
+        if (!cover && STATE.sourceType === 'xtream' && STATE.creds) {
+            const { s, u, p } = STATE.creds;
+            try {
+                const info = await fetch(
+                    `https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`
+                ).then(r => r.json());
+
+                const inf = info && info.info ? info.info : {};
+                let raw = inf.cover || inf.cover_big || inf.movie_image || '';
+                if (!raw && Array.isArray(inf.backdrop_path) && inf.backdrop_path[0]) raw = inf.backdrop_path[0];
+                if (!raw && typeof inf.backdrop_path === 'string') raw = inf.backdrop_path;
+
+                if (raw && typeof raw === 'string') {
+                    raw = raw.trim();
+                    if (raw.length >= 5 && raw !== '0') {
+                        if (!/^https?:\/\//i.test(raw)) raw = raw.startsWith('/') ? (s + raw) : (s + '/' + raw);
+                        cover = app.proxyImg(raw);
+                    }
+                }
+            } catch(e) {}
+        }
+
+        app._seriesCoverCache[sid] = cover || null;
+        if (cover) applyCover(cover);
     },
 
     initSeriesCoverObserver: () => {
+        // Ahora el observer se dispara para TODAS las series con sid, no solo las que
+        // fallaron, porque Cinemeta puede ofrecer una carátula HTTPS incluso cuando
+        // la URL original del Xtream estaba bloqueada silenciosamente por mixed content/ORB.
         if (STATE.sourceType !== 'xtream' || !STATE.creds) return;
-        const { s, u, p } = STATE.creds;
-        const contentArea = document.getElementById('contentArea');
-        const observer = new IntersectionObserver(async (entries) => {
-            for (const entry of entries) {
-                if (!entry.isIntersecting) continue;
-                const card = entry.target;
-                observer.unobserve(card);
-                // Si ya tiene imagen visible, no hacer nada
-                if (card.querySelector('.poster-img:not(.img-error)')) continue;
-                const sid = card.dataset.sid;
-                if (!sid) continue;
-                try {
-                    const info = await fetch(`https://miproxyiptv.onrender.com/${s}/player_api.php?username=${u}&password=${p}&action=get_series_info&series_id=${sid}`).then(r => r.json());
-                    const cover = info.info?.cover;
-                    if (cover && cover.length > 5 && card.isConnected) {
-                        const oldErr = card.querySelector('.img-error');
-                        if (oldErr) oldErr.remove();
-                        const img = document.createElement('img');
-                        img.src = cover;
-                        img.className = 'poster-img object-cover';
-                        img.loading = 'lazy';
-                        img.onerror = () => img.classList.add('img-error');
-                        card.appendChild(img);
-                    }
-                } catch(e) {}
-            }
-        }, { root: contentArea, rootMargin: '300px' });
+        app._buildSeriesObserver();
+        if (!STATE._seriesObserver) return;
 
         document.querySelectorAll('.poster-card[data-sid]').forEach(card => {
-            if (!card.querySelector('.poster-img:not(.img-error)')) observer.observe(card);
+            const img = card.querySelector('.poster-img');
+            // Si la imagen ya está cargada correctamente con dimensiones reales, no observar.
+            if (img && !img.classList.contains('img-error') && img.complete && img.naturalWidth > 0) return;
+            // Si todavía está cargando, también la observamos (es barato y _loadSeriesCover
+            // verifica de nuevo antes de hacer fetch).
+            STATE._seriesObserver.observe(card);
         });
     },
 
