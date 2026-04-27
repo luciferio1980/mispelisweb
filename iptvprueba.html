@@ -706,7 +706,7 @@ const app = {
                     if(Array.isArray(liveCats)) liveCats.forEach(c => catMap[c.category_id] = c.category_name);
 
                     // Aseguramos que los canales Xtream tengan un ID para EPG
-                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon), _origImg: x.stream_icon || '', url: `${s}/live/${u}/${p}/${x.stream_id}.m3u8`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
+                    STATE.data.live = live.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon), _origImg: x.stream_icon || '', url: `${s}/live/${u}/${p}/${x.stream_id}.ts`, type: 'live', cat: catMap[x.category_id] || 'Otras' }));
                     STATE.data.movie = vod.map(x => ({ id: x.stream_id, name: x.name, img: app.proxyImg(x.stream_icon || x.cover), _origImg: x.stream_icon || x.cover || '', url: `${s}/movie/${u}/${p}/${x.stream_id}.${x.container_extension}`, type: 'movie', rating: x.rating }));
                     const resolveImg = (url) => {
                         if (!url || url.length < 5 || url === '0') return '';
@@ -1632,14 +1632,39 @@ const player = {
         DOM.video.src = '';
         if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
 
-        if(Hls.isSupported() && url.includes('.m3u8')) {
-            STATE.hls = new Hls({ xhrSetup: xhr => { xhr.withCredentials = false; } }); 
-            STATE.hls.loadSource(url); 
-            STATE.hls.attachMedia(DOM.video); 
-            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
-        } else { 
-            DOM.video.src = url; 
-            DOM.video.play(); 
+        // Intentamos HLS (.m3u8) para streams en vivo — permite grabación via FRAG_LOADED.
+        // Si el servidor no soporta CORS para XHR, hls.js fallará y usamos .ts directo.
+        const isLikelyHls = url.includes('.m3u8');
+        const canTryHls   = Hls.isSupported() && (isLikelyHls || (type === 'live' && (url.endsWith('.ts') || !url.match(/\.[a-z0-9]{2,4}$/))));
+        const hlsUrl      = isLikelyHls ? url : url.replace(/\.ts$/, '.m3u8').replace(/(\?|$)/, (m, q) => (url.endsWith('.ts') ? '' : q === '?' ? '?' : '') + (url.endsWith('.ts') ? '.m3u8' : ''));
+
+        // función auxiliar para calcular la URL .m3u8
+        const toM3u8 = (u) => {
+            if (u.includes('.m3u8')) return u;
+            if (u.includes('.ts'))   return u.replace('.ts', '.m3u8');
+            return u + '.m3u8';
+        };
+
+        const fallbackDirect = () => {
+            if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+            DOM.video.src = url;
+            DOM.video.play().catch(()=>{});
+        };
+
+        if (canTryHls) {
+            STATE.hls = new Hls({ xhrSetup: xhr => { xhr.withCredentials = false; } });
+            STATE.hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    console.warn('HLS fatal error, switching to direct playback:', data.type);
+                    fallbackDirect();
+                }
+            });
+            STATE.hls.loadSource(toM3u8(url));
+            STATE.hls.attachMedia(DOM.video);
+            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play().catch(()=>{}));
+        } else {
+            DOM.video.src = url;
+            DOM.video.play().catch(()=>{});
         }
 
         if (type === 'live' && id && STATE.creds) {
