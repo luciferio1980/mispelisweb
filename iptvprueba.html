@@ -1757,38 +1757,21 @@ const player = {
             return;
         }
 
-        // ─── MODO STREAM DIRECTO: fetch continuo del src del video ───────────
-        // Para streams M3U con URL directa .ts sin hls.js (requiere CORS en servidor)
-        if (DOM.video.src && !DOM.video.src.startsWith('blob:')) {
-            const directUrl = DOM.video.src;
-            recorder._segments    = [];
-            recorder._mode        = 'direct';
-            recorder.isRecording  = true;
-            DOM.recDot.classList.add('rec-dot');
-            const where = STATE.driveToken ? 'NUBE (Drive)' : (recorder.dirHandle ? 'DISCO LOCAL' : 'MEMORIA');
-            DOM.recText.innerText = `GRABANDO (${where})`;
-            app.showToast(`Grabando stream directo → .ts en: ${where}`);
-
-            (async () => {
-                try {
-                    const res = await fetch(directUrl, { credentials: 'omit' });
-                    if (!res.ok || !res.body) throw new Error('No se puede leer el stream');
-                    const reader = res.body.getReader();
-                    while (recorder.isRecording) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        if (value) recorder._segments.push(value);
-                    }
-                    reader.cancel();
-                } catch (e) {
-                    console.error('Direct stream capture failed:', e);
-                    app.showToast('No se puede grabar: el servidor no permite CORS.');
-                    recorder.isRecording = false;
-                    recorder._mode = null;
-                    DOM.recDot.classList.remove('rec-dot');
-                    DOM.recText.innerText = 'Grabar';
-                }
-            })();
+        // ─── MODO STREAM DIRECTO: captura via captureStream (sin CORS) ──────────
+        // Capturamos el stream ya decodificado por el <video>, evitando el bloqueo CORS
+        // que ocurre al hacer fetch() directo al servidor IPTV.
+        if (DOM.video.src) {
+            const captureMethod = DOM.video.captureStream || DOM.video.mozCaptureStream;
+            if (!captureMethod) {
+                app.showToast('Tu navegador no soporta grabación directa. Usa Chrome/Edge.');
+                return;
+            }
+            const stream = captureMethod.call(DOM.video);
+            if (!stream || stream.getTracks().length === 0) {
+                app.showToast('No se pudo capturar el stream de vídeo.');
+                return;
+            }
+            recorder.start(stream);
             return;
         }
 
