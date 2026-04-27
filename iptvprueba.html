@@ -466,40 +466,6 @@ const drive = {
     }
 };
 
-// --- HLS RECORDING LOADER ---
-// Custom loader que intercepta los segmentos TS antes de que se desmuxen.
-// Esta es la única forma fiable de grabar streams IPTV cross-origin en el navegador,
-// ya que captureStream(), canvas y AudioContext son bloqueados por CORS.
-let RecordingLoader = null;
-const initRecordingLoader = () => {
-    if (RecordingLoader || typeof Hls === 'undefined') return;
-    RecordingLoader = class extends Hls.DefaultConfig.loader {
-        load(context, config, callbacks) {
-            const originalOnSuccess = callbacks.onSuccess;
-            callbacks.onSuccess = (response, stats, ctx, networkDetails) => {
-                // Solo capturamos fragmentos de media (no playlists ni keys) cuando se está grabando
-                if (recorder.isRecording && recorder._mode === 'hls' && context.frag && response && response.data) {
-                    try {
-                        const d = response.data;
-                        let chunk;
-                        if (d instanceof ArrayBuffer) {
-                            chunk = new Uint8Array(d.slice(0));
-                        } else if (d.buffer instanceof ArrayBuffer) {
-                            chunk = new Uint8Array(d.buffer.slice(d.byteOffset || 0, (d.byteOffset || 0) + d.byteLength));
-                        }
-                        if (chunk && chunk.byteLength > 0) {
-                            recorder._segments.push(chunk);
-                            recorder._bytesRecorded = (recorder._bytesRecorded || 0) + chunk.byteLength;
-                        }
-                    } catch (e) { console.warn('Frag capture error:', e); }
-                }
-                originalOnSuccess(response, stats, ctx, networkDetails);
-            };
-            super.load(context, config, callbacks);
-        }
-    };
-};
-
 // --- RECORDER MODULE ---
 const recorder = {
     isRecording: false,
@@ -574,57 +540,52 @@ const recorder = {
     },
 
     stop: async () => {
-        // ─── Stop modo HLS (segmentos) ─────────────────────────────────────
+        // ─── Stop modo HLS ────────────────────────────────────────────────
         if (recorder._mode === 'hls') {
             recorder.isRecording = false;
             DOM.recDot.classList.remove('rec-dot');
             DOM.recText.innerText = "Grabar";
             DOM.recIndicator.classList.add('hidden');
 
-            if (recorder._flushTimer) { clearInterval(recorder._flushTimer); recorder._flushTimer = null; }
-
-            // Caso A: streaming a disco local
-            if (recorder.writable) {
-                try {
-                    // Volcar los últimos segmentos pendientes
-                    for (const c of recorder._segments) await recorder.writable.write(c);
-                    await recorder.writable.close();
-                    app.showToast(`Grabado en disco: ${recorder._localFileName}`);
-                } catch (e) {
-                    console.error(e);
-                    app.showToast("Error cerrando archivo local.");
-                }
-                recorder.writable = null;
-                recorder.fileHandle = null;
-                recorder._segments = [];
-                recorder._mode = null;
-                return;
+            // Des-registrar el listener
+            if (recorder._fragHandler && STATE.hls) {
+                STATE.hls.off(Hls.Events.FRAG_LOADED, recorder._fragHandler);
             }
+            recorder._fragHandler  = null;
+            recorder._fetchedUrls  = null;
+            recorder._mode         = null;
 
-            // Caso B: en memoria → blob
             const segments = recorder._segments || [];
             recorder._segments = [];
-            recorder._mode = null;
 
             if (!segments.length) {
-                app.showToast('No se capturaron segmentos.');
+                app.showToast('No se capturaron segmentos. Comprueba la consola.');
                 return;
             }
 
-            const blob = new Blob(segments, { type: 'video/mp2t' });
+            app.showToast(`Procesando grabación (${segments.length} segmentos)...`);
+            const blob     = new Blob(segments, { type: 'video/mp2t' });
             const fileName = `streamflix_${Date.now()}.ts`;
 
             if (STATE.driveToken) {
                 drive.upload(blob, fileName, 'video/mp2t');
+            } else if (recorder.dirHandle) {
+                try {
+                    const fh = await recorder.dirHandle.getFileHandle(fileName, { create: true });
+                    const w  = await fh.createWritable();
+                    await w.write(blob);
+                    await w.close();
+                    app.showToast(`Guardado en disco: ${fileName}`);
+                } catch (e) { recorder.downloadLocal(blob, fileName); }
             } else {
                 recorder.downloadLocal(blob, fileName);
             }
             return;
         }
 
-        // ─── Stop modo MediaRecorder (canvas+audio fallback) ───────────────
+        // ─── Stop modo canvas+audio (MediaRecorder) ───────────────────────
         if (recorder._cancelDraw) { recorder._cancelDraw(); recorder._cancelDraw = null; }
-        if(recorder.mediaRecorder && recorder.mediaRecorder.state !== 'inactive') {
+        if (recorder.mediaRecorder && recorder.mediaRecorder.state !== 'inactive') {
             recorder.mediaRecorder.stop();
         }
         recorder.isRecording = false;
@@ -1672,11 +1633,7 @@ const player = {
         if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
 
         if(Hls.isSupported() && url.includes('.m3u8')) {
-            initRecordingLoader();
-            STATE.hls = new Hls({
-                xhrSetup: xhr => { xhr.withCredentials = false; },
-                fLoader: RecordingLoader || undefined
-            }); 
+            STATE.hls = new Hls({ xhrSetup: xhr => { xhr.withCredentials = false; } }); 
             STATE.hls.loadSource(url); 
             STATE.hls.attachMedia(DOM.video); 
             STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play());
@@ -1727,71 +1684,76 @@ const player = {
         DOM.recIndicator.classList.add('hidden');
     },
 
-    toggleRecording: async () => {
+    toggleRecording: () => {
         if (recorder.isRecording) {
             recorder.stop();
             return;
         }
 
-        // ─── MODO 1 (PREFERIDO): Captura directa de segmentos HLS ──────────
-        // Funciona con cualquier stream IPTV porque los segmentos llegan ya
-        // descargados a través de hls.js, sin restricciones CORS del navegador.
-        if (STATE.hls && RecordingLoader) {
-            recorder._segments = [];
-            recorder._bytesRecorded = 0;
-            recorder._mode = 'hls';
+        // ─── MODO HLS: captura de segmentos via fetch ─────────────────────────
+        // Escuchamos FRAG_LOADED. Si el payload ya está disponible (hls.js antiguo)
+        // lo usamos directamente; si está vacío (hls.js moderno lo transfirió al
+        // worker), hacemos un fetch independiente del mismo URL.
+        // Este método funciona con cualquier stream IPTV sin restricciones CORS.
+        if (STATE.hls) {
+            recorder._segments   = [];
+            recorder._fetchedUrls = new Set();
+            recorder._mode       = 'hls';
             recorder.isRecording = true;
 
-            // Si hay carpeta local, abrimos un fichero para escritura streaming
-            if (recorder.dirHandle && !STATE.driveToken) {
-                try {
-                    const fileName = `streamflix_${Date.now()}.ts`;
-                    recorder.fileHandle = await recorder.dirHandle.getFileHandle(fileName, { create: true });
-                    recorder.writable   = await recorder.fileHandle.createWritable();
-                    recorder._localFileName = fileName;
+            recorder._fragHandler = async (event, data) => {
+                if (!recorder.isRecording || !data || !data.frag) return;
+                const url = data.frag.url;
+                if (!url || recorder._fetchedUrls.has(url)) return;
+                recorder._fetchedUrls.add(url);
 
-                    // Volcamos a disco según llegan segmentos
-                    recorder._flushTimer = setInterval(async () => {
-                        if (!recorder.writable || !recorder._segments.length) return;
-                        const toWrite = recorder._segments.splice(0);
-                        try {
-                            for (const c of toWrite) await recorder.writable.write(c);
-                        } catch (e) { console.warn('Write error', e); }
-                    }, 1500);
-                } catch (e) {
-                    console.warn('No se pudo abrir archivo local, grabando en memoria', e);
-                    recorder.dirHandle = null;
-                    recorder.writable  = null;
-                }
-            }
+                // Intento 1: usar el payload que ya tiene hls.js en memoria
+                try {
+                    const p = data.payload;
+                    if (p && p.byteLength > 0) {
+                        recorder._segments.push(new Uint8Array(p.slice(0)));
+                        return;
+                    }
+                } catch (_) { /* no hay payload */ }
+
+                // Intento 2: re-descargar el segmento con fetch
+                try {
+                    const res = await fetch(url, { credentials: 'omit' });
+                    if (res.ok) {
+                        const buf = await res.arrayBuffer();
+                        if (buf.byteLength > 0 && recorder.isRecording) {
+                            recorder._segments.push(new Uint8Array(buf));
+                        }
+                    }
+                } catch (e) { console.warn('Frag fetch failed:', url, e); }
+            };
+
+            STATE.hls.on(Hls.Events.FRAG_LOADED, recorder._fragHandler);
 
             DOM.recDot.classList.add('rec-dot');
-            const where = STATE.driveToken ? 'NUBE (Drive)' : (recorder.writable ? 'DISCO LOCAL' : 'MEMORIA');
+            const where = STATE.driveToken ? 'NUBE (Drive)' : (recorder.dirHandle ? 'DISCO LOCAL' : 'MEMORIA');
             DOM.recText.innerText = `GRABANDO (${where})`;
-            app.showToast(`Grabando segmentos HLS en: ${where}`);
+            app.showToast(`Grabando en: ${where} — formato .ts`);
             return;
         }
 
-        // ─── MODO 2 (FALLBACK): Canvas + AudioContext para no-HLS ──────────
+        // ─── FALLBACK canvas+audio para streams directos (no HLS) ────────────
         try {
             const video = DOM.video;
             const canvas = document.createElement('canvas');
             canvas.width  = video.videoWidth  || 1280;
             canvas.height = video.videoHeight || 720;
             const ctx = canvas.getContext('2d');
-
             let rafId;
             const drawLoop = () => {
-                if (video.videoWidth  > 0 && canvas.width  !== video.videoWidth)  canvas.width  = video.videoWidth;
+                if (video.videoWidth > 0 && canvas.width !== video.videoWidth)   canvas.width  = video.videoWidth;
                 if (video.videoHeight > 0 && canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 rafId = requestAnimationFrame(drawLoop);
             };
             drawLoop();
             recorder._cancelDraw = () => cancelAnimationFrame(rafId);
-
             const canvasStream = canvas.captureStream(30);
-
             if (!recorder._audioCtx) {
                 recorder._audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
                 recorder._audioSrc  = recorder._audioCtx.createMediaElementSource(video);
@@ -1799,18 +1761,16 @@ const player = {
                 recorder._audioSrc.connect(recorder._audioDest);
                 recorder._audioSrc.connect(recorder._audioCtx.destination);
             }
-            if (recorder._audioCtx.state === 'suspended') await recorder._audioCtx.resume();
-
+            if (recorder._audioCtx.state === 'suspended') recorder._audioCtx.resume();
             const combinedStream = new MediaStream([
                 ...canvasStream.getVideoTracks(),
                 ...recorder._audioDest.stream.getAudioTracks()
             ]);
-
             recorder._mode = 'mediarecorder';
             recorder.start(combinedStream);
         } catch (e) {
             console.error(e);
-            app.showToast("Error al iniciar grabación: " + e.message);
+            app.showToast('Error al grabar: ' + e.message);
         }
     },
     togglePlay: () => {
