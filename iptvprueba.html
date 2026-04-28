@@ -85,6 +85,62 @@
         #epgBanner { background:rgba(10,10,10,.88);backdrop-filter:blur(6px);
             border:1px solid rgba(255,255,255,.08);transition:opacity .4s; }
         #epgBanner.done { opacity:0; pointer-events:none; }
+
+        /* === CONTINUAR VIENDO === */
+        .cw-card { width: 240px; flex-shrink: 0; cursor: pointer; transition: transform 0.25s ease; }
+        .cw-card:hover { transform: scale(1.04); }
+        .cw-thumb { position: relative; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; background: #1f1f1f; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .cw-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .cw-thumb-fallback { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#888;padding:10px;text-align:center;}
+        .cw-thumb-fallback i { font-size: 1.8rem; }
+        .cw-thumb-fallback span { font-size: 12px; font-weight: 600; }
+        .cw-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.2); }
+        .cw-progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+        .cw-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85), transparent 50%); opacity: 0; transition: opacity 0.25s; display: flex; align-items: center; justify-content: center; }
+        .cw-card:hover .cw-overlay { opacity: 1; }
+        .cw-play-icon { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.95); color: #000; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .cw-remove { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.7); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; opacity: 0; transition: opacity 0.2s, background 0.2s; }
+        .cw-card:hover .cw-remove { opacity: 1; }
+        .cw-remove:hover { background: var(--accent); }
+        .cw-info { padding-top: 8px; }
+        .cw-title { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+        .cw-meta { color: #999; font-size: 11px; margin-top: 2px; }
+
+        /* indicador de progreso en posters normales (grid) */
+        .poster-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.2); z-index: 25; }
+        .poster-progress-fill { height: 100%; background: var(--accent); }
+
+        /* === MENÚS Y BOTONES DEL REPRODUCTOR === */
+        .player-menu { position: absolute; bottom: 70px; right: 10px; background: rgba(20,20,20,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; min-width: 200px; max-height: 320px; overflow-y: auto; z-index: 60; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
+        .player-menu-header { padding: 10px 14px; font-size: 12px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .player-menu-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; color: #ddd; cursor: pointer; font-size: 13px; transition: background 0.15s; }
+        .player-menu-item:hover { background: rgba(255,255,255,0.08); }
+        .player-menu-item.active { color: #fff; }
+        .player-menu-item.active::before { content: '✓'; color: var(--accent); margin-right: 8px; font-weight: bold; }
+        .player-menu-item:not(.active)::before { content: ''; display: inline-block; width: 14px; margin-right: 8px; }
+        .player-btn { color: #fff; transition: color 0.15s, transform 0.15s; cursor: pointer; background: transparent; border: none; }
+        .player-btn:hover { color: #ccc; transform: scale(1.05); }
+        .player-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .player-btn .badge { position: absolute; top: -4px; right: -6px; background: var(--accent); color: #fff; font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 8px; }
+
+        /* Modal de atajos */
+        #shortcutsModal { background: rgba(0,0,0,0.85); }
+        #shortcutsModal .panel { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; max-width: 520px; width: 100%; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
+        .kbd { display: inline-block; padding: 3px 8px; min-width: 26px; text-align: center; background: #2a2a2a; border: 1px solid #444; border-bottom-width: 2px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: #fff; box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+        .shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2a2a; font-size: 13px; }
+        .shortcut-row:last-child { border-bottom: none; }
+        .shortcut-row .keys { display: flex; gap: 4px; }
+        .shortcut-row .desc { color: #aaa; }
+
+        /* Stream info overlay */
+        #streamInfo { position: absolute; top: 80px; left: 16px; background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 10px 14px; font-family: monospace; font-size: 11px; color: #ddd; line-height: 1.6; z-index: 45; backdrop-filter: blur(6px); pointer-events: none; }
+        #streamInfo .label { color: #888; margin-right: 6px; }
+        #streamInfo .value { color: #4ade80; font-weight: bold; }
+
+        /* Indicador OSD de cambio rápido (volumen, velocidad) */
+        .osd-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); border-radius: 12px; padding: 16px 28px; color: #fff; font-size: 18px; font-weight: 600; pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: 55; min-width: 140px; text-align: center; }
+        .osd-indicator.show { opacity: 1; }
+        .osd-indicator i { display: block; font-size: 28px; margin-bottom: 6px; color: var(--accent); }
     </style>
 </head>
 <body class="flex h-screen w-screen bg-black">
@@ -186,6 +242,13 @@
                     <div id="epgList" class="space-y-4 pb-20"></div>
                 </div>
                 <div id="gridSection" class="p-6 lg:p-10">
+                    <div id="continueWatchingSection" class="hidden mb-8">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-xl font-bold text-white flex items-center"><i class="fas fa-history mr-3 text-red-500"></i> Seguir viendo</h2>
+                            <button onclick="history.clearAll()" class="text-xs text-gray-500 hover:text-white transition" title="Borrar todo el historial"><i class="fas fa-trash-alt mr-1"></i> Limpiar</button>
+                        </div>
+                        <div id="continueWatchingRow" class="flex space-x-4 overflow-x-auto hide-scroll pb-2"></div>
+                    </div>
                     <h2 id="sectionTitle" class="text-xl font-bold mb-4 text-white">Tendencias</h2>
                     <div id="gridContainer" class="content-grid"></div>
                     <div id="loadMoreTrigger" class="h-20 w-full flex items-center justify-center text-gray-500 text-sm">Cargando más contenido...</div>
@@ -212,6 +275,18 @@
         <video id="mainVideo" class="w-full h-full object-contain bg-black"></video>
         <div id="bufferingSpinner" class="absolute pointer-events-none hidden"><div class="loader"></div></div>
 
+        <div id="streamInfo" class="hidden">
+            <div><span class="label">Resolución:</span><span class="value" id="siResolution">—</span></div>
+            <div><span class="label">Bitrate:</span><span class="value" id="siBitrate">—</span></div>
+            <div><span class="label">Códec:</span><span class="value" id="siCodec">—</span></div>
+            <div><span class="label">Buffer:</span><span class="value" id="siBuffer">—</span></div>
+        </div>
+
+        <div id="osdIndicator" class="osd-indicator">
+            <i id="osdIcon" class="fas fa-volume-up"></i>
+            <span id="osdText">100%</span>
+        </div>
+
         <div class="custom-controls absolute inset-0 flex flex-col justify-between p-4 lg:p-8">
             <div class="flex justify-between items-start osd-panel osd-top">
                 <div class="flex items-center space-x-4">
@@ -231,23 +306,78 @@
             </div>
             <div class="bg-gradient-to-t from-black to-transparent pb-2 pt-10 px-2 rounded-b-lg osd-panel osd-bottom">
                 <div class="relative group h-2 bg-gray-600 rounded cursor-pointer mb-4" id="progressBarContainer">
+                    <div id="progressBufferFill" class="absolute top-0 left-0 h-full bg-gray-400 opacity-30 rounded z-0" style="width: 0%"></div>
                     <div id="progressBarFill" class="absolute top-0 left-0 h-full bg-red-600 rounded z-10" style="width: 0%"></div>
                 </div>
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-6">
-                        <button id="btnPlayPause" class="text-white hover:text-red-500 text-2xl"><i class="fas fa-play"></i></button>
-                        <button onclick="player.rewind()" class="text-white hover:text-gray-300"><i class="fas fa-undo-10"></i></button>
-                        <button onclick="player.forward()" class="text-white hover:text-gray-300"><i class="fas fa-redo-10"></i></button>
+                <div class="flex items-center justify-between flex-wrap gap-y-2">
+                    <div class="flex items-center space-x-5">
+                        <button id="btnPlayPause" class="player-btn text-2xl" title="Play/Pausa (Espacio)"><i class="fas fa-play"></i></button>
+                        <button onclick="player.rewind()" class="player-btn text-xl" title="Retroceder 10s (←)"><i class="fas fa-undo"></i><sub class="text-xs">10</sub></button>
+                        <button onclick="player.forward()" class="player-btn text-xl" title="Avanzar 10s (→)"><i class="fas fa-redo"></i><sub class="text-xs">10</sub></button>
                         <div class="flex items-center group relative">
-                            <button id="btnMute" class="text-white hover:text-gray-300 text-xl"><i class="fas fa-volume-up"></i></button>
-                            <input type="range" min="0" max="1" step="0.1" id="volSlider" class="w-20 ml-2 h-1 accent-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button id="btnMute" class="player-btn text-xl" title="Silenciar (M)"><i class="fas fa-volume-up"></i></button>
+                            <input type="range" min="0" max="1" step="0.05" id="volSlider" value="1" class="w-20 ml-2 h-1 accent-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         </div>
-                        <span id="timeDisplay" class="text-xs text-gray-400 font-mono">00:00</span>
+                        <span id="timeDisplay" class="text-xs text-gray-300 font-mono">00:00</span>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <button onclick="player.toggleFullscreen()" class="text-white hover:text-gray-300 text-xl"><i class="fas fa-expand"></i></button>
+                        <button id="btnSpeed" onclick="player.toggleMenu('speed')" class="player-btn text-sm font-bold relative" title="Velocidad de reproducción"><span id="speedLabel">1x</span></button>
+                        <button id="btnQuality" onclick="player.toggleMenu('quality')" class="player-btn text-xl relative hidden" title="Calidad"><i class="fas fa-cog"></i></button>
+                        <button id="btnSubs" onclick="player.toggleMenu('subs')" class="player-btn text-xl relative" title="Subtítulos (C)"><i class="fas fa-closed-captioning"></i><span id="subsBadge" class="badge hidden">ON</span></button>
+                        <button id="btnPip" onclick="player.togglePip()" class="player-btn text-xl hidden" title="Picture-in-Picture (P)"><i class="fas fa-clone"></i></button>
+                        <button onclick="player.toggleStreamInfo()" class="player-btn text-xl" title="Info del stream (I)"><i class="fas fa-info-circle"></i></button>
+                        <button onclick="document.getElementById('shortcutsModal').classList.remove('hidden'); document.getElementById('shortcutsModal').classList.add('flex');" class="player-btn text-xl" title="Atajos de teclado (?)"><i class="fas fa-keyboard"></i></button>
+                        <button onclick="player.toggleFullscreen()" class="player-btn text-xl" title="Pantalla completa (F)"><i class="fas fa-expand"></i></button>
                     </div>
                 </div>
+
+                <!-- MENÚ VELOCIDAD -->
+                <div id="speedMenu" class="player-menu hidden">
+                    <div class="player-menu-header">Velocidad</div>
+                    <div id="speedMenuItems"></div>
+                </div>
+
+                <!-- MENÚ CALIDAD -->
+                <div id="qualityMenu" class="player-menu hidden">
+                    <div class="player-menu-header">Calidad</div>
+                    <div id="qualityMenuItems"></div>
+                </div>
+
+                <!-- MENÚ SUBTÍTULOS -->
+                <div id="subsMenu" class="player-menu hidden">
+                    <div class="player-menu-header">Subtítulos</div>
+                    <div id="subsMenuItems">
+                        <div class="player-menu-item active" onclick="player.disableSubs()">Desactivados</div>
+                        <div class="player-menu-item" onclick="document.getElementById('subsFileInput').click()"><i class="fas fa-upload mr-2"></i> Cargar archivo (.vtt/.srt)</div>
+                        <div class="player-menu-item" onclick="player.promptSubsUrl()"><i class="fas fa-link mr-2"></i> Pegar URL...</div>
+                    </div>
+                    <input type="file" id="subsFileInput" accept=".vtt,.srt" class="hidden" onchange="player.loadSubsFromFile(this.files[0])">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ATAJOS DE TECLADO -->
+    <div id="shortcutsModal" class="fixed inset-0 z-[80] hidden items-center justify-center p-4">
+        <div class="panel">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-2xl font-bold text-white"><i class="fas fa-keyboard mr-3 text-red-500"></i>Atajos de teclado</h2>
+                <button onclick="document.getElementById('shortcutsModal').classList.add('hidden'); document.getElementById('shortcutsModal').classList.remove('flex');" class="text-gray-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div>
+                <div class="shortcut-row"><span class="desc">Reproducir / Pausar</span><span class="keys"><span class="kbd">Espacio</span> <span class="kbd">K</span></span></div>
+                <div class="shortcut-row"><span class="desc">Retroceder 10s</span><span class="keys"><span class="kbd">←</span> <span class="kbd">J</span></span></div>
+                <div class="shortcut-row"><span class="desc">Avanzar 10s</span><span class="keys"><span class="kbd">→</span> <span class="kbd">L</span></span></div>
+                <div class="shortcut-row"><span class="desc">Subir / Bajar volumen</span><span class="keys"><span class="kbd">↑</span> <span class="kbd">↓</span></span></div>
+                <div class="shortcut-row"><span class="desc">Silenciar</span><span class="keys"><span class="kbd">M</span></span></div>
+                <div class="shortcut-row"><span class="desc">Pantalla completa</span><span class="keys"><span class="kbd">F</span></span></div>
+                <div class="shortcut-row"><span class="desc">Picture-in-Picture</span><span class="keys"><span class="kbd">P</span></span></div>
+                <div class="shortcut-row"><span class="desc">Subtítulos on/off</span><span class="keys"><span class="kbd">C</span></span></div>
+                <div class="shortcut-row"><span class="desc">Info del stream</span><span class="keys"><span class="kbd">I</span></span></div>
+                <div class="shortcut-row"><span class="desc">Velocidad ±</span><span class="keys"><span class="kbd">,</span> <span class="kbd">.</span></span></div>
+                <div class="shortcut-row"><span class="desc">Saltar a 0%-90%</span><span class="keys"><span class="kbd">0</span> – <span class="kbd">9</span></span></div>
+                <div class="shortcut-row"><span class="desc">Cerrar reproductor</span><span class="keys"><span class="kbd">Esc</span></span></div>
+                <div class="shortcut-row"><span class="desc">Mostrar esta ayuda</span><span class="keys"><span class="kbd">?</span></span></div>
             </div>
         </div>
     </div>
@@ -364,7 +494,32 @@ const DOM = {
     recBgTitle: document.getElementById('recBackgroundTitle'),
     // NUEVOS EPG
     epgSection: document.getElementById('epgSection'),
-    epgList: document.getElementById('epgList')
+    epgList: document.getElementById('epgList'),
+    // NUEVOS - CONTINUAR VIENDO
+    cwSection: document.getElementById('continueWatchingSection'),
+    cwRow: document.getElementById('continueWatchingRow'),
+    // NUEVOS - REPRODUCTOR MEJORADO
+    progBuffer: document.getElementById('progressBufferFill'),
+    btnPip: document.getElementById('btnPip'),
+    btnQuality: document.getElementById('btnQuality'),
+    btnSubs: document.getElementById('btnSubs'),
+    subsBadge: document.getElementById('subsBadge'),
+    speedLabel: document.getElementById('speedLabel'),
+    speedMenu: document.getElementById('speedMenu'),
+    qualityMenu: document.getElementById('qualityMenu'),
+    subsMenu: document.getElementById('subsMenu'),
+    speedMenuItems: document.getElementById('speedMenuItems'),
+    qualityMenuItems: document.getElementById('qualityMenuItems'),
+    subsMenuItems: document.getElementById('subsMenuItems'),
+    streamInfo: document.getElementById('streamInfo'),
+    siResolution: document.getElementById('siResolution'),
+    siBitrate: document.getElementById('siBitrate'),
+    siCodec: document.getElementById('siCodec'),
+    siBuffer: document.getElementById('siBuffer'),
+    osdIndicator: document.getElementById('osdIndicator'),
+    osdIcon: document.getElementById('osdIcon'),
+    osdText: document.getElementById('osdText'),
+    shortcutsModal: document.getElementById('shortcutsModal')
 };
 
 const STATE = {
@@ -381,7 +536,117 @@ const STATE = {
     hls: null,
     driveToken: null,
     currentStreamName: '',
-    epgData: {} // Para almacenar toda la EPG de los canales { channelId: { channel: {...}, listings: [...] } }
+    epgData: {}, // Para almacenar toda la EPG de los canales { channelId: { channel: {...}, listings: [...] } }
+    // NUEVOS
+    currentItem: null,        // Ítem activo en el reproductor (para historial)
+    playbackRate: 1,           // Velocidad actual
+    streamInfoVisible: false,  // Toggle del overlay de info
+    subsActive: false,         // Si hay subtítulos activos
+    subsObjectURL: null,       // ObjectURL del último subtítulo cargado (para revoke)
+    streamInfoTimer: null      // Timer de actualización de info
+};
+
+// --- HISTORIAL / CONTINUAR VIENDO ---
+// Guarda el progreso de películas y episodios de series. Excluye streams en vivo.
+// Estructura por entrada: { url, title, type, posterUrl, parentName, parentId,
+//   episodeInfo, currentTime, duration, lastWatched }
+// La key es la URL del stream (única en Xtream y M3U).
+const history = {
+    KEY: 'sf_history',
+    SAVE_THROTTLE_MS: 5000,        // Mínimo entre escrituras a localStorage
+    MAX_ITEMS: 50,                  // Cap del historial
+    COMPLETED_THRESHOLD: 0.95,      // % a partir del cual se considera "visto" y se borra
+    MIN_DURATION: 30,               // Streams de menos de 30s no se guardan
+    MIN_TIME_TO_SAVE: 10,           // Solo guardar si llevamos más de 10s vistos
+    _items: null,
+    _lastSave: 0,
+
+    _load: () => {
+        if (history._items) return history._items;
+        try { history._items = JSON.parse(localStorage.getItem(history.KEY)) || {}; }
+        catch(e) { history._items = {}; }
+        return history._items;
+    },
+
+    _save: () => {
+        try { localStorage.setItem(history.KEY, JSON.stringify(history._items || {})); }
+        catch(e) { console.warn('No se pudo guardar el historial:', e); }
+    },
+
+    // Cuando excedemos MAX_ITEMS borramos las más antiguas
+    _trim: () => {
+        const all = Object.entries(history._items);
+        if (all.length <= history.MAX_ITEMS) return;
+        all.sort((a, b) => b[1].lastWatched - a[1].lastWatched);
+        history._items = {};
+        all.slice(0, history.MAX_ITEMS).forEach(([k, v]) => history._items[k] = v);
+    },
+
+    update: (item, currentTime, duration) => {
+        if (!item || !item.url || item.type === 'live') return;
+        if (!duration || duration < history.MIN_DURATION) return;
+        if (currentTime < history.MIN_TIME_TO_SAVE) return;
+
+        const now = Date.now();
+        if (now - history._lastSave < history.SAVE_THROTTLE_MS) return;
+        history._lastSave = now;
+
+        history._load();
+        const progress = currentTime / duration;
+
+        if (progress >= history.COMPLETED_THRESHOLD) {
+            // Vista completa → eliminar del historial
+            delete history._items[item.url];
+        } else {
+            history._items[item.url] = {
+                url: item.url,
+                title: item.title,
+                type: item.type,
+                posterUrl: item.posterUrl || '',
+                parentName: item.parentName || '',
+                parentId: item.parentId || null,
+                episodeInfo: item.episodeInfo || '',
+                currentTime,
+                duration,
+                lastWatched: now
+            };
+            history._trim();
+        }
+        history._save();
+    },
+
+    get: (url) => {
+        history._load();
+        return history._items[url] || null;
+    },
+
+    remove: (url) => {
+        history._load();
+        delete history._items[url];
+        history._save();
+    },
+
+    list: () => {
+        history._load();
+        return Object.values(history._items)
+            .sort((a, b) => b.lastWatched - a.lastWatched);
+    },
+
+    clearAll: () => {
+        if (!confirm('¿Borrar todo el historial de "Seguir viendo"?')) return;
+        history._items = {};
+        history._save();
+        app.renderContinueWatching();
+        app.showToast('Historial borrado');
+    },
+
+    // Marcar como visto: borra entrada (útil para "Marcar como visto")
+    markWatched: (url) => {
+        history._load();
+        delete history._items[url];
+        history._save();
+        app.renderContinueWatching();
+    }
 };
 
 // --- GOOGLE DRIVE MODULE ---
@@ -757,6 +1022,86 @@ const app = {
     },
     clearData: () => { localStorage.clear(); location.reload(); },
 
+    // ──────────────── CONTINUAR VIENDO ────────────────
+    renderContinueWatching: () => {
+        const list = history.list().slice(0, 20);
+        if (!DOM.cwSection || !DOM.cwRow) return;
+        if (list.length === 0) { DOM.cwSection.classList.add('hidden'); return; }
+        DOM.cwSection.classList.remove('hidden');
+        DOM.cwRow.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+
+        list.forEach(entry => {
+            const pct = Math.min(100, Math.round((entry.currentTime / entry.duration) * 100));
+            const remainingSec = Math.max(0, entry.duration - entry.currentTime);
+            const remainingTxt = remainingSec > 60
+                ? `${Math.ceil(remainingSec / 60)} min restantes`
+                : `${Math.ceil(remainingSec)} s restantes`;
+
+            const card = document.createElement('div');
+            card.className = 'cw-card';
+            const typeIcon = entry.type === 'series' ? 'fa-tv' : 'fa-film';
+            const fallbackName = entry.parentName || entry.title || '';
+            const subtitle = entry.episodeInfo || (entry.type === 'series' ? 'Episodio' : 'Película');
+
+            card.innerHTML = `
+                <div class="cw-thumb">
+                    <div class="cw-thumb-fallback">
+                        <i class="fas ${typeIcon}"></i>
+                        <span>${app._escapeHtml(fallbackName)}</span>
+                    </div>
+                    ${entry.posterUrl ? `<img src="${app._escapeAttr(entry.posterUrl)}" loading="lazy" onerror="this.style.display='none'">` : ''}
+                    <div class="cw-overlay"><div class="cw-play-icon"><i class="fas fa-play"></i></div></div>
+                    <button class="cw-remove" title="Quitar del historial"><i class="fas fa-times"></i></button>
+                    <div class="cw-progress"><div class="cw-progress-fill" style="width:${pct}%"></div></div>
+                </div>
+                <div class="cw-info">
+                    <div class="cw-title">${app._escapeHtml(entry.title)}</div>
+                    <div class="cw-meta">${app._escapeHtml(subtitle)} · ${remainingTxt}</div>
+                </div>
+            `;
+
+            card.querySelector('.cw-remove').onclick = (e) => {
+                e.stopPropagation();
+                history.remove(entry.url);
+                app.renderContinueWatching();
+                app.showToast('Eliminado del historial');
+            };
+            card.onclick = () => {
+                player.start(entry.url, entry.title, entry.type, null, {
+                    posterUrl: entry.posterUrl,
+                    parentName: entry.parentName,
+                    parentId: entry.parentId,
+                    episodeInfo: entry.episodeInfo,
+                    resumeAt: entry.currentTime
+                });
+            };
+            fragment.appendChild(card);
+        });
+
+        DOM.cwRow.appendChild(fragment);
+    },
+
+    // Helpers de escape para evitar problemas con comillas/HTML en datos del proveedor.
+    // (Solución parcial al riesgo XSS del que hablamos; lo ideal es migrar todo
+    //  el render a textContent + addEventListener, pero esto cubre lo nuevo.)
+    _escapeHtml: (s) => {
+        if (s == null) return '';
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    },
+    _escapeAttr: (s) => app._escapeHtml(s),
+
+    formatTime: (sec) => {
+        if (!sec || !isFinite(sec)) return '00:00';
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = Math.floor(sec % 60);
+        const pad = n => n.toString().padStart(2, '0');
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+    },
+
     // Enruta imágenes HTTP a través de un proxy HTTPS (el mismo proxy CORS que ya
      // usa la app para las llamadas API), evitando "mixed content" y ORB.
     // - URLs HTTPS: se devuelven sin tocar.
@@ -823,6 +1168,7 @@ const app = {
                 DOM.heroTitle.innerText = random.name;
                 DOM.heroPlay.onclick = () => app.openDetail(random);
             }
+            app.renderContinueWatching(); // Mostrar fila "Seguir viendo" si hay items
             STATE.renderList = [...STATE.data.movie].sort(() => 0.5 - Math.random());
             app.renderMore();
         } else if (view === 'live') {
@@ -1328,6 +1674,15 @@ const app = {
                 const typeIcon = item.type === 'series' ? 'fa-tv' : (item.type === 'movie' ? 'fa-film' : 'fa-broadcast-tower');
                 // Guardamos la URL original sin proxy en data-orig para permitir cascada de fallbacks.
                 const escapedOrig = (item._origImg || imgUrl || '').replace(/"/g, '&quot;');
+                // Indicador de progreso si la película está en historial
+                let progressHtml = '';
+                if (item.type === 'movie' && item.url) {
+                    const hist = history.get(item.url);
+                    if (hist) {
+                        const pct = Math.min(100, Math.round((hist.currentTime / hist.duration) * 100));
+                        progressHtml = `<div class="poster-progress"><div class="poster-progress-fill" style="width:${pct}%"></div></div>`;
+                    }
+                }
                 el.innerHTML = `
                     <div class="poster-fallback" style="flex-direction:column;gap:8px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)">
                         <i class="fas ${typeIcon}" style="font-size:2rem;color:#666;flex-shrink:0"></i>
@@ -1340,7 +1695,8 @@ const app = {
                             <button class="bg-white text-black rounded-full w-8 h-8 flex items-center justify-center hover:scale-110 transition play-trigger"><i class="fas fa-play text-xs"></i></button>
                             <button class="text-white hover:text-red-500 transition fav-trigger"><i class="${isFav ? 'fas' : 'far'} fa-heart"></i></button>
                         </div>
-                    </div>`;
+                    </div>
+                    ${progressHtml}`;
             }
             const action = (e) => { if(e) e.stopPropagation(); if(item.type === 'live') player.start(item.url, item.name, item.type, item.id); else app.openDetail(item); };
             el.querySelector('.play-trigger').onclick = action; el.onclick = action;
@@ -1398,7 +1754,18 @@ const app = {
                     for (const k in info.episodes) {
                         episodesHtml += `<h3 class="text-lg font-bold mt-4 mb-2 text-gray-300">T${k}</h3><div class="space-y-1">`;
                         info.episodes[k].forEach(ep => {
-                            episodesHtml += `<div onclick="player.start('${s}/series/${u}/${p}/${ep.id}.${ep.container_extension}', '${ep.title}', 'series')" class="flex items-center p-3 hover:bg-[#333] rounded cursor-pointer transition group"><span class="text-gray-400 mr-4 font-mono">${ep.episode_num}</span><div class="flex-grow"><div class="font-medium group-hover:text-white text-gray-300">${ep.title}</div></div><i class="fas fa-play-circle text-2xl text-transparent group-hover:text-red-600"></i></div>`;
+                            const epUrl = `${s}/series/${u}/${p}/${ep.id}.${ep.container_extension}`;
+                            const epTitle = `${item.name} - T${k}E${ep.episode_num}`;
+                            const epInfo = `T${k} · E${ep.episode_num}${ep.title && ep.title !== item.name ? ' · ' + ep.title : ''}`;
+                            // Indicador de progreso si está en historial
+                            const hist = history.get(epUrl);
+                            const progressBar = hist
+                                ? `<div class="w-full h-1 bg-gray-700 rounded-full mt-1"><div class="h-full bg-red-600 rounded-full" style="width:${Math.round((hist.currentTime/hist.duration)*100)}%"></div></div>`
+                                : '';
+                            const watchedIcon = hist ? '<i class="fas fa-bookmark text-red-500 mr-2" title="Visto parcialmente"></i>' : '';
+                            // Pasamos meta como JSON serializado en data-attr para evitar el horror de escapar comillas en onclick
+                            const meta = JSON.stringify({ posterUrl: coverUrl, parentName: item.name, parentId: item.id, episodeInfo: epInfo });
+                            episodesHtml += `<div data-ep-url="${app._escapeAttr(epUrl)}" data-ep-title="${app._escapeAttr(epTitle)}" data-ep-meta='${app._escapeAttr(meta)}' class="ep-row flex items-center p-3 hover:bg-[#333] rounded cursor-pointer transition group"><span class="text-gray-400 mr-4 font-mono">${ep.episode_num}</span><div class="flex-grow min-w-0">${watchedIcon}<span class="font-medium group-hover:text-white text-gray-300">${app._escapeHtml(ep.title)}</span>${progressBar}</div><i class="fas fa-play-circle text-2xl text-transparent group-hover:text-red-600 ml-3"></i></div>`;
                         });
                         episodesHtml += `</div>`;
                     }
@@ -1413,12 +1780,33 @@ const app = {
                 htmlContent = app.buildDetailHtml(item.img, item.name, "Info no disponible en M3U.", '', item.url);
             }
             DOM.detailContent.innerHTML = htmlContent;
+
+            // Listener delegado para episodios y botón de play (en lugar de onclick inline)
+            // Esto evita problemas de escape con apóstrofes/comillas en títulos de programas.
+            DOM.detailContent.querySelectorAll('.ep-row').forEach(row => {
+                row.onclick = () => {
+                    let meta = {};
+                    try { meta = JSON.parse(row.dataset.epMeta || '{}'); } catch(e) {}
+                    player.start(row.dataset.epUrl, row.dataset.epTitle, 'series', null, meta);
+                };
+            });
+            const playBtn = DOM.detailContent.querySelector('.detail-play-btn');
+            if (playBtn) {
+                playBtn.onclick = () => {
+                    const meta = {
+                        posterUrl: playBtn.dataset.poster || '',
+                        parentName: '',
+                        episodeInfo: ''
+                    };
+                    player.start(playBtn.dataset.url, playBtn.dataset.title, 'movie', null, meta);
+                };
+            }
         } catch (e) { DOM.detailContent.innerHTML = '<div class="p-10 w-full text-center text-red-500">Error cargando detalles.</div>'; }
     },
     buildDetailHtml: (img, title, desc, extraHtml, playUrl) => {
         const posterImg = img || 'https://via.placeholder.com/300x450/222/FFF?text=No+Poster';
-        const playBtnHtml = playUrl ? `<button onclick="player.start('${playUrl}', '${title.replace(/'/g, "\\'")}', 'movie')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded flex items-center transition transform hover:scale-105"><i class="fas fa-play mr-3"></i> REPRODUCIR</button>` : '';
-        return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col"><h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${title}</h1><p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p><div class="mb-6">${playBtnHtml}</div><div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div></div>`;
+        const playBtnHtml = playUrl ? `<button class="detail-play-btn bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded flex items-center transition transform hover:scale-105" data-url="${app._escapeAttr(playUrl)}" data-title="${app._escapeAttr(title)}" data-poster="${app._escapeAttr(img || '')}"><i class="fas fa-play mr-3"></i> REPRODUCIR</button>` : '';
+        return `<div class="md:w-1/3 h-64 md:h-full relative flex-shrink-0"><img src="${posterImg}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-[#181818] to-transparent md:bg-gradient-to-r"></div></div><div class="flex-1 p-6 md:p-10 overflow-y-auto bg-[#181818] flex flex-col"><h1 class="text-3xl md:text-5xl font-bold mb-4 text-white leading-tight">${app._escapeHtml(title)}</h1><p class="text-gray-400 mb-8 text-lg leading-relaxed">${desc}</p><div class="mb-6">${playBtnHtml}</div><div class="border-t border-gray-700 pt-4 w-full">${extraHtml}</div></div>`;
     },
     fetchSeriesCover: async (imgEl, sid) => {
         // Función mantenida por compatibilidad. Marca la imagen como errónea y delega al observer.
@@ -1613,30 +2001,70 @@ const app = {
 };
 
 const player = {
-    start: (url, title, type, id = null) => {
+    // Velocidades disponibles en el menú
+    SPEEDS: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
+
+    start: (url, title, type, id = null, opts = {}) => {
         if(recorder.isRecording) {
             if(!confirm("Hay una grabación activa. ¿Detenerla y cambiar de canal?")) return;
             player.stopBackground();
         }
 
         STATE.currentStreamName = title;
+        // Guardamos el ítem completo para el sistema de historial.
+        STATE.currentItem = {
+            url, title, type, id,
+            posterUrl: opts.posterUrl || '',
+            parentName: opts.parentName || '',
+            parentId: opts.parentId || null,
+            episodeInfo: opts.episodeInfo || ''
+        };
+
         app.closeDetail(); 
         DOM.overlay.classList.remove('hidden');
         DOM.recIndicator.classList.add('hidden'); 
+        player.closeAllMenus();
+        player.disableSubs(); // Limpiar subs anteriores
 
         DOM.pTitle.innerText = title; 
         DOM.pEpg.innerText = type === 'live' ? 'Cargando programa...' : (type === 'movie' ? 'Película' : 'Episodio');
         
         if(type === 'live') DOM.btnRecord.classList.remove('hidden'); else DOM.btnRecord.classList.add('hidden');
         
+        // Aplicar velocidad guardada
+        DOM.video.playbackRate = STATE.playbackRate;
+        DOM.speedLabel.innerText = STATE.playbackRate + 'x';
+
         DOM.video.src = '';
         if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+
+        // Determinar punto de resume:
+        //   1) opts.resumeAt explícito (cuando llega desde "Continuar viendo")
+        //   2) entrada en el historial para esta URL
+        let resumeAt = (typeof opts.resumeAt === 'number') ? opts.resumeAt : null;
+        if (resumeAt == null && type !== 'live') {
+            const hist = history.get(url);
+            if (hist && hist.currentTime > history.MIN_TIME_TO_SAVE) resumeAt = hist.currentTime;
+        }
+
+        // Aplicar el resume cuando los metadatos del vídeo estén listos.
+        if (resumeAt != null) {
+            const onMeta = () => {
+                try {
+                    if (DOM.video.duration && resumeAt < DOM.video.duration - 5) {
+                        DOM.video.currentTime = resumeAt;
+                        app.showToast(`Continuando desde ${app.formatTime(resumeAt)}`);
+                    }
+                } catch(e) { console.warn('Resume failed:', e); }
+                DOM.video.removeEventListener('loadedmetadata', onMeta);
+            };
+            DOM.video.addEventListener('loadedmetadata', onMeta);
+        }
 
         // Intentamos HLS (.m3u8) para streams en vivo — permite grabación via FRAG_LOADED.
         // Si el servidor no soporta CORS para XHR, hls.js fallará y usamos .ts directo.
         const isLikelyHls = url.includes('.m3u8');
         const canTryHls   = Hls.isSupported() && (isLikelyHls || (type === 'live' && (url.endsWith('.ts') || !url.match(/\.[a-z0-9]{2,4}$/))));
-        const hlsUrl      = isLikelyHls ? url : url.replace(/\.ts$/, '.m3u8').replace(/(\?|$)/, (m, q) => (url.endsWith('.ts') ? '' : q === '?' ? '?' : '') + (url.endsWith('.ts') ? '.m3u8' : ''));
 
         // función auxiliar para calcular la URL .m3u8
         const toM3u8 = (u) => {
@@ -1647,6 +2075,7 @@ const player = {
 
         const fallbackDirect = () => {
             if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+            DOM.btnQuality.classList.add('hidden');
             DOM.video.src = url;
             DOM.video.play().catch(()=>{});
         };
@@ -1661,11 +2090,30 @@ const player = {
             });
             STATE.hls.loadSource(toM3u8(url));
             STATE.hls.attachMedia(DOM.video);
-            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => DOM.video.play().catch(()=>{}));
+            STATE.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                DOM.video.play().catch(()=>{});
+                player.populateQualityMenu(); // Rellenar selector de calidad
+            });
+            // Solo repintamos el menú de calidad si está abierto, para no tirar el DOM
+            // cada vez que el ABR cambia de nivel automáticamente.
+            STATE.hls.on(Hls.Events.LEVEL_SWITCHED, () => {
+                if (!DOM.qualityMenu.classList.contains('hidden')) player.populateQualityMenu();
+            });
         } else {
             DOM.video.src = url;
             DOM.video.play().catch(()=>{});
+            DOM.btnQuality.classList.add('hidden');
         }
+
+        // Mostrar/ocultar botón de PiP según soporte
+        if (document.pictureInPictureEnabled) {
+            DOM.btnPip.classList.remove('hidden');
+        } else {
+            DOM.btnPip.classList.add('hidden');
+        }
+
+        // Iniciar timer de actualización de info del stream
+        player._startStreamInfoTimer();
 
         if (type === 'live' && id && STATE.creds) {
             // Buscamos el EPG actual si lo tenemos almacenado
@@ -1689,10 +2137,21 @@ const player = {
             DOM.recIndicator.classList.remove('hidden');
             app.showToast("Grabación continuando en 2º plano");
         } else {
+            // Forzar guardado final del progreso (sin esperar al throttle)
+            if (STATE.currentItem && DOM.video.duration && DOM.video.currentTime > history.MIN_TIME_TO_SAVE) {
+                history._lastSave = 0; // bypass throttle
+                history.update(STATE.currentItem, DOM.video.currentTime, DOM.video.duration);
+            }
             DOM.video.pause(); 
             DOM.video.src = ''; 
-            if(STATE.hls) STATE.hls.destroy(); 
+            if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+            player._stopStreamInfoTimer();
+            player.closeAllMenus();
+            player.disableSubs();
+            STATE.currentItem = null;
             DOM.overlay.classList.add('hidden'); 
+            // Si estamos en home, refrescar la fila de "Seguir viendo"
+            if (STATE.view === 'home') app.renderContinueWatching();
         }
     },
 
@@ -1703,10 +2162,18 @@ const player = {
 
     stopBackground: () => {
         recorder.stop();
+        // Guardado final también aquí
+        if (STATE.currentItem && DOM.video.duration && DOM.video.currentTime > history.MIN_TIME_TO_SAVE) {
+            history._lastSave = 0;
+            history.update(STATE.currentItem, DOM.video.currentTime, DOM.video.duration);
+        }
         DOM.video.pause(); 
         DOM.video.src = ''; 
-        if(STATE.hls) STATE.hls.destroy(); 
+        if(STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+        player._stopStreamInfoTimer();
+        STATE.currentItem = null;
         DOM.recIndicator.classList.add('hidden');
+        if (STATE.view === 'home') app.renderContinueWatching();
     },
 
     toggleRecording: () => {
@@ -1778,31 +2245,395 @@ const player = {
         app.showToast('No hay stream activo para grabar.');
     },
     togglePlay: () => {
-        if(DOM.video.paused) { DOM.video.play(); DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-play text-6xl animate-ping'; setTimeout(()=>document.getElementById('centerPlayIcon').className='fas fa-play text-6xl opacity-0 transition-opacity', 500); } 
-        else { DOM.video.pause(); DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>'; document.getElementById('centerPlayIcon').className = 'fas fa-pause text-6xl opacity-100'; }
+        const cpi = document.getElementById('centerPlayIcon');
+        if(DOM.video.paused) {
+            DOM.video.play();
+            DOM.playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            cpi.className = 'fas fa-play text-6xl animate-ping';
+            setTimeout(() => cpi.className = 'fas fa-play text-6xl opacity-0 transition-opacity duration-500', 500);
+        } else {
+            DOM.video.pause();
+            DOM.playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            cpi.className = 'fas fa-pause text-6xl opacity-100 transition-opacity duration-500';
+            setTimeout(() => cpi.className = 'fas fa-pause text-6xl opacity-0 transition-opacity duration-500', 600);
+        }
     },
-    rewind: () => DOM.video.currentTime -= 10,
-    forward: () => DOM.video.currentTime += 10,
+    rewind: () => { DOM.video.currentTime = Math.max(0, DOM.video.currentTime - 10); player.showOSD('fa-undo', '-10s'); },
+    forward: () => { DOM.video.currentTime = Math.min(DOM.video.duration || Infinity, DOM.video.currentTime + 10); player.showOSD('fa-redo', '+10s'); },
     toggleFullscreen: () => { if (!document.fullscreenElement) DOM.overlay.requestFullscreen(); else document.exitFullscreen(); },
+
+    // ──────────────── PICTURE-IN-PICTURE ────────────────
+    togglePip: async () => {
+        try {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+                app.showToast('PiP desactivado');
+            } else if (document.pictureInPictureEnabled) {
+                await DOM.video.requestPictureInPicture();
+                app.showToast('Picture-in-Picture activado');
+            } else {
+                app.showToast('Tu navegador no soporta PiP');
+            }
+        } catch (e) {
+            console.warn('PiP error:', e);
+            app.showToast('No se pudo activar PiP');
+        }
+    },
+
+    // ──────────────── VELOCIDAD ────────────────
+    setSpeed: (rate) => {
+        STATE.playbackRate = rate;
+        DOM.video.playbackRate = rate;
+        DOM.speedLabel.innerText = rate + 'x';
+        player.populateSpeedMenu();
+        player.showOSD('fa-tachometer-alt', rate + 'x');
+        try { localStorage.setItem('sf_playback_rate', rate); } catch(e) {}
+    },
+    populateSpeedMenu: () => {
+        DOM.speedMenuItems.innerHTML = player.SPEEDS.map(r =>
+            `<div class="player-menu-item ${r === STATE.playbackRate ? 'active' : ''}" data-rate="${r}">${r}x${r === 1 ? ' (Normal)' : ''}</div>`
+        ).join('');
+        DOM.speedMenuItems.querySelectorAll('.player-menu-item').forEach(item => {
+            item.onclick = () => { player.setSpeed(parseFloat(item.dataset.rate)); player.closeAllMenus(); };
+        });
+    },
+    bumpSpeed: (delta) => {
+        const idx = player.SPEEDS.indexOf(STATE.playbackRate);
+        const newIdx = Math.max(0, Math.min(player.SPEEDS.length - 1, (idx >= 0 ? idx : 2) + delta));
+        player.setSpeed(player.SPEEDS[newIdx]);
+    },
+
+    // ──────────────── CALIDAD ────────────────
+    populateQualityMenu: () => {
+        if (!STATE.hls || !STATE.hls.levels || STATE.hls.levels.length <= 1) {
+            DOM.btnQuality.classList.add('hidden');
+            return;
+        }
+        DOM.btnQuality.classList.remove('hidden');
+        const levels = STATE.hls.levels;
+        const current = STATE.hls.currentLevel; // -1 = auto
+        const autoActive = STATE.hls.autoLevelEnabled;
+
+        let html = `<div class="player-menu-item ${autoActive ? 'active' : ''}" data-level="-1">Auto${autoActive && current >= 0 ? ` <span class="text-gray-500 text-xs">(${levels[current].height}p)</span>` : ''}</div>`;
+        // De más alto a más bajo
+        const sorted = levels.map((l, i) => ({ l, i })).sort((a, b) => (b.l.height||0) - (a.l.height||0));
+        sorted.forEach(({ l, i }) => {
+            const kbps = l.bitrate ? Math.round(l.bitrate / 1000) : null;
+            const label = `${l.height || '?'}p${kbps ? ' · ' + kbps + ' kbps' : ''}`;
+            html += `<div class="player-menu-item ${!autoActive && current === i ? 'active' : ''}" data-level="${i}">${label}</div>`;
+        });
+        DOM.qualityMenuItems.innerHTML = html;
+        DOM.qualityMenuItems.querySelectorAll('.player-menu-item').forEach(item => {
+            item.onclick = () => {
+                const lvl = parseInt(item.dataset.level);
+                STATE.hls.currentLevel = lvl;
+                if (lvl === -1) STATE.hls.nextLevel = -1;
+                player.closeAllMenus();
+                app.showToast(lvl === -1 ? 'Calidad: Auto' : `Calidad: ${STATE.hls.levels[lvl].height}p`);
+            };
+        });
+    },
+
+    // ──────────────── SUBTÍTULOS ────────────────
+    // Convierte SRT a VTT en memoria. SRT y VTT solo difieren en cabecera y separador
+    // de milisegundos (',' vs '.'), así que esto cubre el 99% de los casos.
+    _srtToVtt: (text) => {
+        if (text.startsWith('WEBVTT')) return text;
+        return 'WEBVTT\n\n' + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+    },
+    _applySubsFromUrl: (url, label = 'Subtítulos') => {
+        // Limpiar tracks anteriores
+        [...DOM.video.querySelectorAll('track')].forEach(t => t.remove());
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = label;
+        track.srclang = 'es';
+        track.src = url;
+        track.default = true;
+        DOM.video.appendChild(track);
+        // Forzar visibilidad cuando el track esté listo
+        setTimeout(() => {
+            for (const tt of DOM.video.textTracks) tt.mode = 'showing';
+        }, 200);
+        STATE.subsActive = true;
+        DOM.subsBadge.classList.remove('hidden');
+    },
+    loadSubsFromFile: async (file) => {
+        if (!file) return;
+        try {
+            const text = await file.text();
+            const vtt = player._srtToVtt(text);
+            if (STATE.subsObjectURL) URL.revokeObjectURL(STATE.subsObjectURL);
+            const blob = new Blob([vtt], { type: 'text/vtt' });
+            STATE.subsObjectURL = URL.createObjectURL(blob);
+            player._applySubsFromUrl(STATE.subsObjectURL, file.name);
+            player.closeAllMenus();
+            app.showToast(`Subtítulos cargados: ${file.name}`);
+        } catch (e) {
+            console.error(e);
+            app.showToast('Error al cargar subtítulos');
+        }
+    },
+    promptSubsUrl: async () => {
+        const url = prompt('Pega la URL del archivo de subtítulos (.vtt o .srt):');
+        if (!url) return;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('No se pudo descargar');
+            const text = await res.text();
+            const vtt = player._srtToVtt(text);
+            if (STATE.subsObjectURL) URL.revokeObjectURL(STATE.subsObjectURL);
+            const blob = new Blob([vtt], { type: 'text/vtt' });
+            STATE.subsObjectURL = URL.createObjectURL(blob);
+            player._applySubsFromUrl(STATE.subsObjectURL, 'Externo');
+            player.closeAllMenus();
+            app.showToast('Subtítulos cargados desde URL');
+        } catch (e) {
+            // Probable CORS — sugerir descargar y subir el archivo
+            console.warn(e);
+            app.showToast('Falló la descarga (CORS). Descarga el .vtt y cárgalo como archivo.');
+        }
+    },
+    disableSubs: () => {
+        for (const tt of DOM.video.textTracks) tt.mode = 'disabled';
+        [...DOM.video.querySelectorAll('track')].forEach(t => t.remove());
+        if (STATE.subsObjectURL) { URL.revokeObjectURL(STATE.subsObjectURL); STATE.subsObjectURL = null; }
+        STATE.subsActive = false;
+        DOM.subsBadge.classList.add('hidden');
+    },
+    toggleSubs: () => {
+        if (STATE.subsActive) {
+            // Si están activos, los apagamos pero NO removemos las tracks (para poder reactivar)
+            for (const tt of DOM.video.textTracks) tt.mode = tt.mode === 'showing' ? 'disabled' : 'showing';
+            const anyShowing = [...DOM.video.textTracks].some(t => t.mode === 'showing');
+            STATE.subsActive = anyShowing;
+            DOM.subsBadge.classList.toggle('hidden', !anyShowing);
+            app.showToast(anyShowing ? 'Subtítulos activados' : 'Subtítulos desactivados');
+        } else {
+            // Si no hay tracks, abrir menú para que el usuario cargue uno
+            player.toggleMenu('subs');
+        }
+    },
+
+    // ──────────────── MENÚS FLOTANTES ────────────────
+    closeAllMenus: () => {
+        DOM.speedMenu.classList.add('hidden');
+        DOM.qualityMenu.classList.add('hidden');
+        DOM.subsMenu.classList.add('hidden');
+    },
+    toggleMenu: (which) => {
+        const menu = which === 'speed' ? DOM.speedMenu
+                   : which === 'quality' ? DOM.qualityMenu
+                   : DOM.subsMenu;
+        const wasOpen = !menu.classList.contains('hidden');
+        player.closeAllMenus();
+        if (!wasOpen) {
+            if (which === 'speed') player.populateSpeedMenu();
+            if (which === 'quality') player.populateQualityMenu();
+            menu.classList.remove('hidden');
+        }
+    },
+
+    // ──────────────── INFO DEL STREAM ────────────────
+    toggleStreamInfo: () => {
+        STATE.streamInfoVisible = !STATE.streamInfoVisible;
+        DOM.streamInfo.classList.toggle('hidden', !STATE.streamInfoVisible);
+    },
+    _startStreamInfoTimer: () => {
+        if (STATE.streamInfoTimer) clearInterval(STATE.streamInfoTimer);
+        STATE.streamInfoTimer = setInterval(() => {
+            if (!STATE.streamInfoVisible) return;
+            // Resolución
+            const w = DOM.video.videoWidth, h = DOM.video.videoHeight;
+            DOM.siResolution.textContent = (w && h) ? `${w}×${h}` : '—';
+            // Bitrate y códec desde HLS
+            if (STATE.hls && STATE.hls.currentLevel >= 0) {
+                const lvl = STATE.hls.levels[STATE.hls.currentLevel];
+                if (lvl) {
+                    DOM.siBitrate.textContent = lvl.bitrate ? Math.round(lvl.bitrate / 1000) + ' kbps' : '—';
+                    DOM.siCodec.textContent = (lvl.videoCodec || lvl.codecs || '—').split(',')[0];
+                }
+            } else {
+                DOM.siBitrate.textContent = '—';
+                DOM.siCodec.textContent = '—';
+            }
+            // Buffer
+            try {
+                const buf = DOM.video.buffered;
+                if (buf.length > 0) {
+                    const ahead = buf.end(buf.length - 1) - DOM.video.currentTime;
+                    DOM.siBuffer.textContent = Math.max(0, ahead).toFixed(1) + 's';
+                } else DOM.siBuffer.textContent = '0s';
+            } catch(e) { DOM.siBuffer.textContent = '—'; }
+        }, 1000);
+    },
+    _stopStreamInfoTimer: () => {
+        if (STATE.streamInfoTimer) { clearInterval(STATE.streamInfoTimer); STATE.streamInfoTimer = null; }
+    },
+
+    // ──────────────── INDICADOR OSD (overlay efímero) ────────────────
+    _osdTimer: null,
+    showOSD: (iconClass, text) => {
+        DOM.osdIcon.className = 'fas ' + iconClass;
+        DOM.osdText.textContent = text;
+        DOM.osdIndicator.classList.add('show');
+        clearTimeout(player._osdTimer);
+        player._osdTimer = setTimeout(() => DOM.osdIndicator.classList.remove('show'), 800);
+    },
+
+    seekPercent: (pct) => {
+        if (!DOM.video.duration) return;
+        DOM.video.currentTime = (pct / 100) * DOM.video.duration;
+        player.showOSD('fa-forward', pct + '%');
+    },
+
+    bumpVolume: (delta) => {
+        const newVol = Math.max(0, Math.min(1, DOM.video.volume + delta));
+        DOM.video.volume = newVol;
+        DOM.volSlider.value = newVol;
+        DOM.muteBtn.innerHTML = newVol === 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        player.showOSD(newVol === 0 ? 'fa-volume-mute' : (newVol < 0.5 ? 'fa-volume-down' : 'fa-volume-up'),
+                       Math.round(newVol * 100) + '%');
+    },
+
     updateProgress: () => {
         if(DOM.video.duration) {
-            const pct = (DOM.video.currentTime / DOM.video.duration) * 100; DOM.progFill.style.width = `${pct}%`;
-            DOM.timeDisp.innerText = `${Math.floor(DOM.video.currentTime/60)}:${Math.floor(DOM.video.currentTime%60).toString().padStart(2,'0')} / ${Math.floor(DOM.video.duration/60)}:${Math.floor(DOM.video.duration%60).toString().padStart(2,'0')}`;
+            const pct = (DOM.video.currentTime / DOM.video.duration) * 100;
+            DOM.progFill.style.width = `${pct}%`;
+            DOM.timeDisp.innerText = `${app.formatTime(DOM.video.currentTime)} / ${app.formatTime(DOM.video.duration)}`;
+
+            // Barra de buffer (zona descargada)
+            try {
+                const buf = DOM.video.buffered;
+                if (buf.length > 0) {
+                    const bufPct = (buf.end(buf.length - 1) / DOM.video.duration) * 100;
+                    DOM.progBuffer.style.width = `${bufPct}%`;
+                }
+            } catch(e) {}
+
+            // Actualizar historial (throttled internamente cada 5s)
+            if (STATE.currentItem) {
+                history.update(STATE.currentItem, DOM.video.currentTime, DOM.video.duration);
+            }
+        } else {
+            // Streams en vivo sin duración: mostramos solo tiempo transcurrido
+            DOM.timeDisp.innerText = app.formatTime(DOM.video.currentTime || 0);
         }
     }
 };
 
+// Restaurar la última velocidad seleccionada por el usuario
+try {
+    const savedRate = parseFloat(localStorage.getItem('sf_playback_rate'));
+    if (savedRate && player.SPEEDS.includes(savedRate)) STATE.playbackRate = savedRate;
+} catch(e) {}
+
 DOM.video.addEventListener('timeupdate', player.updateProgress);
+DOM.video.addEventListener('progress', player.updateProgress); // Para actualizar buffer aunque no esté reproduciendo
 DOM.video.addEventListener('waiting', () => DOM.spinner.classList.remove('hidden'));
 DOM.video.addEventListener('playing', () => DOM.spinner.classList.add('hidden'));
 DOM.playBtn.addEventListener('click', player.togglePlay);
 DOM.video.addEventListener('click', player.togglePlay);
+DOM.video.addEventListener('dblclick', player.toggleFullscreen);
+
+// Al terminar una película/episodio: forzar guardado como "vista" (borrarla del historial)
+DOM.video.addEventListener('ended', () => {
+    if (STATE.currentItem && STATE.currentItem.url) {
+        history.markWatched(STATE.currentItem.url);
+    }
+});
+
+// Cuando el usuario sale de PiP, recuperamos el control normal
+DOM.video.addEventListener('leavepictureinpicture', () => {
+    // No hacer nada especial — el video sigue en el overlay
+});
+
 DOM.progCont.addEventListener('click', (e) => { const rect = DOM.progCont.getBoundingClientRect(); DOM.video.currentTime = ((e.clientX - rect.left) / rect.width) * DOM.video.duration; });
 DOM.volSlider.addEventListener('input', (e) => { DOM.video.volume = e.target.value; DOM.muteBtn.innerHTML = e.target.value == 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; });
 DOM.muteBtn.addEventListener('click', () => { DOM.video.muted = !DOM.video.muted; DOM.muteBtn.innerHTML = DOM.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'; });
 
+// ──────────────── ATAJOS DE TECLADO ────────────────
+// Solo activos cuando el reproductor está abierto y no estamos escribiendo en un input.
+document.addEventListener('keydown', (e) => {
+    // Cerrar el modal de atajos con Esc desde cualquier sitio
+    if (e.key === 'Escape' && !DOM.shortcutsModal.classList.contains('hidden')) {
+        DOM.shortcutsModal.classList.add('hidden');
+        DOM.shortcutsModal.classList.remove('flex');
+        return;
+    }
+    // Si no hay player abierto, salir
+    if (DOM.overlay.classList.contains('hidden')) return;
+    // Si el usuario está en un input/textarea, no interceptar
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+
+    const k = e.key.toLowerCase();
+
+    // Espacio y K = play/pause
+    if (k === ' ' || k === 'k') { e.preventDefault(); player.togglePlay(); return; }
+    // Flechas / J L = ±10s
+    if (k === 'arrowleft' || k === 'j') { e.preventDefault(); player.rewind(); return; }
+    if (k === 'arrowright' || k === 'l') { e.preventDefault(); player.forward(); return; }
+    // Volumen
+    if (k === 'arrowup') { e.preventDefault(); player.bumpVolume(0.1); return; }
+    if (k === 'arrowdown') { e.preventDefault(); player.bumpVolume(-0.1); return; }
+    // F = fullscreen
+    if (k === 'f') { e.preventDefault(); player.toggleFullscreen(); return; }
+    // M = mute
+    if (k === 'm') { e.preventDefault(); DOM.muteBtn.click(); return; }
+    // P = PiP
+    if (k === 'p') { e.preventDefault(); player.togglePip(); return; }
+    // C = subtítulos
+    if (k === 'c') { e.preventDefault(); player.toggleSubs(); return; }
+    // I = info del stream
+    if (k === 'i') { e.preventDefault(); player.toggleStreamInfo(); return; }
+    // , y . = velocidad ±
+    if (k === ',') { e.preventDefault(); player.bumpSpeed(-1); return; }
+    if (k === '.') { e.preventDefault(); player.bumpSpeed(1); return; }
+    // Esc = cerrar
+    if (k === 'escape') { e.preventDefault(); player.close(); return; }
+    // ? = abrir modal de atajos (sin preventDefault para que '?' no bloquee otras combinaciones)
+    if (k === '?' || (e.shiftKey && k === '/')) {
+        e.preventDefault();
+        DOM.shortcutsModal.classList.remove('hidden');
+        DOM.shortcutsModal.classList.add('flex');
+        return;
+    }
+    // Números 0-9 = saltar a 0%-90%
+    if (k >= '0' && k <= '9') {
+        e.preventDefault();
+        player.seekPercent(parseInt(k) * 10);
+        return;
+    }
+});
+
+// Click fuera de los menús los cierra
+DOM.overlay.addEventListener('click', (e) => {
+    // Si el click no es sobre un menú, ni sobre los botones que los abren, cerrarlos
+    if (!e.target.closest('.player-menu') &&
+        !e.target.closest('#btnSpeed') &&
+        !e.target.closest('#btnQuality') &&
+        !e.target.closest('#btnSubs')) {
+        player.closeAllMenus();
+    }
+});
+
+// Doble tap móvil para ±10s
+let lastTap = 0;
+DOM.video.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+        e.preventDefault();
+        const rect = DOM.video.getBoundingClientRect();
+        const x = e.changedTouches[0].clientX - rect.left;
+        if (x < rect.width / 2) player.rewind();
+        else player.forward();
+    }
+    lastTap = now;
+});
+
 let uiTimer;
-const resetUITimer = () => { DOM.overlay.classList.add('active-ui'); DOM.overlay.style.cursor = 'default'; clearTimeout(uiTimer); uiTimer = setTimeout(() => { if(!DOM.video.paused) { DOM.overlay.classList.remove('active-ui'); DOM.overlay.style.cursor = 'none'; } }, 5000); };
+const resetUITimer = () => { DOM.overlay.classList.add('active-ui'); DOM.overlay.style.cursor = 'default'; clearTimeout(uiTimer); uiTimer = setTimeout(() => { if(!DOM.video.paused) { DOM.overlay.classList.remove('active-ui'); DOM.overlay.style.cursor = 'none'; player.closeAllMenus(); } }, 5000); };
 DOM.overlay.addEventListener('mousemove', resetUITimer); DOM.overlay.addEventListener('click', resetUITimer);
 DOM.video.addEventListener('pause', () => { DOM.overlay.classList.add('active-ui'); clearTimeout(uiTimer); });
 DOM.video.addEventListener('play', resetUITimer);
