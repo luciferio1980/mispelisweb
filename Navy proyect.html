@@ -718,11 +718,19 @@
 
       return {
         x: pr.x,
-        y: pr.y - 18 * sc,
+        y: pr.y - 22 * sc,
         baseY: pr.y,
         sc,
         p: pr.s
       };
+    }
+
+    function projectBulletAtZ(b, z) {
+      const p = CAM / (CAM + Math.max(0, z));
+      const x = W / 2 + b.worldX * roadHalf * p;
+      const y = horizon + (b.originY - horizon) * (p / b.pShip);
+
+      return { x, y, s: p };
     }
 
     resize();
@@ -1310,16 +1318,27 @@
       ship.muzzle = 0.06;
 
       const sr = getShipRender();
-      const wingOffsetWorld = (20 * sr.sc) / (roadHalf * sr.p);
 
-      const z = SHIP_Z + 6;
+      const pushBullet = (localX, localY, vx) => {
+        const worldX = ship.worldX + (localX * sr.sc) / (roadHalf * sr.p);
+        const originY = sr.y + localY * sr.sc;
+
+        bullets.push({
+          worldX,
+          z: SHIP_Z + 6,
+          vx,
+          pShip: sr.p,
+          originY,
+          dead: false
+        });
+      };
 
       if (effects.triple > 0) {
-        bullets.push({ worldX: ship.worldX, z, vx: 0, side: 0, dead: false });
-        bullets.push({ worldX: ship.worldX - wingOffsetWorld, z, vx: -0.32, side: -1, dead: false });
-        bullets.push({ worldX: ship.worldX + wingOffsetWorld, z, vx: 0.32, side: 1, dead: false });
+        pushBullet(0, -72, 0);
+        pushBullet(-22, 6, 0);
+        pushBullet(22, 6, 0);
       } else {
-        bullets.push({ worldX: ship.worldX, z, vx: 0, side: 0, dead: false });
+        pushBullet(0, -72, 0);
       }
 
       try {
@@ -1490,7 +1509,7 @@
           Synth.tunnel();
         } catch (e) {}
 
-        addText(W / 2, H * 0.28, 'TÚNEL NEÓN', `hsl(${state.tunnelHue},100%,70%)`, 1.2, 26);
+        addText(W / 2, H * 0.28, 'AGUJERO DE GUSANO', `hsl(${state.tunnelHue},100%,70%)`, 1.2, 26);
       }
 
       if (state.tunnelActive) {
@@ -1531,7 +1550,9 @@
       ship.worldX = clamp(ship.worldX, -1, 1);
 
       const vx = (ship.worldX - ship.prevWorldX) / Math.max(dt, 0.0001);
-      ship.bank = clamp(vx * 0.10, -0.55, 0.55);
+      const targetBank = clamp(vx * 0.25, -1, 1);
+
+      ship.bank += (targetBank - ship.bank) * Math.min(1, dt * 12);
 
       if (autofire || firing) {
         fire();
@@ -1778,8 +1799,20 @@
 
       drawStars();
       drawSun();
+
+      if (state.tunnelAlpha > 0.02) {
+        drawWormhole();
+      }
+
       drawRoad();
-      drawTunnel();
+
+      if (state.tunnelAlpha > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = state.tunnelAlpha * 0.16;
+        ctx.fillStyle = `hsl(${state.tunnelHue + animTime * 20},100%,50%)`;
+        ctx.fillRect(0, horizon, W, H - horizon);
+        ctx.restore();
+      }
 
       ctx.save();
 
@@ -1848,6 +1881,81 @@
       for (let i = 0; i < 6; i++) {
         const yy = y + r * 0.15 + i * r * 0.14;
         ctx.fillRect(x - r, yy, r * 2, Math.max(2, r * 0.05));
+      }
+
+      ctx.restore();
+    }
+
+    function drawWormhole() {
+      const hue = state.tunnelHue + animTime * 20;
+      const cx = W / 2;
+      const cy = horizon;
+      const maxR = Math.hypot(W, H) * 0.85;
+
+      ctx.save();
+
+      ctx.globalAlpha = state.tunnelAlpha;
+
+      ctx.fillStyle = `hsl(${hue},70%,4%)`;
+      ctx.fillRect(0, 0, W, H);
+
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.35);
+      glow.addColorStop(0, `hsla(${hue + 40},100%,70%,0.35)`);
+      glow.addColorStop(0.4, `hsla(${hue},100%,50%,0.12)`);
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      for (let i = 0; i < 28; i++) {
+        const t = ((i / 28) + animTime * 0.22) % 1;
+        const r = Math.pow(t, 2.1) * maxR;
+        const ringHue = hue + i * 12 + animTime * 35;
+        const a = 0.08 + 0.55 * t;
+
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, r * 1.25, r, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(${ringHue},100%,65%,${a})`;
+        ctx.lineWidth = Math.max(1.5, 2 + 26 * t);
+        ctx.stroke();
+      }
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(animTime * 0.22);
+
+      for (let i = 0; i < 22; i++) {
+        const a = (i / 22) * Math.PI * 2;
+        const t = ((animTime * 0.45) + (i / 22)) % 1;
+        const r1 = Math.pow(t, 2) * maxR;
+        const r2 = Math.pow(Math.min(1, t + 0.07), 2) * maxR;
+        const streakHue = hue + i * 16;
+
+        ctx.strokeStyle = `hsla(${streakHue},100%,70%,${0.08 + 0.45 * t})`;
+        ctx.lineWidth = Math.max(1, 2 + 8 * t);
+
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r1 * 1.25, Math.sin(a) * r1);
+        ctx.lineTo(Math.cos(a) * r2 * 1.25, Math.sin(a) * r2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      for (let i = 0; i < 50; i++) {
+        const a = (i / 50) * Math.PI * 2 + animTime * 0.12;
+        const t = ((animTime * 0.6) + (i * 0.017)) % 1;
+        const r = Math.pow(t, 1.8) * maxR;
+
+        const x = cx + Math.cos(a) * r * 1.25;
+        const y = cy + Math.sin(a) * r;
+        const s = 1 + 3 * t;
+
+        ctx.fillStyle = `hsla(${hue + i * 10},100%,80%,${0.15 + 0.7 * t})`;
+
+        ctx.beginPath();
+        ctx.arc(x, y, s, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       ctx.restore();
@@ -1984,48 +2092,6 @@
       ctx.moveTo(rn.x, rn.y);
       ctx.lineTo(rf.x, rf.y);
       ctx.stroke();
-
-      ctx.restore();
-    }
-
-    function drawTunnel() {
-      if (state.tunnelAlpha <= 0.01) return;
-
-      ctx.save();
-
-      ctx.globalAlpha = state.tunnelAlpha;
-
-      const hue = state.tunnelHue + Math.sin(animTime * 1.5) * 25;
-
-      ctx.fillStyle = `hsla(${hue},80%,5%,0.22)`;
-      ctx.fillRect(0, 0, W, H);
-
-      const seg = 220;
-      const offset = (animTime * 520) % seg;
-      const maxK = Math.ceil(Z_FAR / seg) + 1;
-
-      for (let k = maxK; k >= 0; k--) {
-        let z = k * seg - offset;
-
-        if (z < 0 || z > Z_FAR) continue;
-
-        const pr = project(z, 0);
-        const half = roadHalf * pr.s * 1.15;
-        const top = pr.y - half * 1.35;
-        const a = 0.10 + 0.28 * (1 - z / Z_FAR);
-
-        ctx.strokeStyle = `hsla(${hue + k * 12},100%,65%,${a})`;
-        ctx.lineWidth = Math.max(1, 4 * pr.s);
-        ctx.shadowBlur = 18 * pr.s;
-        ctx.shadowColor = `hsla(${hue + k * 12},100%,60%,0.8)`;
-
-        ctx.beginPath();
-        ctx.moveTo(pr.x - half, pr.y);
-        ctx.lineTo(pr.x - half, top);
-        ctx.quadraticCurveTo(pr.x, top - half * 0.35, pr.x + half, top);
-        ctx.lineTo(pr.x + half, pr.y);
-        ctx.stroke();
-      }
 
       ctx.restore();
     }
@@ -2535,23 +2601,10 @@
     }
 
     function drawBullet(b) {
-      const sr = getShipRender();
-
-      let ox = sr.x;
-      let oy = sr.y - 52 * sr.sc;
-
-      if (b.side === -1) {
-        ox = sr.x - 20 * sr.sc;
-        oy = sr.y + 2 * sr.sc;
-      }
-
-      if (b.side === 1) {
-        ox = sr.x + 20 * sr.sc;
-        oy = sr.y + 2 * sr.sc;
-      }
-
-      const pr = project(b.z, b.worldX);
-      const tail = b.z > SHIP_Z + 170 ? project(b.z - 150, b.worldX) : { x: ox, y: oy };
+      const cur = projectBulletAtZ(b, b.z);
+      const origin = projectBulletAtZ(b, SHIP_Z);
+      const tailZ = b.z > SHIP_Z + 140 ? b.z - 140 : SHIP_Z;
+      const tail = projectBulletAtZ(b, tailZ);
 
       ctx.save();
 
@@ -2559,33 +2612,33 @@
       ctx.shadowBlur = 16;
       ctx.shadowColor = '#0ff';
 
-      const beam = ctx.createLinearGradient(ox, oy, pr.x, pr.y);
+      const beam = ctx.createLinearGradient(origin.x, origin.y, cur.x, cur.y);
       beam.addColorStop(0, 'rgba(0,255,255,0)');
       beam.addColorStop(1, 'rgba(0,255,255,0.16)');
 
       ctx.strokeStyle = beam;
-      ctx.lineWidth = Math.max(1.5, 3 * pr.s);
+      ctx.lineWidth = Math.max(1.5, 3 * cur.s);
 
       ctx.beginPath();
-      ctx.moveTo(ox, oy);
-      ctx.lineTo(pr.x, pr.y);
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(cur.x, cur.y);
       ctx.stroke();
 
-      const bolt = ctx.createLinearGradient(tail.x, tail.y, pr.x, pr.y);
+      const bolt = ctx.createLinearGradient(tail.x, tail.y, cur.x, cur.y);
       bolt.addColorStop(0, 'rgba(0,255,255,0)');
       bolt.addColorStop(1, 'rgba(190,255,255,0.98)');
 
       ctx.strokeStyle = bolt;
-      ctx.lineWidth = Math.max(2, 6 * pr.s);
+      ctx.lineWidth = Math.max(2, 6 * cur.s);
 
       ctx.beginPath();
       ctx.moveTo(tail.x, tail.y);
-      ctx.lineTo(pr.x, pr.y);
+      ctx.lineTo(cur.x, cur.y);
       ctx.stroke();
 
       ctx.fillStyle = '#dff';
       ctx.beginPath();
-      ctx.arc(pr.x, pr.y, Math.max(2, 4 * pr.s), 0, Math.PI * 2);
+      ctx.arc(cur.x, cur.y, Math.max(2, 4 * cur.s), 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -2629,16 +2682,18 @@
 
       ctx.save();
 
-      ctx.translate(sr.x, sr.y);
+      ctx.translate(sr.x + ship.bank * 8 * sr.sc, sr.y);
+      ctx.rotate(ship.bank * 0.36);
+      ctx.transform(1, 0, ship.bank * 0.16, 1, 0, 0);
       ctx.scale(sr.sc, sr.sc);
-      ctx.rotate(ship.bank * 0.18);
 
       ctx.shadowBlur = 25;
       ctx.shadowColor = '#0ff';
 
-      const bodyGrad = ctx.createLinearGradient(0, -50, 0, 40);
-      bodyGrad.addColorStop(0, '#0ff');
-      bodyGrad.addColorStop(0.45, '#0a6f7f');
+      const bodyGrad = ctx.createLinearGradient(0, -72, 0, 36);
+      bodyGrad.addColorStop(0, '#032830');
+      bodyGrad.addColorStop(0.35, '#0aa');
+      bodyGrad.addColorStop(0.75, '#0ff');
       bodyGrad.addColorStop(1, '#f0f');
 
       ctx.fillStyle = bodyGrad;
@@ -2646,27 +2701,55 @@
       ctx.lineWidth = 2;
 
       ctx.beginPath();
-      ctx.moveTo(0, -50);
-      ctx.lineTo(10, -18);
-      ctx.lineTo(44, 18);
-      ctx.lineTo(20, 20);
-      ctx.lineTo(12, 34);
-      ctx.lineTo(-12, 34);
-      ctx.lineTo(-20, 20);
-      ctx.lineTo(-44, 18);
-      ctx.lineTo(-10, -18);
+      ctx.moveTo(0, -72);
+      ctx.lineTo(7, -36);
+      ctx.lineTo(13, -10);
+      ctx.lineTo(46, 20);
+      ctx.lineTo(20, 27);
+      ctx.lineTo(14, 36);
+      ctx.lineTo(-14, 36);
+      ctx.lineTo(-20, 27);
+      ctx.lineTo(-46, 20);
+      ctx.lineTo(-13, -10);
+      ctx.lineTo(-7, -36);
       ctx.closePath();
 
       ctx.fill();
       ctx.stroke();
 
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = '#f0f';
-      ctx.fillStyle = 'rgba(255,0,255,0.75)';
+      ctx.strokeStyle = 'rgba(0,255,255,0.45)';
+      ctx.lineWidth = 1.5;
 
       ctx.beginPath();
-      ctx.ellipse(0, -8, 7, 16, 0, 0, Math.PI * 2);
+      ctx.moveTo(0, -62);
+      ctx.lineTo(0, 28);
+      ctx.stroke();
+
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#f0f';
+      ctx.fillStyle = 'rgba(255,0,255,0.65)';
+
+      ctx.beginPath();
+      ctx.moveTo(0, -34);
+      ctx.lineTo(6, -18);
+      ctx.lineTo(0, 2);
+      ctx.lineTo(-6, -18);
+      ctx.closePath();
       ctx.fill();
+
+      ctx.fillStyle = '#111';
+      ctx.strokeStyle = '#0ff';
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.ellipse(-12, 34, 7, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(12, 34, 7, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
 
       const boosting = autofire || firing;
       const flameLen = (20 + Math.sin(animTime * 40) * 6) * (boosting ? 1.45 : 0.75);
@@ -2676,11 +2759,39 @@
       ctx.fillStyle = boosting ? '#ffbf00' : '#ff7700';
 
       ctx.beginPath();
-      ctx.moveTo(-10, 34);
-      ctx.lineTo(0, 34 + flameLen);
-      ctx.lineTo(10, 34);
+      ctx.moveTo(-16, 36);
+      ctx.lineTo(-12, 36 + flameLen);
+      ctx.lineTo(-8, 36);
       ctx.closePath();
       ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(8, 36);
+      ctx.lineTo(12, 36 + flameLen);
+      ctx.lineTo(16, 36);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = '#0ff';
+      ctx.strokeStyle = '#0ff';
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+      ctx.moveTo(0, -58);
+      ctx.lineTo(0, -72);
+      ctx.stroke();
+
+      if (Math.sin(animTime * 6) > 0) {
+        ctx.fillStyle = '#f0f';
+        ctx.beginPath();
+        ctx.arc(44, 20, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(-44, 20, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       if (ship.muzzle > 0) {
         const a = ship.muzzle / 0.06;
@@ -2691,16 +2802,16 @@
         ctx.fillStyle = 'rgba(180,255,255,0.95)';
 
         ctx.beginPath();
-        ctx.arc(0, -52, 9, 0, Math.PI * 2);
+        ctx.arc(0, -72, 9, 0, Math.PI * 2);
         ctx.fill();
 
         if (effects.triple > 0) {
           ctx.beginPath();
-          ctx.arc(-20, 2, 6, 0, Math.PI * 2);
+          ctx.arc(-22, 6, 6, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.beginPath();
-          ctx.arc(20, 2, 6, 0, Math.PI * 2);
+          ctx.arc(22, 6, 6, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -2714,7 +2825,7 @@
         ctx.lineWidth = 2.5;
 
         ctx.beginPath();
-        ctx.ellipse(0, -5, 54, 44, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -8, 56, 48, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
 
