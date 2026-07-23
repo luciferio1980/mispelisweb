@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
-  <title>⚡ CYBER PANG ULTRA ⚡</title>
+  <title>⚡ CYBER PANG ULTRA AUTOFIRE ⚡</title>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
@@ -59,55 +59,39 @@
       height: 100dvh;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 6px;
       padding:
-        max(10px, env(safe-area-inset-top))
-        max(10px, env(safe-area-inset-right))
-        max(12px, env(safe-area-inset-bottom))
-        max(10px, env(safe-area-inset-left));
+        max(6px, env(safe-area-inset-top))
+        max(6px, env(safe-area-inset-right))
+        max(8px, env(safe-area-inset-bottom))
+        max(6px, env(safe-area-inset-left));
     }
 
     #top {
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     #title {
-      text-align: center;
-      font-weight: 900;
-      letter-spacing: 0.18em;
-      font-size: clamp(1rem, 4vw, 2rem);
-      background: linear-gradient(90deg, #b829dd, #00d4ff, #ff2d95, #b829dd);
-      background-size: 300% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      animation: titleFlow 3s linear infinite;
-      filter: drop-shadow(0 0 18px rgba(184, 41, 221, 0.45));
-      pointer-events: none;
-    }
-
-    @keyframes titleFlow {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 300% 50%; }
+      display: none;
     }
 
     #hud {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 7px;
-      padding: 8px 10px;
+      gap: 6px;
+      padding: 5px 8px;
       border: 1px solid rgba(0, 212, 255, 0.25);
-      border-radius: 16px;
+      border-radius: 12px;
       background: rgba(7, 7, 18, 0.78);
       box-shadow:
         0 0 18px rgba(0, 212, 255, 0.08),
         inset 0 0 25px rgba(0, 0, 0, 0.45);
-      font-size: clamp(0.56rem, 2.2vw, 0.86rem);
-      letter-spacing: 0.06em;
+      font-size: clamp(0.54rem, 2vw, 0.8rem);
+      letter-spacing: 0.05em;
       backdrop-filter: blur(8px);
     }
 
@@ -135,18 +119,18 @@
 
     .hud-buttons {
       display: flex;
-      gap: 6px;
+      gap: 5px;
     }
 
     .mini-btn {
-      min-width: 42px;
-      height: 40px;
-      padding: 0 8px;
-      border-radius: 13px;
+      min-width: 38px;
+      height: 36px;
+      padding: 0 6px;
+      border-radius: 11px;
       border: 1px solid rgba(0, 212, 255, 0.45);
       background: rgba(0, 212, 255, 0.08);
       color: var(--neon-blue);
-      font-size: 0.8rem;
+      font-size: 0.72rem;
       font-family: inherit;
       cursor: pointer;
       touch-action: none;
@@ -178,7 +162,7 @@
     canvas {
       display: block;
       border: 2px solid rgba(184, 41, 221, 0.5);
-      border-radius: 18px;
+      border-radius: 14px;
       background: #070711;
       box-shadow:
         0 0 28px rgba(184, 41, 221, 0.18),
@@ -195,12 +179,12 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      padding: 22px;
+      gap: 14px;
+      padding: 18px;
       text-align: center;
-      background: rgba(4, 4, 12, 0.86);
+      background: rgba(4, 4, 12, 0.87);
       backdrop-filter: blur(7px);
-      border-radius: 18px;
+      border-radius: 14px;
       border: 1px solid rgba(0, 212, 255, 0.12);
     }
 
@@ -209,7 +193,7 @@
     }
 
     #overlayTitle {
-      font-size: clamp(1.45rem, 7vw, 3.2rem);
+      font-size: clamp(1.35rem, 7vw, 3rem);
       font-weight: 900;
       letter-spacing: 0.1em;
       color: var(--neon-purple);
@@ -219,8 +203,8 @@
     }
 
     #overlaySubtitle {
-      font-size: clamp(0.78rem, 3.2vw, 1.05rem);
-      line-height: 1.55;
+      font-size: clamp(0.76rem, 3.2vw, 1.02rem);
+      line-height: 1.5;
       color: var(--neon-blue);
       text-shadow: 0 0 12px rgba(0, 212, 255, 0.45);
       max-width: 40ch;
@@ -239,17 +223,17 @@
 
     #overlayActions {
       display: grid;
-      gap: 12px;
+      gap: 10px;
       width: min(100%, 360px);
     }
 
     .overlay-action {
       font-family: inherit;
-      font-size: clamp(0.95rem, 4.2vw, 1.18rem);
+      font-size: clamp(0.92rem, 4.2vw, 1.15rem);
       font-weight: 900;
       letter-spacing: 0.12em;
-      padding: 15px 18px;
-      border-radius: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
       border: 2px solid var(--neon-pink);
       color: var(--neon-pink);
       background: rgba(255, 45, 149, 0.08);
@@ -298,20 +282,36 @@
 
     #controls {
       flex: 0 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1.3fr 1fr;
-      gap: 12px;
-      width: min(100%, 640px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: min(100%, 780px);
       margin: 0 auto;
+      gap: 14px;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .controls-left {
+      justify-content: flex-start;
+    }
+
+    .controls-right {
+      justify-content: flex-end;
     }
 
     .touch-btn {
-      height: clamp(58px, 13vw, 82px);
-      border-radius: 24px;
+      width: clamp(64px, 17vw, 88px);
+      height: clamp(64px, 17vw, 88px);
+      border-radius: 50%;
       border: 2px solid rgba(0, 212, 255, 0.45);
       background: rgba(0, 212, 255, 0.07);
       color: var(--neon-blue);
-      font-size: clamp(1.45rem, 7vw, 2.2rem);
+      font-size: clamp(1.4rem, 6vw, 2rem);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -324,9 +324,13 @@
     }
 
     .touch-btn.fire {
+      width: clamp(105px, 28vw, 145px);
+      height: clamp(64px, 14vw, 88px);
+      border-radius: 26px;
       border-color: rgba(255, 45, 149, 0.6);
       color: var(--neon-pink);
       background: rgba(255, 45, 149, 0.08);
+      font-size: clamp(1.7rem, 8vw, 2.4rem);
       text-shadow: 0 0 16px rgba(255, 45, 149, 0.75);
       box-shadow:
         0 0 24px rgba(255, 45, 149, 0.16),
@@ -338,16 +342,26 @@
       filter: brightness(1.5);
     }
 
-    @media (max-height: 560px) {
-      #title { display: none; }
-      .touch-btn { height: 52px; border-radius: 18px; }
-      #hud { padding: 5px 8px; }
-      .mini-btn { height: 36px; min-width: 40px; }
-    }
+    @media (max-height: 620px) {
+      #hud {
+        padding: 4px 6px;
+      }
 
-    @media (max-width: 430px) {
-      .hud-item.optional { display: none; }
-      .mini-btn { min-width: 38px; padding: 0 5px; font-size: 0.72rem; }
+      .mini-btn {
+        height: 32px;
+        min-width: 34px;
+        font-size: 0.66rem;
+      }
+
+      .touch-btn {
+        width: clamp(54px, 12vw, 70px);
+        height: clamp(54px, 12vw, 70px);
+      }
+
+      .touch-btn.fire {
+        width: clamp(88px, 22vw, 115px);
+        height: clamp(52px, 11vw, 70px);
+      }
     }
   </style>
 </head>
@@ -382,16 +396,20 @@
     </div>
 
     <div id="controls">
-      <button id="btnLeft" class="touch-btn" aria-label="Mover izquierda">◀</button>
-      <button id="btnFire" class="touch-btn fire" aria-label="Disparar">⚡</button>
-      <button id="btnRight" class="touch-btn" aria-label="Mover derecha">▶</button>
+      <div class="controls-group controls-left">
+        <button id="btnLeft" class="touch-btn" aria-label="Mover izquierda">◀</button>
+        <button id="btnRight" class="touch-btn" aria-label="Mover derecha">▶</button>
+      </div>
+
+      <div class="controls-group controls-right">
+        <button id="btnFire" class="touch-btn fire" aria-label="Disparar">⚡</button>
+      </div>
     </div>
   </div>
 
   <script>
     // ============================================
-    // CYBER PANG ULTRA
-    // Difficulty + Boss + Power-ups + Record + Vibration
+    // CYBER PANG ULTRA AUTOFIRE
     // ============================================
 
     const canvas = document.getElementById('gameCanvas');
@@ -415,8 +433,9 @@
     const btnRight = document.getElementById('btnRight');
     const btnFire = document.getElementById('btnFire');
 
-    const W = 800;
-    const H = 500;
+    // Pantalla más grande: formato más vertical para móvil
+    const W = 640;
+    const H = 720;
     const MAX_LIVES = 5;
 
     let scaleX = 1;
@@ -433,6 +452,7 @@
     let lastFireTime = 0;
 
     let highScore = loadHighScore();
+    let autoFire = false;
 
     const input = {
       left: false,
@@ -502,11 +522,12 @@
       { main: '#06ffa5', glow: 'rgba(6,255,165,', ring: '#40ffb8' }
     ];
 
+    // Rebotes ajustados para pantalla más alta
     const BALL_SIZES = [
-      { radius: 45, bounce: -11, score: 10 },
-      { radius: 32, bounce: -9.5, score: 20 },
-      { radius: 22, bounce: -8, score: 40 },
-      { radius: 14, bounce: -6.5, score: 80 }
+      { radius: 42, bounce: -13.6, score: 10 },
+      { radius: 30, bounce: -11.8, score: 20 },
+      { radius: 21, bounce: -10.2, score: 40 },
+      { radius: 13, bounce: -8.6, score: 80 }
     ];
 
     const POWERUPS = {
@@ -522,7 +543,7 @@
 
     const player = {
       x: W / 2,
-      y: H - 40,
+      y: H - 45,
       width: 50,
       height: 30,
       speed: 6,
@@ -547,7 +568,7 @@
     };
 
     const stars = [];
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 90; i++) {
       stars.push({
         x: Math.random() * W,
         y: Math.random() * H,
@@ -1176,14 +1197,23 @@
         overlayTitle.textContent = 'CYBER PANG ULTRA';
         overlaySubtitle.innerHTML = `
           Récord: <b>${highScore}</b><br /><br />
-          Arrastra para mover la nave.<br />
-          Botones: <b>◀ ▶</b> y <b>⚡</b>.<br /><br />
+          Controles tipo consola:<br />
+          <b>◀ ▶</b> izquierda · <b>⚡</b> derecha<br /><br />
           Power-ups:<br />
           <b>S</b> Shield · <b>O</b> Overclock · <b>C</b> Chrono<br />
           <span class="cyan">M</span> Magnet · <span class="orange">L</span> Double Laser · <span class="ice">F</span> Freeze<br />
           <span class="green">D</span> Data · <span class="gold">♥</span> Core<br /><br />
           <b>JEFE CYBER</b> cada 5 niveles.
         `;
+
+        addOverlayButton(
+          `AUTOFIRE: ${autoFire ? 'ON' : 'OFF'}`,
+          autoFire ? 'green' : 'blue',
+          () => {
+            autoFire = !autoFire;
+            updateOverlay();
+          }
+        );
 
         addOverlayButton('▶ JUGAR · FÁCIL', 'green', () => startGame('easy'));
         addOverlayButton('▶ JUGAR · NORMAL', 'blue', () => startGame('normal'));
@@ -1211,7 +1241,8 @@
           Puntuación: <b>${score}</b><br />
           Récord: <b>${highScore}</b><br />
           ${newRecord ? '<b>¡NUEVO RÉCORD!</b><br />' : ''}
-          Dificultad: <b>${difficulty.name}</b>
+          Dificultad: <b>${difficulty.name}</b><br />
+          Autofire: <b>${autoFire ? 'ON' : 'OFF'}</b>
         `;
 
         addOverlayButton('REINICIAR', '', () => startGame(currentDifficultyKey));
@@ -1413,7 +1444,6 @@
       spawnLevel(level);
       updateHUD();
 
-      // Fix: overlay disappears immediately when entering playing state
       overlay.classList.add('hidden');
       clearOverlayActions();
 
@@ -1469,14 +1499,15 @@
 
       const numBalls = Math.min(2 + Math.floor(lvl / 2), 6);
       const speedBoost = (1 + lvl * 0.06) * difficulty.ballSpeed;
+      const margin = 80;
 
       for (let i = 0; i < numBalls; i++) {
         const x =
           numBalls === 1
             ? W / 2
-            : 100 + (i * (W - 200)) / (numBalls - 1);
+            : margin + (i * (W - margin * 2)) / (numBalls - 1);
 
-        const y = 60 + Math.random() * 70;
+        const y = 70 + Math.random() * 80;
         const colorIdx = i % BALL_COLORS.length;
         const dir = Math.random() > 0.5 ? 1 : -1;
         const vx = dir * (1.6 + Math.random() * 1.6) * speedBoost;
@@ -1503,7 +1534,7 @@
       };
     }
 
-    function shootHarpoon() {
+    function shootHarpoon(manual = true) {
       const doubleActive = powerTimers.double > 0;
       const count = doubleActive ? 2 : 1;
       const maxHarpoons =
@@ -1511,10 +1542,10 @@
         (powerTimers.overclock > 0 ? 2 : 0) +
         (doubleActive ? 2 : 0);
 
-      if (harpoons.length + count > maxHarpoons) return;
+      if (harpoons.length + count > maxHarpoons) return false;
 
       const offsets = doubleActive ? [-10, 10] : [0];
-      const speed = powerTimers.overclock > 0 ? 10 : 9;
+      const speed = powerTimers.overclock > 0 ? 12 : 11;
 
       for (const off of offsets) {
         harpoons.push({
@@ -1531,7 +1562,12 @@
       }
 
       sfxShoot();
-      vibrate(8);
+
+      if (manual) {
+        vibrate(8);
+      }
+
+      return true;
     }
 
     function createParticle(x, y, color, sizeMult = 1) {
@@ -1758,8 +1794,8 @@
 
       boss = {
         x: W / 2,
-        y: 110,
-        radius: 66,
+        y: 120,
+        radius: 60,
         hp,
         maxHp: hp,
         vx: (1.4 + lvl * 0.12) * difficulty.ballSpeed * (Math.random() > 0.5 ? 1 : -1),
@@ -1771,7 +1807,7 @@
 
       sfxBossSpawn();
       vibrate([60, 40, 100]);
-      addFloatingText('CYBER BOSS', '#ff2d95', W / 2, 170);
+      addFloatingText('CYBER BOSS', '#ff2d95', W / 2, 200);
     }
 
     function bossShoot() {
@@ -1861,7 +1897,7 @@
 
       boss.phase += 0.04 * enemyTimeScale;
       boss.x += boss.vx * enemyTimeScale;
-      boss.y = 110 + Math.sin(boss.phase) * 20;
+      boss.y = 120 + Math.sin(boss.phase) * 25;
 
       if (boss.x - boss.radius < 0) {
         boss.x = boss.radius;
@@ -1901,7 +1937,6 @@
         }
       }
 
-      // Harpoon collision
       for (let j = harpoons.length - 1; j >= 0; j--) {
         const h = harpoons[j];
         let hit = false;
@@ -1925,7 +1960,6 @@
         }
       }
 
-      // Boss contact
       if (boss && player.invincible <= 0) {
         const dx = player.x - boss.x;
         const dy = player.y - boss.y;
@@ -1984,7 +2018,6 @@
 
       if (gameState !== 'playing') return;
 
-      // Timers
       for (const key in powerTimers) {
         if (powerTimers[key] > 0) powerTimers[key]--;
       }
@@ -1994,7 +2027,6 @@
 
       const pickupTimeScale = powerTimers.chrono > 0 ? 0.45 : 1;
 
-      // Player
       if (keys['ArrowLeft'] || keys['KeyA'] || input.left) {
         player.x -= player.speed;
       }
@@ -2010,16 +2042,20 @@
         player.invincible--;
       }
 
-      // Fire
       const now = performance.now();
       const fireCooldown = powerTimers.overclock > 0 ? 110 : 250;
 
-      if ((keys['Space'] || input.fire) && now - lastFireTime > fireCooldown) {
-        shootHarpoon();
-        lastFireTime = now;
+      // AUTOFIRE
+      if (autoFire && now - lastFireTime > fireCooldown) {
+        if (shootHarpoon(false)) {
+          lastFireTime = now;
+        }
+      } else if (!autoFire && (keys['Space'] || input.fire) && now - lastFireTime > fireCooldown) {
+        if (shootHarpoon(true)) {
+          lastFireTime = now;
+        }
       }
 
-      // Harpoons
       for (let i = harpoons.length - 1; i >= 0; i--) {
         const h = harpoons[i];
 
@@ -2033,7 +2069,6 @@
         }
       }
 
-      // Balls
       for (let i = balls.length - 1; i >= 0; i--) {
         const b = balls[i];
 
@@ -2092,7 +2127,6 @@
         if (removed) continue;
       }
 
-      // Pickups
       for (let i = pickups.length - 1; i >= 0; i--) {
         const p = pickups[i];
 
@@ -2158,10 +2192,8 @@
         }
       }
 
-      // Boss
       updateBoss(enemyTimeScale);
 
-      // Enemy projectiles
       for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
         const p = enemyProjectiles[i];
 
@@ -2192,7 +2224,6 @@
         }
       }
 
-      // Player vs balls
       if (player.invincible <= 0) {
         for (const b of balls) {
           const dx = player.x - b.x;
@@ -2206,7 +2237,6 @@
         }
       }
 
-      // Level clear
       if (!boss && balls.length === 0 && gameState === 'playing') {
         setState('levelclear');
       }
@@ -2243,6 +2273,7 @@
         drawStatusOverlays();
         drawPowerHUD();
         drawBossHealthBar();
+        drawAutoFireIndicator();
       }
 
       drawScanlines();
@@ -2863,7 +2894,7 @@
     function drawBossHealthBar() {
       if (!boss) return;
 
-      const barW = 320;
+      const barW = Math.min(300, W * 0.72);
       const barH = 12;
       const x = (W - barW) / 2;
       const y = 14;
@@ -2892,6 +2923,24 @@
       ctx.strokeStyle = 'rgba(255,255,255,0.25)';
       ctx.lineWidth = 1;
       ctx.strokeRect(x, y + 4, barW, barH);
+    }
+
+    function drawAutoFireIndicator() {
+      if (!autoFire) return;
+
+      const blink = Math.sin(frameCount * 0.1) > -0.3;
+
+      ctx.globalAlpha = blink ? 0.95 : 0.35;
+      ctx.font = '900 12px Orbitron, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = COLORS.neonGreen;
+      ctx.shadowColor = COLORS.neonGreen;
+      ctx.shadowBlur = 10;
+
+      ctx.fillText('AUTO', W - 14, 24);
+
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
     }
 
     function drawScanlines() {
