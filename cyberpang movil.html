@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
-  <title>⚡ CYBER PANG ULTRA AUTOFIRE ⚡</title>
+  <title>⚡ CYBER PANG ULTRA FIXED ⚡</title>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
@@ -293,7 +293,7 @@
     .controls-group {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
 
     .controls-left {
@@ -305,8 +305,8 @@
     }
 
     .touch-btn {
-      width: clamp(64px, 17vw, 88px);
-      height: clamp(64px, 17vw, 88px);
+      width: clamp(68px, 18vw, 92px);
+      height: clamp(68px, 18vw, 92px);
       border-radius: 50%;
       border: 2px solid rgba(0, 212, 255, 0.45);
       background: rgba(0, 212, 255, 0.07);
@@ -324,9 +324,9 @@
     }
 
     .touch-btn.fire {
-      width: clamp(105px, 28vw, 145px);
-      height: clamp(64px, 14vw, 88px);
-      border-radius: 26px;
+      width: clamp(110px, 30vw, 150px);
+      height: clamp(68px, 15vw, 92px);
+      border-radius: 28px;
       border-color: rgba(255, 45, 149, 0.6);
       color: var(--neon-pink);
       background: rgba(255, 45, 149, 0.08);
@@ -354,13 +354,19 @@
       }
 
       .touch-btn {
-        width: clamp(54px, 12vw, 70px);
-        height: clamp(54px, 12vw, 70px);
+        width: clamp(56px, 13vw, 74px);
+        height: clamp(56px, 13vw, 74px);
       }
 
       .touch-btn.fire {
-        width: clamp(88px, 22vw, 115px);
+        width: clamp(92px, 24vw, 120px);
         height: clamp(52px, 11vw, 70px);
+      }
+    }
+
+    @media (max-width: 430px) {
+      .hud-item.optional {
+        display: none;
       }
     }
   </style>
@@ -369,7 +375,7 @@
 <body>
   <div id="gameWrapper">
     <div id="top">
-      <div id="title">⚡ CYBER PANG ULTRA ⚡</div>
+      <div id="title">⚡ CYBER PANG ULTRA FIXED ⚡</div>
 
       <div id="hud">
         <div class="hud-item optional">HI <span id="highScore">0</span></div>
@@ -409,7 +415,7 @@
 
   <script>
     // ============================================
-    // CYBER PANG ULTRA AUTOFIRE
+    // CYBER PANG ULTRA FIXED
     // ============================================
 
     const canvas = document.getElementById('gameCanvas');
@@ -1262,25 +1268,53 @@
     }
 
     // ============================================
-    // Touch controls
+    // Touch controls - CORREGIDOS
     // ============================================
 
     function bindHoldButton(element, onDown, onUp) {
+      let activePointerId = null;
+
       element.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        initAudio();
+
+        activePointerId = e.pointerId;
 
         if (element.setPointerCapture) {
-          element.setPointerCapture(e.pointerId);
+          try {
+            element.setPointerCapture(e.pointerId);
+          } catch (err) {}
         }
 
         onDown();
       });
 
-      ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
-        element.addEventListener(eventName, (e) => {
-          e.preventDefault();
+      function releasePointer(e) {
+        if (activePointerId !== null && e.pointerId !== activePointerId) return;
+
+        e.preventDefault();
+
+        activePointerId = null;
+
+        if (element.releasePointerCapture) {
+          try {
+            element.releasePointerCapture(e.pointerId);
+          } catch (err) {}
+        }
+
+        onUp();
+      }
+
+      ['pointerup', 'pointercancel'].forEach((eventName) => {
+        element.addEventListener(eventName, releasePointer);
+      });
+
+      element.addEventListener('lostpointercapture', (e) => {
+        if (activePointerId !== null && e.pointerId === activePointerId) {
+          activePointerId = null;
           onUp();
-        });
+        }
       });
     }
 
@@ -1369,8 +1403,9 @@
       e.preventDefault();
 
       const rect = canvas.getBoundingClientRect();
+      const cssWidth = canvas.clientWidth || rect.width;
       const deltaClientX = e.clientX - dragStartClientX;
-      const deltaGameX = (deltaClientX / rect.width) * W;
+      const deltaGameX = (deltaClientX / cssWidth) * W;
 
       player.x = clamp(
         playerStartX + deltaGameX,
@@ -1398,6 +1433,10 @@
     });
 
     window.addEventListener('blur', () => {
+      input.left = false;
+      input.right = false;
+      input.fire = false;
+
       if (gameState === 'playing') {
         setState('paused');
       }
