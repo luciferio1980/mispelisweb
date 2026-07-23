@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦆 Duck Hunt - HTML</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+background: #111;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+font-family: 'Courier New', monospace;
+overflow: hidden;
+}
+#gameContainer {
+position: relative;
+cursor: none;
+}
+canvas {
+display: block;
+border: 4px solid #333;
+border-radius: 4px;
+image-rendering: pixelated;
+}
+#crosshair {
+position: absolute;
+pointer-events: none;
+width: 40px;
+height: 40px;
+transform: translate(-50%, -50%);
+z-index: 10;
+}
+#crosshair::before, #crosshair::after {
+content: '';
+position: absolute;
+background: rgba(255, 50, 50, 0.9);
+}
+#crosshair::before {
+width: 2px; height: 100%;
+left: 50%; transform: translateX(-50%);
+}
+#crosshair::after {
+height: 2px; width: 100%;
+top: 50%; transform: translateY(-50%);
+}
+#crosshair .circle {
+position: absolute;
+width: 30px; height: 30px;
+border: 2px solid rgba(255, 50, 50, 0.9);
+border-radius: 50%;
+top: 50%; left: 50%;
+transform: translate(-50%, -50%);
+}
+#instructions {
+position: absolute;
+bottom: -35px;
+left: 0; right: 0;
+text-align: center;
+color: #888;
+font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="game" width="800" height="600"></canvas>
+<div id="crosshair"><div class="circle"></div></div>
+<div id="instructions">🖱️ Click para disparar | ENTER para empezar</div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const crosshair = document.getElementById('crosshair');
+const W = 800, H = 600;
+
+// ============ AUDIO ENGINE ============
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function initAudio() {
+    if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playShot() {
+    if (!audioCtx) return;
+    const bufferSize = audioCtx.sampleRate * 0.15;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3000, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+    source.connect(filter).connect(gain).connect(audioCtx.destination);
+    source.start();
+}
+
+function playQuack() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.08);
+    osc.frequency.setValueAtTime(700, audioCtx.currentTime + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(350, audioCtx.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.2);
+}
+
+function playFall() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function playHit() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function playLaugh() {
+    if (!audioCtx) return;
+    const notes = [500, 600, 500, 600, 500, 400];
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.12 + 0.1);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + i * 0.12);
+        osc.stop(audioCtx.currentTime + i * 0.12 + 0.12);
+    });
+}
+
+function playRoundStart() {
+    if (!audioCtx) return;
+    const notes = [440, 554, 659];
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime + i * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.15 + 0.3);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + i * 0.15);
+        osc.stop(audioCtx.currentTime + i * 0.15 + 0.3);
+    });
+}
+
+function playGameOver() {
+    if (!audioCtx) return;
+    const notes = [400, 350, 300, 250, 200];
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime + i * 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.2 + 0.3);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + i * 0.2);
+        osc.stop(audioCtx.currentTime + i * 0.2 + 0.35);
+    });
+}
+
+// ============ GAME STATE ============
+const STATE = {
+    MENU: 0,
+    DOG_WALK: 1,
+    DOG_SNIFF: 2,
+    DOG_JUMP: 3,
+    PLAYING: 4,
+    DUCK_HIT: 5,
+    DUCK_ESCAPE: 6,
+    DOG_RESULT: 7,
+    ROUND_CLEAR: 8,
+    GAME_OVER: 9
+};
+
+let gameState = STATE.MENU;
+let score = 0;
+let round = 1;
+let ducksInRound = 0;
+let ducksHit = 0;
+let ducksEscaped = 0;
+let bullets = 3;
+let ducks = [];
+let stateTimer = 0;
+let flashTimer = 0;
+let mouseX = W / 2, mouseY = H / 2;
+let dog = { x: -60, y: 430, frame: 0, jumping: false, jumpY: 0, holdingDuck: false, laughing: false };
+let clouds = [];
+let particles = [];
+let feathers = [];
+let totalDucks = 10;
+let duckOrder = 0;
+let highScore = parseInt(localStorage.getItem('duckHuntHigh')) || 0;
+let quackTimer = 0;
+let grassSway = 0;
+
+// Init clouds
+for (let i = 0; i < 5; i++) {
+    clouds.push({
+        x: Math.random() * W,
+        y: 40 + Math.random() * 120,
+        speed: 0.2 + Math.random() * 0.3,
+        size: 30 + Math.random() * 40
+    });
+}
+
+// ============ DUCK CLASS ============
+class Duck {
+    constructor(speed) {
+        this.x = Math.random() < 0.5 ? -30 : W + 30;
+        this.y = 250 + Math.random() * 150;
+        this.vx = (this.x < 0 ? 1 : -1) * (speed + Math.random() * 1.5);
+        this.vy = -(1 + Math.random() * 2);
+        this.width = 40;
+        this.height = 35;
+        this.alive = true;
+        this.falling = false;
+        this.fallSpeed = 0;
+        this.escaped = false;
+        this.frame = 0;
+        this.frameTimer = 0;
+        this.hitFlash = 0;
+        this.color = Math.random() < 0.3 ? '#2a2' : (Math.random() < 0.5 ? '#22a' : '#111');
+        this.changeTimer = 60 + Math.random() * 60;
+        this.quacking = false;
+        this.quackFrame = 0;
+    }
+
+    update() {
+        this.frameTimer++;
+        if (this.frameTimer > 6) {
+            this.frame = (this.frame + 1) % 3;
+            this.frameTimer = 0;
+        }
+
+        if (this.falling) {
+            this.fallSpeed += 0.5;
+            this.y += this.fallSpeed;
+            this.x += Math.sin(this.y * 0.05) * 2;
+            if (this.y > H + 50) this.alive = false;
+            return;
+        }
+
+        this.changeTimer--;
+        if (this.changeTimer <= 0) {
+            this.vy = (Math.random() - 0.5) * 4;
+            this.vx += (Math.random() - 0.5) * 2;
+            this.vx = Math.max(-5, Math.min(5, this.vx));
+            this.changeTimer = 40 + Math.random() * 80;
+            if (Math.random() < 0.3) {
+                this.quacking = true;
+                this.quackFrame = 15;
+                playQuack();
+            }
+        }
+
+        if (this.quackFrame > 0) this.quackFrame--;
+        else this.quacking = false;
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Bounce off walls
+        if (this.x < 20) { this.x = 20; this.vx = Math.abs(this.vx); }
+        if (this.x > W - 20) { this.x = W - 20; this.vx = -Math.abs(this.vx); }
+        if (this.y < 30) { this.y = 30; this.vy = Math.abs(this.vy); }
+        if (this.y > 350) { this.y = 350; this.vy = -Math.abs(this.vy); }
+
+        // Escape timer
+        if (this.hitFlash > 0) this.hitFlash--;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        if (this.falling) {
+            // Falling duck - spinning
+            ctx.rotate(this.y * 0.03);
+            this.drawDuckBody(0); // wings down
+            // X eyes
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-8, -8); ctx.lineTo(-3, -3);
+            ctx.moveTo(-3, -8); ctx.lineTo(-8, -3);
+            ctx.stroke();
+        } else {
+            const dir = this.vx >= 0 ? 1 : -1;
+            ctx.scale(dir, 1);
+            this.drawDuckBody(this.frame);
+            if (this.hitFlash > 0 && this.hitFlash % 4 < 2) {
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 25, 20, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+        ctx.restore();
+    }
+
+    drawDuckBody(wingFrame) {
+        // Body
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 18, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head
+        ctx.fillStyle = this.color === '#2a2' ? '#1a1' : (this.color === '#22a' ? '#11a' : '#222');
+        ctx.beginPath();
+        ctx.arc(14, -10, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(17, -12, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(18, -12, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Beak
+        ctx.fillStyle = '#f80';
+        if (this.quacking) {
+            ctx.beginPath();
+            ctx.moveTo(22, -12);
+            ctx.lineTo(32, -15);
+            ctx.lineTo(22, -9);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(22, -8);
+            ctx.lineTo(30, -5);
+            ctx.lineTo(22, -5);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(22, -11);
+            ctx.lineTo(32, -9);
+            ctx.lineTo(22, -7);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Wings
+        ctx.fillStyle = this.color === '#111' ? '#333' : this.color;
+        const wingAngles = [-0.8, 0, 0.8];
+        const wingY = [-12, -5, 3];
+        ctx.save();
+        ctx.translate(-2, -2);
+        ctx.rotate(wingAngles[wingFrame]);
+        ctx.beginPath();
+        ctx.ellipse(-8, wingY[wingFrame] * 0.3, 16, 6, -0.3 + wingAngles[wingFrame] * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Tail
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(-16, -3);
+        ctx.lineTo(-26, -8);
+        ctx.lineTo(-24, 0);
+        ctx.lineTo(-16, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        // White belly
+        ctx.fillStyle = '#eee';
+        ctx.beginPath();
+        ctx.ellipse(2, 6, 10, 6, 0, 0, Math.PI);
+        ctx.fill();
+    }
+
+    checkHit(mx, my) {
+        const dx = mx - this.x;
+        const dy = my - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < 28;
+    }
+}
+
+// ============ PARTICLES ============
+function addFeathers(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+        feathers.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4 - 2,
+            life: 60,
+            rot: Math.random() * Math.PI * 2,
+            color: color
+        });
+    }
+}
+
+function addShotParticles(x, y) {
+    for (let i = 0; i < 5; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 0.5) * 3,
+            life: 15,
+            color: '#ff0'
+        });
+    }
+}
+
+// ============ DRAWING FUNCTIONS ============
+function drawBackground() {
+    // Sky gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 450);
+    skyGrad.addColorStop(0, '#4a90d9');
+    skyGrad.addColorStop(0.6, '#87CEEB');
+    skyGrad.addColorStop(1, '#b8e6b8');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, 450);
+
+    // Sun
+    ctx.fillStyle = '#FFE44D';
+    ctx.beginPath();
+    ctx.arc(680, 70, 35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 228, 77, 0.3)';
+    ctx.beginPath();
+    ctx.arc(680, 70, 50, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Clouds
+    clouds.forEach(c => {
+        c.x += c.speed;
+        if (c.x > W + 80) c.x = -80;
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.size * 0.6, 0, Math.PI * 2);
+        ctx.arc(c.x + c.size * 0.5, c.y - c.size * 0.2, c.size * 0.5, 0, Math.PI * 2);
+        ctx.arc(c.x + c.size, c.y, c.size * 0.55, 0, Math.PI * 2);
+        ctx.arc(c.x + c.size * 0.5, c.y + c.size * 0.1, c.size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Background trees
+    drawTree(80, 420, 0.8);
+    drawTree(200, 430, 1.0);
+    drawTree(350, 425, 0.7);
+    drawTree(500, 430, 0.9);
+    drawTree(650, 420, 1.1);
+    drawTree(750, 435, 0.75);
+
+    // Ground
+    const groundGrad = ctx.createLinearGradient(0, 430, 0, H);
+    groundGrad.addColorStop(0, '#4a8c3f');
+    groundGrad.addColorStop(0.3, '#3d7a34');
+    groundGrad.addColorStop(1, '#2d5a24');
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, 430, W, H - 430);
+
+    // Grass details
+    grassSway += 0.02;
+    ctx.strokeStyle = '#5a9c4f';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 60; i++) {
+        const gx = (i * 14 + 5) % W;
+        const gy = 435 + (i * 7) % 30;
+        const sway = Math.sin(grassSway + i) * 3;
+        ctx.beginPath();
+        ctx.moveTo(gx, gy);
+        ctx.quadraticCurveTo(gx + sway, gy - 10, gx + sway * 1.5, gy - 18);
+        ctx.stroke();
+    }
+}
+
+function drawTree(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Trunk
+    ctx.fillStyle = '#6b4226';
+    ctx.fillRect(-8, -10, 16, 40);
+
+    // Foliage
+    ctx.fillStyle = '#2d6b1e';
+    ctx.beginPath();
+    ctx.arc(0, -30, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a8a2a';
+    ctx.beginPath();
+    ctx.arc(-15, -20, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(15, -22, 24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4a9a3a';
+    ctx.beginPath();
+    ctx.arc(0, -40, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawDog() {
+    ctx.save();
+    ctx.translate(dog.x, dog.y - dog.jumpY);
+
+    const bounce = Math.sin(dog.frame * 0.3) * 3;
+
+    // Body
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath();
+    ctx.ellipse(0, 10 + bounce * 0.3, 28, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legs
+    ctx.fillStyle = '#7a5c10';
+    const legAnim = Math.sin(dog.frame * 0.4) * 5;
+    ctx.fillRect(-18, 22, 8, 16 + legAnim);
+    ctx.fillRect(-4, 22, 8, 16 - legAnim);
+    ctx.fillRect(8, 22, 8, 16 + legAnim);
+    ctx.fillRect(20, 22, 8, 16 - legAnim);
+
+    // Tail
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-26, 5);
+    ctx.quadraticCurveTo(-38, -5 + Math.sin(dog.frame * 0.5) * 8, -35, -15);
+    ctx.stroke();
+
+    // Head
+    ctx.fillStyle = '#9B7924';
+    ctx.beginPath();
+    ctx.arc(25, -8 + bounce, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ears
+    ctx.fillStyle = '#6b4c0a';
+    ctx.beginPath();
+    ctx.ellipse(15, -22 + bounce, 7, 12, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(33, -20 + bounce, 7, 11, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Snout
+    ctx.fillStyle = '#c4a44a';
+    ctx.beginPath();
+    ctx.ellipse(35, -3 + bounce, 10, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nose
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(43, -5 + bounce, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    if (dog.laughing) {
+        // Laughing eyes (^ ^)
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(20, -12 + bounce, 4, Math.PI, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(30, -12 + bounce, 4, Math.PI, 0);
+        ctx.stroke();
+        // Open mouth
+        ctx.fillStyle = '#800';
+        ctx.beginPath();
+        ctx.ellipse(35, 3 + bounce, 6, 5, 0, 0, Math.PI);
+        ctx.fill();
+    } else {
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(20, -12 + bounce, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(30, -12 + bounce, 3, 0, Math.PI * 2);
+        ctx.fill();
+        // Eye shine
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(21, -13 + bounce, 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Holding duck
+    if (dog.holdingDuck) {
+        ctx.save();
+        ctx.translate(35, -30 + bounce);
+        ctx.rotate(0.2);
+        ctx.scale(0.6, 0.6);
+        // Dead duck
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f80';
+        ctx.beginPath();
+        ctx.moveTo(12, -3);
+        ctx.lineTo(20, -1);
+        ctx.lineTo(12, 1);
+        ctx.closePath();
+        ctx.fill();
+        // X eyes
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(5, -5); ctx.lineTo(9, -1);
+        ctx.moveTo(9, -5); ctx.lineTo(5, -1);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+function drawHUD() {
+    // Top bar
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, 45);
+
+    // Score
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText(`PUNTOS: ${score}`, 15, 30);
+
+    // Round
+    ctx.textAlign = 'center';
+    ctx.fillText(`RONDA ${round}/${totalDucks}`, W / 2, 30);
+
+    // High score
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff0';
+    ctx.fillText(`RÉCORD: ${highScore}`, W - 15, 30);
+
+    // Bullets
+    ctx.textAlign = 'left';
+    for (let i = 0; i < 3; i++) {
+        if (i < bullets) {
+            ctx.fillStyle = '#f44';
+            ctx.beginPath();
+            ctx.arc(15 + i * 25, 55, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fa0';
+            ctx.fillRect(11 + i * 25, 55, 8, 12);
+        } else {
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(15 + i * 25, 55, 8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+
+    // Duck tracker
+    ctx.textAlign = 'right';
+    for (let i = 0; i < totalDucks; i++) {
+        const dx = W - 20 - i * 22;
+        if (i < ducksHit) {
+            ctx.fillStyle = '#4f4';
+            ctx.font = '16px serif';
+            ctx.fillText('🦆', dx, 60);
+        } else if (i < ducksHit + ducksEscaped) {
+            ctx.fillStyle = '#f44';
+            ctx.font = '16px serif';
+            ctx.fillText('✖', dx, 60);
+        } else {
+            ctx.fillStyle = '#555';
+            ctx.font = '16px serif';
+            ctx.fillText('🦆', dx, 60);
+        }
+    }
+}
+
+function drawMenu() {
+    drawBackground();
+
+    // Title
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(100, 100, 600, 350);
+    ctx.strokeStyle = '#f80';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(100, 100, 600, 350);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f80';
+    ctx.font = 'bold 56px "Courier New"';
+    ctx.fillText('🦆 DUCK HUNT', W / 2, 180);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px "Courier New"';
+    ctx.fillText('¡Caza todos los patos que puedas!', W / 2, 230);
+
+    ctx.font = '16px "Courier New"';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('🖱️ Mueve el ratón para apuntar', W / 2, 280);
+    ctx.fillText('🔫 Click para disparar (3 balas por pato)', W / 2, 310);
+    ctx.fillText('⏱️ ¡No dejes que escapen!', W / 2, 340);
+
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 24px "Courier New"';
+    const blink = Math.sin(Date.now() * 0.005) > 0;
+    if (blink) {
+        ctx.fillText('>>> PRESIONA ENTER O CLICK PARA JUGAR <<<', W / 2, 410);
+    }
+
+    if (highScore > 0) {
+        ctx.fillStyle = '#f80';
+        ctx.font = '18px "Courier New"';
+        ctx.fillText(`🏆 Récord: ${highScore}`, W / 2, 440);
+    }
+}
+
+function drawGameOver() {
+    drawBackground();
+
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(100, 120, 600, 320);
+    ctx.strokeStyle = '#f44';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(100, 120, 600, 320);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f44';
+    ctx.font = 'bold 48px "Courier New"';
+    ctx.fillText('GAME OVER', W / 2, 190);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px "Courier New"';
+    ctx.fillText(`Puntuación: ${score}`, W / 2, 250);
+    ctx.fillText(`Patos cazados: ${ducksHit}/${totalDucks}`, W / 2, 290);
+
+    const accuracy = totalDucks > 0 ? Math.round((ducksHit / totalDucks) * 100) : 0;
+    ctx.fillText(`Precisión: ${accuracy}%`, W / 2, 330);
+
+    if (score >= highScore && score > 0) {
+        ctx.fillStyle = '#ff0';
+        ctx.font = 'bold 22px "Courier New"';
+        ctx.fillText('🏆 ¡NUEVO RÉCORD! 🏆', W / 2, 370);
+    }
+
+    ctx.fillStyle = '#4f4';
+    ctx.font = 'bold 20px "Courier New"';
+    const blink = Math.sin(Date.now() * 0.005) > 0;
+    if (blink) {
+        ctx.fillText('PRESIONA ENTER PARA REINICIAR', W / 2, 420);
+    }
+}
+
+function drawFlash() {
+    if (flashTimer > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${flashTimer / 5})`;
+        ctx.fillRect(0, 0, W, H);
+        flashTimer--;
+    }
+}
+
+function drawParticles() {
+    feathers.forEach((f, i) => {
+        f.x += f.vx;
+        f.y += f.vy;
+        f.vy += 0.1;
+        f.rot += 0.1;
+        f.life--;
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.rot);
+        ctx.globalAlpha = f.life / 60;
+        ctx.fillStyle = f.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+    feathers = feathers.filter(f => f.life > 0);
+
+    particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        ctx.globalAlpha = p.life / 15;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    particles = particles.filter(p => p.life > 0);
+}
+
+// ============ GAME LOGIC ============
+function startGame() {
+    initAudio();
+    score = 0;
+    round = 1;
+    ducksHit = 0;
+    ducksEscaped = 0;
+    duckOrder = 0;
+    startRound();
+}
+
+function startRound() {
+    bullets = 3;
+    ducks = [];
+    const speed = 1.5 + round * 0.3;
+    ducks.push(new Duck(speed));
+    gameState = STATE.DOG_WALK;
+    dog.x = -60;
+    dog.y = 430;
+    dog.jumpY = 0;
+    dog.holdingDuck = false;
+    dog.laughing = false;
+    dog.frame = 0;
+    stateTimer = 0;
+    playRoundStart();
+}
+
+function shoot() {
+    if (gameState !== STATE.PLAYING) return;
+    if (bullets <= 0) return;
+
+    bullets--;
+    flashTimer = 4;
+    playShot();
+    addShotParticles(mouseX, mouseY);
+
+    let hitAny = false;
+    ducks.forEach(duck => {
+        if (!duck.falling && duck.checkHit(mouseX, mouseY)) {
+            duck.falling = true;
+            duck.fallSpeed = 0;
+            hitAny = true;
+            const points = Math.max(100, 500 - round * 30);
+            score += points;
+            addFeathers(duck.x, duck.y, duck.color);
+            playHit();
+            setTimeout(() => playFall(), 200);
+        }
+    });
+
+    if (hitAny) {
+        gameState = STATE.DUCK_HIT;
+        stateTimer = 0;
+    } else if (bullets <= 0) {
+        // Out of bullets, ducks escape
+        setTimeout(() => {
+            if (gameState === STATE.PLAYING) {
+                ducks.forEach(d => {
+                    if (!d.falling) {
+                        d.vy = -4;
+                        d.escaped = true;
+                    }
+                });
+                gameState = STATE.DUCK_ESCAPE;
+                stateTimer = 0;
+            }
+        }, 500);
+    }
+}
+
+function update() {
+    stateTimer++;
+
+    switch (gameState) {
+        case STATE.DOG_WALK:
+            dog.x += 2;
+            dog.frame++;
+            if (dog.x > 200) {
+                gameState = STATE.DOG_SNIFF;
+                stateTimer = 0;
+            }
+            break;
+
+        case STATE.DOG_SNIFF:
+            dog.frame++;
+            if (stateTimer > 60) {
+                gameState = STATE.DOG_JUMP;
+                stateTimer = 0;
+                playQuack();
+            }
+            break;
+
+        case STATE.DOG_JUMP:
+            dog.jumpY = Math.sin(Math.min(stateTimer / 30, 1) * Math.PI) * 120;
+            dog.frame++;
+            if (stateTimer > 60) {
+                dog.jumpY = 0;
+                gameState = STATE.PLAYING;
+                stateTimer = 0;
+            }
+            break;
+
+        case STATE.PLAYING:
+            ducks.forEach(d => d.update());
+
+            // Check if all ducks gone
+            const allDone = ducks.every(d => d.falling || d.escaped || !d.alive);
+            if (allDone && ducks.length > 0) {
+                const anyHit = ducks.some(d => d.falling || !d.alive);
+                if (anyHit) {
+                    gameState = STATE.DUCK_HIT;
+                } else {
+                    gameState = STATE.DUCK_ESCAPE;
+                }
+                stateTimer = 0;
+            }
+
+            // Escape timer (too long)
+            if (stateTimer > 600) {
+                ducks.forEach(d => {
+                    if (!d.falling) {
+                        d.vy = -5;
+                        d.escaped = true;
+                    }
+                });
+                gameState = STATE.DUCK_ESCAPE;
+                stateTimer = 0;
+            }
+            break;
+
+        case STATE.DUCK_HIT:
+            ducks.forEach(d => d.update());
+            if (stateTimer > 60) {
+                ducksHit++;
+                dog.holdingDuck = true;
+                dog.laughing = false;
+                gameState = STATE.DOG_RESULT;
+                stateTimer = 0;
+                dog.x = W / 2 - 30;
+                dog.jumpY = 0;
+            }
+            break;
+
+        case STATE.DUCK_ESCAPE:
+            ducks.forEach(d => {
+                d.vy = -4;
+                d.update();
+            });
+            if (stateTimer > 60) {
+                ducksEscaped++;
+                dog.holdingDuck = false;
+                dog.laughing = true;
+                gameState = STATE.DOG_RESULT;
+                stateTimer = 0;
+                dog.x = W / 2 - 30;
+                dog.jumpY = 0;
+                playLaugh();
+            }
+            break;
+
+        case STATE.DOG_RESULT:
+            dog.frame++;
+            if (stateTimer < 30) {
+                dog.jumpY = Math.sin(stateTimer / 30 * Math.PI) * 80;
+            } else {
+                dog.jumpY = 0;
+            }
+            if (stateTimer > 90) {
+                round++;
+                if (round > totalDucks) {
+                    gameState = STATE.GAME_OVER;
+                    if (score > highScore) {
+                        highScore = score;
+                        localStorage.setItem('duckHuntHigh', highScore);
+                    }
+                    playGameOver();
+                } else {
+                    startRound();
+                }
+            }
+            break;
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    if (gameState === STATE.MENU) {
+        drawMenu();
+        return;
+    }
+
+    if (gameState === STATE.GAME_OVER) {
+        drawGameOver();
+        return;
+    }
+
+    drawBackground();
+
+    // Draw dog
+    if (gameState === STATE.DOG_WALK || gameState === STATE.DOG_SNIFF ||
+        gameState === STATE.DOG_JUMP || gameState === STATE.DOG_RESULT) {
+        drawDog();
+    }
+
+    // Draw ducks
+    ducks.forEach(d => {
+        if (d.alive) d.draw();
+    });
+
+    drawParticles();
+    drawHUD();
+    drawFlash();
+
+    // Round announcement
+    if (gameState === STATE.DOG_WALK && stateTimer < 60) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 32px "Courier New"';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 4;
+        ctx.strokeText(`RONDA ${round}`, W / 2, 200);
+        ctx.fillText(`RONDA ${round}`, W / 2, 200);
+    }
+
+    // "Fly away!" text
+    if (gameState === STATE.DUCK_ESCAPE && stateTimer < 50) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f44';
+        ctx.font = 'bold 28px "Courier New"';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeText('¡ESCAPÓ!', W / 2, 200);
+        ctx.fillText('¡ESCAPÓ!', W / 2, 200);
+    }
+
+    // "Hit!" text
+    if (gameState === STATE.DUCK_HIT && stateTimer < 40) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#4f4';
+        ctx.font = 'bold 28px "Courier New"';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeText('¡ACIERTO!', W / 2, 200);
+        ctx.fillText('¡ACIERTO!', W / 2, 200);
+    }
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+// ============ INPUT ============
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    mouseX = (e.clientX - rect.left) * scaleX;
+    mouseY = (e.clientY - rect.top) * scaleY;
+    crosshair.style.left = e.clientX - canvas.parentElement.getBoundingClientRect().left + 'px';
+    crosshair.style.top = e.clientY - canvas.parentElement.getBoundingClientRect().top + 'px';
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    initAudio();
+    if (gameState === STATE.MENU) {
+        startGame();
+    } else if (gameState === STATE.GAME_OVER) {
+        gameState = STATE.MENU;
+    } else if (gameState === STATE.PLAYING) {
+        shoot();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        initAudio();
+        if (gameState === STATE.MENU) {
+            startGame();
+        } else if (gameState === STATE.GAME_OVER) {
+            gameState = STATE.MENU;
+        }
+    }
+});
+
+// Prevent context menu
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ============ START ============
+gameLoop();
+</script>
+</body>
+</html>
