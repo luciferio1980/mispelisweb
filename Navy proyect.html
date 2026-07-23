@@ -89,16 +89,33 @@
       text-shadow: 0 0 10px #f0f;
     }
 
-    #pauseBtn {
+    .hud-btn, #pauseBtn {
       pointer-events: auto;
-      width: clamp(34px, 5vh, 42px);
+      min-width: clamp(34px, 5vh, 42px);
       height: clamp(34px, 5vh, 42px);
-      border: 1px solid var(--cyan);
+      padding: 0 8px;
       border-radius: 10px;
+      font-size: clamp(13px, 2.2vh, 18px);
+    }
+
+    #pauseBtn {
+      border: 1px solid var(--cyan);
       background: rgba(0, 255, 255, 0.08);
       color: var(--cyan);
-      font-size: clamp(14px, 2.4vh, 18px);
       box-shadow: 0 0 14px rgba(0, 255, 255, 0.25);
+    }
+
+    .hud-btn {
+      border: 1px solid var(--magenta);
+      background: rgba(255, 0, 255, 0.08);
+      color: var(--magenta);
+      box-shadow: 0 0 14px rgba(255, 0, 255, 0.25);
+    }
+
+    .hud-btn.off {
+      color: #999;
+      border-color: #555;
+      box-shadow: none;
     }
 
     #powerHud {
@@ -359,6 +376,7 @@
     <div class="hud-box">SCORE <span id="scoreVal">0</span></div>
     <div class="hud-box">LVL <span id="levelVal">1</span></div>
     <div class="hud-box" id="livesVal">♥♥♥</div>
+    <button id="hudMusicBtn" class="hud-btn">♪</button>
     <button id="pauseBtn">⏸</button>
   </div>
 
@@ -381,7 +399,7 @@
     <p>
       Arrastra sobre la pantalla para mover la nave.<br />
       Usa <b>◀ ▶</b> y <b>⚡</b> para disparar.<br />
-      Destruye las oleadas alienígenas, esquiva sus disparos y, a partir de los 2 minutos, aparecen muros.
+      Destruye las oleadas alienígenas, encadena combos y enfréntate a los jefes cada 5 niveles.
     </p>
 
     <div class="menu-row">
@@ -392,6 +410,7 @@
 
     <div class="menu-row">
       <button id="autofireBtn" class="toggle">AUTOFIRE: OFF</button>
+      <button id="musicBtn" class="toggle active">MÚSICA: ON</button>
     </div>
 
     <div class="power-list">
@@ -504,6 +523,8 @@
     const finalScore = $('finalScore');
     const powerHud = $('powerHud');
     const autofireBtn = $('autofireBtn');
+    const musicBtn = $('musicBtn');
+    const hudMusicBtn = $('hudMusicBtn');
 
     function loadHigh() {
       try {
@@ -516,6 +537,20 @@
     function saveHigh(v) {
       try {
         localStorage.setItem('navyProjectHigh', String(v));
+      } catch (e) {}
+    }
+
+    function loadMusicPref() {
+      try {
+        return localStorage.getItem('navyProjectMusic') !== 'off';
+      } catch (e) {
+        return true;
+      }
+    }
+
+    function saveMusicPref() {
+      try {
+        localStorage.setItem('navyProjectMusic', musicEnabled ? 'on' : 'off');
       } catch (e) {}
     }
 
@@ -573,6 +608,15 @@
         score: 80,
         hue: [250, 300],
         aim: 0.46
+      },
+      boss: {
+        hp: 1,
+        size: [135, 165],
+        speed: [70, 90],
+        shoot: [1.0, 1.5],
+        score: 1000,
+        hue: [295, 330],
+        aim: 0.75
       }
     };
 
@@ -590,6 +634,9 @@
         enemyShotSpeed: 0.78,
         shotHit: 0.12,
         wallGap: 0.26,
+        maxPlayerBullets: 18,
+        maxEnemyBullets: 16,
+        maxParticles: 130,
         toSpawn: lvl => 10 + lvl * 3
       },
       normal: {
@@ -605,6 +652,9 @@
         enemyShotSpeed: 1.0,
         shotHit: 0.15,
         wallGap: 0.22,
+        maxPlayerBullets: 24,
+        maxEnemyBullets: 22,
+        maxParticles: 170,
         toSpawn: lvl => 13 + lvl * 4
       },
       hard: {
@@ -620,12 +670,16 @@
         enemyShotSpeed: 1.25,
         shotHit: 0.18,
         wallGap: 0.18,
+        maxPlayerBullets: 30,
+        maxEnemyBullets: 28,
+        maxParticles: 210,
         toSpawn: lvl => 16 + lvl * 5
       }
     };
 
     let difficulty = 'normal';
     let autofire = false;
+    let musicEnabled = loadMusicPref();
 
     const state = {
       mode: 'menu',
@@ -643,7 +697,9 @@
       tunnelTimer: 0,
       tunnelHue: 200,
       tunnelAlpha: 0,
-      tunnelNext: 35
+      tunnelNext: 35,
+      combo: 0,
+      comboTimer: 0
     };
 
     const ship = {
@@ -682,11 +738,22 @@
     function makeLevelCfg(lvl) {
       const cfg = currentCfg();
 
+      if (lvl % 5 === 0) {
+        return {
+          toSpawn: 1,
+          spawned: 0,
+          interval: 1,
+          timer: 1.2,
+          boss: true
+        };
+      }
+
       return {
         toSpawn: cfg.toSpawn(lvl),
         spawned: 0,
         interval: Math.max(0.22, (0.88 - lvl * 0.04) * cfg.spawn),
-        timer: 1.0
+        timer: 1.0,
+        boss: false
       };
     }
 
@@ -733,6 +800,10 @@
       return { x, y, s: p };
     }
 
+    function getComboMult() {
+      return Math.min(4, 1 + Math.floor(state.combo / 8) * 0.5);
+    }
+
     resize();
 
     /* ==============================
@@ -761,15 +832,26 @@
           this.ctx = new AC();
 
           const master = this.ctx.createGain();
-          master.gain.value = 0.75;
-          master.connect(this.ctx.destination);
+          master.gain.value = 0.92;
+
+          const comp = this.ctx.createDynamicsCompressor();
+          const t = this.ctx.currentTime;
+
+          comp.threshold.setValueAtTime(-20, t);
+          comp.knee.setValueAtTime(24, t);
+          comp.ratio.setValueAtTime(5, t);
+          comp.attack.setValueAtTime(0.003, t);
+          comp.release.setValueAtTime(0.25, t);
+
+          master.connect(comp);
+          comp.connect(this.ctx.destination);
 
           this.musicGain = this.ctx.createGain();
-          this.musicGain.gain.value = 0.20;
+          this.musicGain.gain.value = 0.46;
           this.musicGain.connect(master);
 
           this.sfxGain = this.ctx.createGain();
-          this.sfxGain.gain.value = 0.45;
+          this.sfxGain.gain.value = 0.50;
           this.sfxGain.connect(master);
         } catch (e) {
           this.ctx = null;
@@ -790,8 +872,9 @@
         }
       },
 
-      startMusic() {
-        if (!this.ready()) return;
+      startMusic(force = false) {
+        if (!musicEnabled || !this.ready()) return;
+        if (this.musicTimer && !force) return;
 
         this.stopMusic();
 
@@ -893,7 +976,7 @@
         o.frequency.setValueAtTime(160, time);
         o.frequency.exponentialRampToValueAtTime(42, time + 0.11);
 
-        g.gain.setValueAtTime(0.34, time);
+        g.gain.setValueAtTime(0.42, time);
         g.gain.exponentialRampToValueAtTime(0.0001, time + 0.15);
 
         o.connect(g);
@@ -933,17 +1016,17 @@
         const c = chords[bar];
 
         if (s % 4 === 0) {
-          this.tone('sawtooth', c.bass, time, 0.22, 0.20, this.musicGain, 320);
+          this.tone('sawtooth', c.bass, time, 0.22, 0.26, this.musicGain, 340);
         }
 
         if (s % 2 === 0) {
           const note = c.arp[(s / 2) % c.arp.length];
-          this.tone('square', note, time, 0.10, 0.05, this.musicGain, 2200);
+          this.tone('square', note, time, 0.10, 0.085, this.musicGain, 2400);
         }
 
         if (s === 0) {
           c.pad.forEach(f => {
-            this.tone('sawtooth', f, time, 1.65, 0.02, this.musicGain, 850);
+            this.tone('sawtooth', f, time, 1.65, 0.032, this.musicGain, 900);
           });
         }
 
@@ -952,11 +1035,11 @@
         }
 
         if (s === 4 || s === 12) {
-          this.noise(time, 0.12, 0.10, 2000, 400, this.musicGain);
+          this.noise(time, 0.12, 0.15, 2000, 400, this.musicGain);
         }
 
         if (s % 2 === 0) {
-          this.noise(time, 0.03, 0.025, 9000, 5000, this.musicGain);
+          this.noise(time, 0.03, 0.035, 9000, 5000, this.musicGain);
         }
       },
 
@@ -1030,8 +1113,44 @@
         [220, 330, 440, 660].forEach((f, i) => {
           this.tone('triangle', f, t + i * 0.06, 0.22, 0.07, this.sfxGain, 1800);
         });
+      },
+
+      bossWarn() {
+        if (!this.ready()) return;
+        const t = this.ctx.currentTime;
+        [110, 110, 146.83, 110].forEach((f, i) => {
+          this.tone('sawtooth', f, t + i * 0.14, 0.20, 0.14, this.sfxGain, 700);
+        });
       }
     };
+
+    function updateMusicButtons() {
+      if (musicBtn) {
+        musicBtn.textContent = `MÚSICA: ${musicEnabled ? 'ON' : 'OFF'}`;
+        musicBtn.classList.toggle('active', musicEnabled);
+      }
+
+      if (hudMusicBtn) {
+        hudMusicBtn.textContent = musicEnabled ? '♪' : '♪✕';
+        hudMusicBtn.classList.toggle('off', !musicEnabled);
+      }
+    }
+
+    function setMusicEnabled(value) {
+      musicEnabled = value;
+      saveMusicPref();
+      updateMusicButtons();
+
+      if (!musicEnabled) {
+        Synth.stopMusic();
+      } else if (state.mode === 'playing') {
+        try {
+          Synth.init();
+          Synth.resume();
+          Synth.startMusic(false);
+        } catch (e) {}
+      }
+    }
 
     /* ==============================
        GAME FUNCTIONS
@@ -1041,7 +1160,12 @@
       try {
         Synth.init();
         Synth.resume();
-        Synth.stopMusic();
+
+        if (musicEnabled) {
+          Synth.startMusic(true);
+        } else {
+          Synth.stopMusic();
+        }
       } catch (e) {}
 
       resetGame();
@@ -1052,10 +1176,6 @@
       gameOverOverlay.classList.add('hidden');
       pauseOverlay.classList.add('hidden');
       controls.classList.remove('hidden');
-
-      try {
-        Synth.startMusic();
-      } catch (e) {}
 
       updateHUD();
     }
@@ -1076,6 +1196,8 @@
       state.tunnelHue = 200;
       state.tunnelAlpha = 0;
       state.tunnelNext = 35;
+      state.combo = 0;
+      state.comboTimer = 0;
 
       bullets = [];
       aliens = [];
@@ -1118,6 +1240,12 @@
 
         try {
           Synth.resume();
+
+          if (musicEnabled) {
+            Synth.startMusic(false);
+          } else {
+            Synth.stopMusic();
+          }
         } catch (e) {}
       }
     }
@@ -1162,6 +1290,8 @@
       ship.invuln = 2.2;
       state.shake = 18;
       state.flash = 1;
+      state.combo = 0;
+      state.comboTimer = 0;
 
       try {
         Synth.hit();
@@ -1196,7 +1326,49 @@
       return 'eye';
     }
 
+    function spawnBoss() {
+      const cfg = currentCfg();
+      const def = ALIEN_TYPES.boss;
+
+      const base = rand(def.size[0], def.size[1]) * (1 + state.level * 0.01);
+      const hp = 45 + state.level * 7;
+
+      aliens.push({
+        type: 'boss',
+        worldX: 0,
+        baseWorldX: 0,
+        z: Z_FAR,
+        rNear: base * sizeScale,
+        hp,
+        maxHp: hp,
+        speed: rand(def.speed[0], def.speed[1]) * cfg.speed,
+        hue: rand(def.hue[0], def.hue[1]),
+        phase: rand(0, Math.PI * 2),
+        amp: 0.42,
+        freq: 0.45,
+        shootTimer: 2.0,
+        shootMin: def.shoot[0] * cfg.enemyShootMul,
+        shootMax: def.shoot[1] * cfg.enemyShootMul,
+        score: def.score + state.level * 50,
+        aim: def.aim,
+        dead: false
+      });
+
+      levelCfg.spawned = 1;
+
+      addText(W / 2, H * 0.24, '¡NODO MADRE!', '#f0f', 1.6, 34);
+
+      try {
+        Synth.bossWarn();
+      } catch (e) {}
+    }
+
     function spawnAlien() {
+      if (levelCfg.boss) {
+        spawnBoss();
+        return;
+      }
+
       const cfg = currentCfg();
       const type = chooseAlienType();
       const def = ALIEN_TYPES[type];
@@ -1214,8 +1386,8 @@
 
       const speed = rand(def.speed[0], def.speed[1]) * cfg.speed * (1 + state.level * 0.03);
 
-      const shootMin = def.shoot[0] * cfg.enemyShootMul / (1 + state.level * 0.03);
-      const shootMax = def.shoot[1] * cfg.enemyShootMul / (1 + state.level * 0.03);
+      const shootMin = def.shoot[0] * cfg.enemyShootMul * 1.15 / (1 + state.level * 0.03);
+      const shootMax = def.shoot[1] * cfg.enemyShootMul * 1.15 / (1 + state.level * 0.03);
 
       const worldX = rand(-0.82, 0.82);
 
@@ -1258,7 +1430,7 @@
       const cfg = currentCfg();
 
       powerups.push({
-        worldX,
+        worldX: clamp(worldX, -1, 1),
         z,
         type,
         speed: rand(260, 330) * cfg.speed,
@@ -1283,8 +1455,8 @@
     }
 
     function addScore(amount, x, y, color) {
-      const mult = effects.multi > 0 ? 2 : 1;
-      const gained = amount * mult;
+      const mult = (effects.multi > 0 ? 2 : 1) * getComboMult();
+      const gained = Math.round(amount * mult);
 
       state.score += gained;
 
@@ -1318,6 +1490,11 @@
       ship.muzzle = 0.06;
 
       const sr = getShipRender();
+      const shots = effects.triple > 0 ? 3 : 1;
+
+      if (bullets.length + shots > cfg.maxPlayerBullets) {
+        bullets.splice(0, bullets.length + shots - cfg.maxPlayerBullets);
+      }
 
       const pushBullet = (localX, localY, vx) => {
         const worldX = ship.worldX + (localX * sr.sc) / (roadHalf * sr.p);
@@ -1349,6 +1526,8 @@
     function fireEnemyBullet(o, targetOffset = 0) {
       const cfg = currentCfg();
 
+      if (enemyBullets.length >= cfg.maxEnemyBullets) return;
+
       const speed = rand(360, 480) * cfg.enemyShotSpeed * (1 + state.level * 0.02);
       const time = Math.max(0.2, o.z / speed);
 
@@ -1374,6 +1553,23 @@
     }
 
     function alienShoot(o) {
+      const cfg = currentCfg();
+
+      if (o.type === 'boss') {
+        if (enemyBullets.length <= cfg.maxEnemyBullets - 5) {
+          for (let i = -2; i <= 2; i++) {
+            fireEnemyBullet(o, i * 0.12);
+          }
+        }
+
+        if (Math.random() < 0.35 && enemyBullets.length <= cfg.maxEnemyBullets - 2) {
+          fireEnemyBullet(o, -0.05);
+          fireEnemyBullet(o, 0.05);
+        }
+
+        return;
+      }
+
       if (o.type === 'titan') {
         fireEnemyBullet(o, -0.14);
         fireEnemyBullet(o, 0);
@@ -1387,6 +1583,15 @@
     }
 
     function explode(x, y, hue, count = 16, spread = 1) {
+      const cfg = currentCfg();
+
+      if (particles.length + count > cfg.maxParticles) {
+        const excess = particles.length + count - cfg.maxParticles;
+        if (excess > 0) {
+          particles.splice(0, Math.min(excess, particles.length));
+        }
+      }
+
       for (let i = 0; i < count; i++) {
         const a = rand(0, Math.PI * 2);
         const sp = rand(40, 240) * spread;
@@ -1413,7 +1618,14 @@
       const cfg = currentCfg();
       const pr = project(o.z, o.worldX);
 
-      explode(pr.x, pr.y, o.hue, 22, Math.max(0.5, pr.s));
+      state.combo++;
+      state.comboTimer = 2.8;
+
+      if (state.combo > 0 && state.combo % 10 === 0) {
+        addText(W / 2, H * 0.26, `COMBO x${state.combo}!`, '#ff0', 1.0, 26);
+      }
+
+      explode(pr.x, pr.y, o.hue, o.type === 'boss' ? 34 : 16, Math.max(0.5, pr.s));
 
       try {
         Synth.explosion();
@@ -1421,7 +1633,11 @@
 
       addScore(o.score, pr.x, pr.y, `hsl(${o.hue},100%,70%)`);
 
-      if (givePower) {
+      if (o.type === 'boss') {
+        addText(W / 2, H * 0.30, 'SECTOR LIBERADO', '#0ff', 1.4, 28);
+        spawnPower(clamp(o.worldX - 0.12, -1, 1), o.z);
+        spawnPower(clamp(o.worldX + 0.12, -1, 1), o.z);
+      } else if (givePower) {
         const chance = cfg.power * (o.type === 'titan' ? 1.8 : 1);
 
         if (Math.random() < chance) {
@@ -1469,12 +1685,22 @@
 
           aliens.forEach(o => {
             const p = project(o.z, o.worldX);
-            explode(p.x, p.y, o.hue, 10, Math.max(0.4, p.s));
-            addScore(Math.floor(o.score / 2), p.x, p.y, '#f55');
-            o.dead = true;
+
+            if (o.type === 'boss') {
+              o.hp -= 20;
+              explode(p.x, p.y, o.hue, 12, 1);
+
+              if (o.hp <= 0) {
+                destroyAlien(o);
+              }
+            } else {
+              explode(p.x, p.y, o.hue, 10, Math.max(0.4, p.s));
+              addScore(Math.floor(o.score / 2), p.x, p.y, '#f55');
+              o.dead = true;
+            }
           });
 
-          aliens = [];
+          aliens = aliens.filter(o => !o.dead);
           enemyBullets = [];
           break;
       }
@@ -1489,6 +1715,14 @@
       effects.triple = Math.max(0, effects.triple - dt);
       effects.multi = Math.max(0, effects.multi - dt);
       effects.shield = Math.max(0, effects.shield - dt);
+
+      if (state.comboTimer > 0) {
+        state.comboTimer -= dt;
+
+        if (state.comboTimer <= 0) {
+          state.combo = 0;
+        }
+      }
 
       ship.invuln = Math.max(0, ship.invuln - dt);
       ship.muzzle = Math.max(0, ship.muzzle - dt);
@@ -1523,8 +1757,10 @@
 
       state.tunnelAlpha += ((state.tunnelActive ? 1 : 0) - state.tunnelAlpha) * Math.min(1, dt * 2.5);
 
-      // Walls after 2 minutes
-      if (state.time >= state.wallNext && !state.tunnelActive) {
+      const hasBoss = aliens.some(a => a.type === 'boss');
+
+      // Walls after 2 minutes, but not during boss
+      if (state.time >= state.wallNext && !state.tunnelActive && !hasBoss) {
         if (walls.length === 0) {
           spawnWall();
           state.wallNext = state.time + rand(16, 26) - Math.min(6, state.level * 0.4);
@@ -1591,11 +1827,23 @@
           o.shootTimer = rand(o.shootMin, o.shootMax) * rand(0.85, 1.25);
         }
 
-        if (o.z <= 8) {
+        if (o.type === 'boss') {
+          if (o.z <= 70) {
+            if (effects.shield <= 0) {
+              loseLife();
+            } else {
+              addText(W / 2, H * 0.30, 'ESCUDO CONTENCIÓN', '#0ff', 1.0, 18);
+            }
+
+            o.z = 520;
+            o.speed += 8;
+            state.shake = Math.max(state.shake, 18);
+          }
+        } else if (o.z <= 8) {
           o.dead = true;
 
           const pr = project(2, o.worldX);
-          explode(pr.x, H - 25, o.hue, 26, 1.4);
+          explode(pr.x, H - 25, o.hue, 18, 1.4);
 
           if (effects.shield > 0) {
             addScore(Math.floor(o.score / 2), pr.x, pr.y, '#0ff');
@@ -1625,10 +1873,10 @@
           } else {
             if (effects.shield > 0) {
               addText(W / 2, H * 0.30, 'ESCUDO BLOQUEA MURO', '#0ff', 1.0, 18);
-              explode(W / 2, H * 0.45, w.hue, 24, 1.2);
+              explode(W / 2, H * 0.45, w.hue, 20, 1.2);
               w.dead = true;
             } else {
-              explode(W / 2, H * 0.45, w.hue, 30, 1.5);
+              explode(W / 2, H * 0.45, w.hue, 24, 1.5);
               w.dead = true;
               loseLife();
             }
@@ -1647,14 +1895,14 @@
           if (o.dead) continue;
 
           if (Math.abs(b.z - o.z) < 100) {
-            const hitRange = (o.rNear + 20) / roadHalf;
+            const hitRange = (o.rNear + (o.type === 'boss' ? 28 : 20)) / roadHalf;
 
             if (Math.abs(b.worldX - o.worldX) < hitRange) {
               b.dead = true;
               o.hp--;
 
               const pr = project(o.z, o.worldX);
-              explode(pr.x, pr.y, o.hue, 5, Math.max(0.35, pr.s));
+              explode(pr.x, pr.y, o.hue, 4, Math.max(0.35, pr.s));
 
               if (o.hp <= 0) {
                 destroyAlien(o);
@@ -1679,12 +1927,12 @@
 
           if (effects.shield > 0 && dx < 0.26) {
             b.dead = true;
-            explode(pr.x, pr.y, 190, 7, 0.6);
+            explode(pr.x, pr.y, 190, 6, 0.6);
           } else if (dx < cfg.shotHit) {
             b.dead = true;
             loseLife();
           } else {
-            explode(pr.x, pr.y, b.hue, 4, 0.45);
+            explode(pr.x, pr.y, b.hue, 3, 0.45);
           }
         }
 
@@ -1768,6 +2016,10 @@
         html += powerTag('×2 SCORE', '#b26bff', effects.multi);
       }
 
+      if (state.combo >= 5) {
+        html += powerTag(`🔥 COMBO x${getComboMult().toFixed(1)}`, '#ff0', state.comboTimer);
+      }
+
       if (state.time >= 120) {
         html += powerTag('🧱 MUROS ACTIVOS', '#f33', 0);
       }
@@ -1824,6 +2076,7 @@
       }
 
       drawEntities();
+      drawBossBar();
       drawParticles();
       drawTexts();
 
@@ -2234,7 +2487,77 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      if (o.type === 'eye') {
+      if (o.type === 'boss') {
+        ctx.save();
+        ctx.rotate(Math.sin(t * 0.4) * 0.08);
+
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 + t * 0.5;
+          const x = Math.cos(a) * r * 0.98;
+          const y = Math.sin(a) * r * 0.36;
+          const pulse = 0.5 + 0.5 * Math.sin(t * 3 + i);
+
+          ctx.fillStyle = `hsla(${o.hue + i * 8},100%,70%,${0.25 + 0.55 * pulse})`;
+
+          ctx.beginPath();
+          ctx.arc(x, y, r * 0.045 * (0.7 + pulse * 0.6), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+
+        const bossGrad = ctx.createLinearGradient(0, -r * 0.5, 0, r * 0.5);
+        bossGrad.addColorStop(0, light);
+        bossGrad.addColorStop(0.45, main);
+        bossGrad.addColorStop(1, dark);
+
+        ctx.fillStyle = bossGrad;
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 1.08, r * 0.52, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = light;
+        ctx.lineWidth = Math.max(1.5, r * 0.04);
+        ctx.stroke();
+
+        ctx.fillStyle = dark;
+
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.18, r * 0.8, r * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.18, r * 0.42, r * 0.26, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const pulse = 0.75 + Math.sin(t * 4) * 0.25;
+
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = light;
+        ctx.fillStyle = light;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.16 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = dark;
+
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.82, r * 0.08, r * 0.16, r * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(r * 0.82, r * 0.08, r * 0.16, r * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = main;
+        ctx.fillRect(-r * 0.34, r * 0.34, r * 0.12, r * 0.20);
+        ctx.fillRect(r * 0.22, r * 0.34, r * 0.12, r * 0.20);
+      } else if (o.type === 'eye') {
         ctx.fillStyle = dark;
 
         for (let i = 0; i < 10; i++) {
@@ -2304,7 +2627,7 @@
 
         ctx.fillStyle = 'rgba(200,255,255,0.28)';
         ctx.beginPath();
-        ctx.arc(0, -r * 0.16, r * 0.34, Math.PI, 0);
+        ctx.arc(0, -r * 0.16, r * 0.34, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = main;
@@ -2515,7 +2838,7 @@
         }
       }
 
-      if (o.maxHp > 1) {
+      if (o.maxHp > 1 && o.type !== 'boss') {
         const bw = r * 1.5;
         const bh = Math.max(2, r * 0.12);
         const by = -r * 1.35;
@@ -2658,6 +2981,44 @@
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      ctx.restore();
+    }
+
+    function drawBossBar() {
+      const boss = aliens.find(a => a.type === 'boss' && !a.dead);
+      if (!boss) return;
+
+      const bw = Math.min(W * 0.56, 520);
+      const bh = Math.max(10, H * 0.024);
+      const bx = (W - bw) / 2;
+      const by = Math.max(48, H * 0.08);
+      const pct = clamp(boss.hp / boss.maxHp, 0, 1);
+
+      ctx.save();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(bx, by, bw, bh);
+
+      const grad = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+      grad.addColorStop(0, '#f33');
+      grad.addColorStop(0.5, '#f0f');
+      grad.addColorStop(1, '#b26bff');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx, by, bw * pct, bh);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, bw, bh);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(10, H * 0.02)}px Orbitron, monospace`;
+      ctx.textAlign = 'center';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#f0f';
+
+      ctx.fillText('NODO MADRE', W / 2, by - 6);
 
       ctx.restore();
     }
@@ -2903,6 +3264,14 @@
       autofireBtn.classList.toggle('active', autofire);
     });
 
+    musicBtn.addEventListener('click', () => {
+      setMusicEnabled(!musicEnabled);
+    });
+
+    hudMusicBtn.addEventListener('click', () => {
+      setMusicEnabled(!musicEnabled);
+    });
+
     const leftBtn = $('leftBtn');
     const rightBtn = $('rightBtn');
     const fireBtn = $('fireBtn');
@@ -3011,6 +3380,7 @@
       }
     });
 
+    updateMusicButtons();
     updateHUD();
   </script>
 </body>
