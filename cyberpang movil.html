@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
-  <title>⚡ CYBER PANG ULTRA FIXED ⚡</title>
+  <title>⚡ CYBER PANG ULTRA FULL ⚡</title>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
@@ -293,7 +293,7 @@
     .controls-group {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: clamp(22px, 6vw, 36px);
     }
 
     .controls-left {
@@ -369,13 +369,107 @@
         display: none;
       }
     }
+
+    /* ============================================
+       MODO HORIZONTAL: PANTALLA COMPLETA
+       ============================================ */
+
+    @media (orientation: landscape) {
+      #gameWrapper {
+        gap: 0;
+        padding: 0;
+        position: relative;
+      }
+
+      #top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3;
+        pointer-events: none;
+        padding:
+          max(6px, env(safe-area-inset-top))
+          max(6px, env(safe-area-inset-right))
+          0
+          max(6px, env(safe-area-inset-left));
+      }
+
+      #hud {
+        pointer-events: auto;
+        background: rgba(7, 7, 18, 0.55);
+      }
+
+      #canvasContainer {
+        position: absolute;
+        inset: 0;
+      }
+
+      #controls {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin: 0;
+        background: none;
+        padding-left: max(18px, env(safe-area-inset-left));
+        padding-right: max(18px, env(safe-area-inset-right));
+      }
+
+      .controls-group {
+        pointer-events: auto;
+        gap: clamp(18px, 4vw, 30px);
+      }
+
+      .touch-btn {
+        opacity: 0.88;
+        background: rgba(0, 212, 255, 0.12);
+      }
+
+      .touch-btn.fire {
+        opacity: 0.92;
+        background: rgba(255, 45, 149, 0.12);
+      }
+
+      canvas {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      #overlay {
+        border-radius: 0;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      .touch-btn {
+        width: clamp(54px, 10vh, 68px);
+        height: clamp(54px, 10vh, 68px);
+        font-size: 1.3rem;
+      }
+
+      .touch-btn.fire {
+        width: clamp(90px, 18vh, 120px);
+        height: clamp(50px, 9vh, 64px);
+      }
+
+      #hud {
+        font-size: 0.58rem;
+        padding: 4px 6px;
+      }
+    }
   </style>
 </head>
 
 <body>
   <div id="gameWrapper">
     <div id="top">
-      <div id="title">⚡ CYBER PANG ULTRA FIXED ⚡</div>
+      <div id="title">⚡ CYBER PANG ULTRA FULL ⚡</div>
 
       <div id="hud">
         <div class="hud-item optional">HI <span id="highScore">0</span></div>
@@ -415,7 +509,7 @@
 
   <script>
     // ============================================
-    // CYBER PANG ULTRA FIXED
+    // CYBER PANG ULTRA FULL
     // ============================================
 
     const canvas = document.getElementById('gameCanvas');
@@ -439,9 +533,14 @@
     const btnRight = document.getElementById('btnRight');
     const btnFire = document.getElementById('btnFire');
 
-    // Pantalla más grande: formato más vertical para móvil
-    const W = 640;
-    const H = 720;
+    // Tamaño dinámico: vertical fijo, horizontal adaptable
+    let W = 640;
+    let H = 720;
+    let isLandscape = false;
+
+    let lastResizeW = W;
+    let lastResizeH = H;
+
     const MAX_LIVES = 5;
 
     let scaleX = 1;
@@ -528,7 +627,6 @@
       { main: '#06ffa5', glow: 'rgba(6,255,165,', ring: '#40ffb8' }
     ];
 
-    // Rebotes ajustados para pantalla más alta
     const BALL_SIZES = [
       { radius: 42, bounce: -13.6, score: 10 },
       { radius: 30, bounce: -11.8, score: 20 },
@@ -583,6 +681,54 @@
         brightness: Math.random(),
         color: Math.random() > 0.5 ? COLORS.neonBlue : COLORS.neonPurple
       });
+    }
+
+    // ============================================
+    // Helpers básicos
+    // ============================================
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function onGameResize() {
+      if (W !== lastResizeW || H !== lastResizeH) {
+        for (const s of stars) {
+          s.x = Math.random() * W;
+          s.y = Math.random() * H;
+        }
+
+        lastResizeW = W;
+        lastResizeH = H;
+      }
+
+      player.speed = isLandscape ? 8 : 6;
+      player.y = H - 45;
+      player.x = clamp(player.x, player.width / 2, W - player.width / 2);
+
+      if (boss) {
+        boss.x = clamp(boss.x, boss.radius, W - boss.radius);
+        boss.y = 120;
+      }
+
+      for (const b of balls) {
+        b.x = clamp(b.x, b.radius, W - b.radius);
+        b.y = clamp(b.y, b.radius, H - b.radius);
+      }
+
+      for (const p of pickups) {
+        p.x = clamp(p.x, p.radius, W - p.radius);
+        p.y = clamp(p.y, p.radius, H - p.radius);
+      }
+
+      for (const p of enemyProjectiles) {
+        p.x = clamp(p.x, -30, W + 30);
+        p.y = clamp(p.y, -30, H + 30);
+      }
+
+      for (const h of harpoons) {
+        h.x = clamp(h.x, 10, W - 10);
+      }
     }
 
     // ============================================
@@ -1113,7 +1259,7 @@
     });
 
     // ============================================
-    // Responsive canvas
+    // Responsive canvas + landscape full
     // ============================================
 
     function layoutCanvas() {
@@ -1122,26 +1268,50 @@
 
       if (!boxW || !boxH) return;
 
-      const aspect = W / H;
-
-      let cssW = boxW;
-      let cssH = cssW / aspect;
-
-      if (cssH > boxH) {
-        cssH = boxH;
-        cssW = cssH * aspect;
-      }
-
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
-
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-      canvas.width = Math.max(1, Math.floor(cssW * dpr));
-      canvas.height = Math.max(1, Math.floor(cssH * dpr));
+      const landscape = window.matchMedia
+        ? window.matchMedia('(orientation: landscape)').matches
+        : boxW > boxH;
+
+      if (landscape) {
+        isLandscape = true;
+
+        H = 720;
+        W = Math.max(720, Math.round(H * (boxW / boxH)));
+
+        canvas.style.width = `${boxW}px`;
+        canvas.style.height = `${boxH}px`;
+
+        canvas.width = Math.max(1, Math.floor(boxW * dpr));
+        canvas.height = Math.max(1, Math.floor(boxH * dpr));
+      } else {
+        isLandscape = false;
+
+        W = 640;
+        H = 720;
+
+        const aspect = W / H;
+
+        let cssW = boxW;
+        let cssH = cssW / aspect;
+
+        if (cssH > boxH) {
+          cssH = boxH;
+          cssW = cssH * aspect;
+        }
+
+        canvas.style.width = `${cssW}px`;
+        canvas.style.height = `${cssH}px`;
+
+        canvas.width = Math.max(1, Math.floor(cssW * dpr));
+        canvas.height = Math.max(1, Math.floor(cssH * dpr));
+      }
 
       scaleX = canvas.width / W;
       scaleY = canvas.height / H;
+
+      onGameResize();
     }
 
     window.addEventListener('resize', layoutCanvas);
@@ -1268,7 +1438,7 @@
     }
 
     // ============================================
-    // Touch controls - CORREGIDOS
+    // Touch controls corregidos
     // ============================================
 
     function bindHoldButton(element, onDown, onUp) {
@@ -1443,12 +1613,48 @@
     });
 
     // ============================================
-    // Core game functions
+    // Fullscreen real en horizontal (opcional automático)
     // ============================================
 
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
+    let fullscreenAttempted = false;
+
+    function tryEnterFullscreen() {
+      const landscape = window.matchMedia
+        ? window.matchMedia('(orientation: landscape)').matches
+        : window.innerWidth > window.innerHeight;
+
+      if (!landscape || fullscreenAttempted) return;
+
+      fullscreenAttempted = true;
+
+      const el = document.documentElement;
+      const request = el.requestFullscreen || el.webkitRequestFullscreen;
+
+      if (request) {
+        try {
+          const promise = request.call(el);
+          if (promise && promise.catch) {
+            promise.catch(() => {});
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
     }
+
+    document.addEventListener('pointerdown', tryEnterFullscreen, true);
+
+    document.addEventListener('fullscreenchange', () => {
+      layoutCanvas();
+    });
+
+    document.addEventListener('webkitfullscreenchange', () => {
+      layoutCanvas();
+    });
+
+    // ============================================
+    // Core game functions
+    // ============================================
 
     function resetPowerTimers() {
       powerTimers.overclock = 0;
