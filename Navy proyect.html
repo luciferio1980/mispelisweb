@@ -172,7 +172,7 @@
       gap: clamp(8px, 1.6vh, 14px);
       padding: clamp(8px, 1.5vh, 12px);
       border-radius: 26px;
-      background: rgba(8, 0, 22, 0.38);
+      background: rgba(8, 0, 22, 0.30);
       border: 1px solid rgba(0, 255, 255, 0.22);
       box-shadow:
         0 0 24px rgba(0, 255, 255, 0.08),
@@ -381,7 +381,7 @@
     <p>
       Arrastra sobre la pantalla para mover la nave.<br />
       Usa <b>◀ ▶</b> y <b>⚡</b> para disparar.<br />
-      Destruye las oleadas alienígenas y esquiva sus disparos.
+      Destruye las oleadas alienígenas, esquiva sus disparos y, a partir de los 2 minutos, aparecen muros.
     </p>
 
     <div class="menu-row">
@@ -432,6 +432,7 @@
     let roadHalf = 0;
     let sizeScale = 1;
     let stars = [];
+    let SHIP_Z = 140;
 
     const CAM = 300;
     const Z_FAR = 1500;
@@ -446,6 +447,12 @@
 
     function clamp(v, a, b) {
       return Math.max(a, Math.min(b, v));
+    }
+
+    function computeShipZ() {
+      const desiredY = H - Math.max(88, H * 0.22);
+      const p = clamp((desiredY - horizon) / (H - horizon), 0.30, 0.88);
+      return Math.max(70, CAM / p - CAM);
     }
 
     function resize() {
@@ -467,6 +474,7 @@
       horizon = H * (W > H ? 0.28 : 0.32);
       roadHalf = Math.min(W * 0.38, H * 0.85);
       sizeScale = clamp(Math.min(W, H) / 420, 0.70, 1.50);
+      SHIP_Z = computeShipZ();
 
       stars = Array.from({ length: 90 }, () => ({
         x: Math.random(),
@@ -581,6 +589,7 @@
         enemyShootMul: 1.50,
         enemyShotSpeed: 0.78,
         shotHit: 0.12,
+        wallGap: 0.26,
         toSpawn: lvl => 10 + lvl * 3
       },
       normal: {
@@ -595,6 +604,7 @@
         enemyShootMul: 1.0,
         enemyShotSpeed: 1.0,
         shotHit: 0.15,
+        wallGap: 0.22,
         toSpawn: lvl => 13 + lvl * 4
       },
       hard: {
@@ -609,6 +619,7 @@
         enemyShootMul: 0.75,
         enemyShotSpeed: 1.25,
         shotHit: 0.18,
+        wallGap: 0.18,
         toSpawn: lvl => 16 + lvl * 5
       }
     };
@@ -626,7 +637,13 @@
       time: 0,
       last: 0,
       shake: 0,
-      flash: 0
+      flash: 0,
+      wallNext: 120,
+      tunnelActive: false,
+      tunnelTimer: 0,
+      tunnelHue: 200,
+      tunnelAlpha: 0,
+      tunnelNext: 35
     };
 
     const ship = {
@@ -645,6 +662,7 @@
     let powerups = [];
     let particles = [];
     let texts = [];
+    let walls = [];
 
     let moveDir = 0;
     let firing = false;
@@ -695,11 +713,16 @@
     }
 
     function getShipRender() {
-      const x = W / 2 + ship.worldX * roadHalf;
-      const y = H - Math.max(64, H * 0.18);
-      const sc = clamp(Math.min(W, H) / 420, 0.70, 1.50);
+      const pr = project(SHIP_Z, ship.worldX);
+      const sc = pr.s * sizeScale * 1.35;
 
-      return { x, y, sc };
+      return {
+        x: pr.x,
+        y: pr.y - 18 * sc,
+        baseY: pr.y,
+        sc,
+        p: pr.s
+      };
     }
 
     resize();
@@ -977,6 +1000,28 @@
         [330, 262, 196, 131].forEach((f, i) => {
           this.tone('sawtooth', f, t + i * 0.16, 0.32, 0.14, this.sfxGain, 1200);
         });
+      },
+
+      wallWarn() {
+        if (!this.ready()) return;
+        const t = this.ctx.currentTime;
+        this.tone('sawtooth', 196, t, 0.16, 0.12, this.sfxGain, 800, 120);
+        this.tone('sawtooth', 147, t + 0.14, 0.22, 0.12, this.sfxGain, 700, 90);
+      },
+
+      wallPass() {
+        if (!this.ready()) return;
+        const t = this.ctx.currentTime;
+        this.tone('triangle', 523, t, 0.12, 0.10, this.sfxGain, 3000);
+        this.tone('triangle', 784, t + 0.08, 0.16, 0.10, this.sfxGain, 3500);
+      },
+
+      tunnel() {
+        if (!this.ready()) return;
+        const t = this.ctx.currentTime;
+        [220, 330, 440, 660].forEach((f, i) => {
+          this.tone('triangle', f, t + i * 0.06, 0.22, 0.07, this.sfxGain, 1800);
+        });
       }
     };
 
@@ -1017,6 +1062,12 @@
       state.time = 0;
       state.shake = 0;
       state.flash = 0;
+      state.wallNext = 120;
+      state.tunnelActive = false;
+      state.tunnelTimer = 0;
+      state.tunnelHue = 200;
+      state.tunnelAlpha = 0;
+      state.tunnelNext = 35;
 
       bullets = [];
       aliens = [];
@@ -1024,6 +1075,7 @@
       powerups = [];
       particles = [];
       texts = [];
+      walls = [];
 
       effects.rapid = 0;
       effects.triple = 0;
@@ -1207,6 +1259,21 @@
       });
     }
 
+    function spawnWall() {
+      const cfg = currentCfg();
+
+      walls.push({
+        z: Z_FAR,
+        gapCenter: rand(-0.55, 0.55),
+        gapHalf: cfg.wallGap,
+        speed: rand(360, 440) * cfg.speed * (1 + state.level * 0.02),
+        hue: rand(180, 320),
+        thickness: 110,
+        passed: false,
+        dead: false
+      });
+    }
+
     function addScore(amount, x, y, color) {
       const mult = effects.multi > 0 ? 2 : 1;
       const gained = amount * mult;
@@ -1242,12 +1309,15 @@
       ship.lastFire = state.time;
       ship.muzzle = 0.06;
 
-      const z = 5;
+      const sr = getShipRender();
+      const wingOffsetWorld = (20 * sr.sc) / (roadHalf * sr.p);
+
+      const z = SHIP_Z + 6;
 
       if (effects.triple > 0) {
         bullets.push({ worldX: ship.worldX, z, vx: 0, side: 0, dead: false });
-        bullets.push({ worldX: ship.worldX - 0.05, z, vx: -0.32, side: -1, dead: false });
-        bullets.push({ worldX: ship.worldX + 0.05, z, vx: 0.32, side: 1, dead: false });
+        bullets.push({ worldX: ship.worldX - wingOffsetWorld, z, vx: -0.32, side: -1, dead: false });
+        bullets.push({ worldX: ship.worldX + wingOffsetWorld, z, vx: 0.32, side: 1, dead: false });
       } else {
         bullets.push({ worldX: ship.worldX, z, vx: 0, side: 0, dead: false });
       }
@@ -1275,6 +1345,7 @@
         speed,
         rNear: 7 * sizeScale,
         hue: o.hue,
+        checked: false,
         dead: false
       });
 
@@ -1409,6 +1480,46 @@
         state.shake = Math.max(0, state.shake - dt * 30);
       }
 
+      // Tunnel
+      if (!state.tunnelActive && state.time >= state.tunnelNext) {
+        state.tunnelActive = true;
+        state.tunnelTimer = rand(5, 8);
+        state.tunnelHue = rand(170, 320);
+
+        try {
+          Synth.tunnel();
+        } catch (e) {}
+
+        addText(W / 2, H * 0.28, 'TÚNEL NEÓN', `hsl(${state.tunnelHue},100%,70%)`, 1.2, 26);
+      }
+
+      if (state.tunnelActive) {
+        state.tunnelTimer -= dt;
+
+        if (state.tunnelTimer <= 0) {
+          state.tunnelActive = false;
+          state.tunnelNext = state.time + rand(25, 45);
+        }
+      }
+
+      state.tunnelAlpha += ((state.tunnelActive ? 1 : 0) - state.tunnelAlpha) * Math.min(1, dt * 2.5);
+
+      // Walls after 2 minutes
+      if (state.time >= state.wallNext && !state.tunnelActive) {
+        if (walls.length === 0) {
+          spawnWall();
+          state.wallNext = state.time + rand(16, 26) - Math.min(6, state.level * 0.4);
+
+          try {
+            Synth.wallWarn();
+          } catch (e) {}
+
+          addText(W / 2, H * 0.22, '¡MURO!', '#f33', 1.0, 28);
+        } else {
+          state.wallNext = state.time + 2;
+        }
+      }
+
       ship.prevWorldX = ship.worldX;
 
       if (moveDir !== 0) {
@@ -1459,7 +1570,7 @@
           o.shootTimer = rand(o.shootMin, o.shootMax) * rand(0.85, 1.25);
         }
 
-        if (o.z <= 0) {
+        if (o.z <= 8) {
           o.dead = true;
 
           const pr = project(2, o.worldX);
@@ -1474,6 +1585,39 @@
       });
 
       if (state.mode !== 'playing') return;
+
+      walls.forEach(w => {
+        w.z -= w.speed * dt;
+
+        if (!w.passed && w.z <= SHIP_Z) {
+          w.passed = true;
+
+          const inside = Math.abs(ship.worldX - w.gapCenter) < (w.gapHalf - 0.05);
+
+          if (inside) {
+            addScore(50, W / 2, H * 0.30, '#0ff');
+            addText(W / 2, H * 0.30, '¡MURO SUPERADO!', '#0ff', 1.0, 20);
+
+            try {
+              Synth.wallPass();
+            } catch (e) {}
+          } else {
+            if (effects.shield > 0) {
+              addText(W / 2, H * 0.30, 'ESCUDO BLOQUEA MURO', '#0ff', 1.0, 18);
+              explode(W / 2, H * 0.45, w.hue, 24, 1.2);
+              w.dead = true;
+            } else {
+              explode(W / 2, H * 0.45, w.hue, 30, 1.5);
+              w.dead = true;
+              loseLife();
+            }
+          }
+        }
+
+        if (w.z < -150) {
+          w.dead = true;
+        }
+      });
 
       for (const b of bullets) {
         if (b.dead) continue;
@@ -1506,21 +1650,24 @@
         b.worldX += b.vx * dt;
         b.worldX = clamp(b.worldX, -1.2, 1.2);
 
-        if (b.z <= 22) {
+        if (!b.checked && b.z <= SHIP_Z + 8) {
+          b.checked = true;
+
           const dx = Math.abs(b.worldX - ship.worldX);
-          const pr = project(20, b.worldX);
+          const pr = project(SHIP_Z, b.worldX);
 
           if (effects.shield > 0 && dx < 0.26) {
             b.dead = true;
-            explode(pr.x, H - Math.max(80, H * 0.12), 190, 7, 0.6);
+            explode(pr.x, pr.y, 190, 7, 0.6);
           } else if (dx < cfg.shotHit) {
             b.dead = true;
             loseLife();
           } else {
-            b.dead = true;
-            explode(pr.x, H - 15, b.hue, 5, 0.6);
+            explode(pr.x, pr.y, b.hue, 4, 0.45);
           }
-        } else if (b.z < -50) {
+        }
+
+        if (b.z <= 0) {
           b.dead = true;
         }
       });
@@ -1537,7 +1684,7 @@
           }
         }
 
-        if (p.z <= 50 && Math.abs(p.worldX - ship.worldX) < 0.34) {
+        if (p.z <= SHIP_Z + 20 && Math.abs(p.worldX - ship.worldX) < 0.34) {
           p.dead = true;
           applyPower(p);
         } else if (p.z <= 0) {
@@ -1576,6 +1723,7 @@
       powerups = powerups.filter(x => !x.dead);
       particles = particles.filter(x => !x.dead);
       texts = texts.filter(x => !x.dead);
+      walls = walls.filter(x => !x.dead);
 
       updatePowerHud();
     }
@@ -1599,11 +1747,16 @@
         html += powerTag('×2 SCORE', '#b26bff', effects.multi);
       }
 
+      if (state.time >= 120) {
+        html += powerTag('🧱 MUROS ACTIVOS', '#f33', 0);
+      }
+
       powerHud.innerHTML = html;
     }
 
     function powerTag(label, color, t) {
-      return `<div class="power-tag" style="color:${color};border-color:${color};box-shadow:0 0 10px ${color};">${label} ${t.toFixed(1)}s</div>`;
+      const timeText = t > 0 ? ` ${t.toFixed(1)}s` : '';
+      return `<div class="power-tag" style="color:${color};border-color:${color};box-shadow:0 0 10px ${color};">${label}${timeText}</div>`;
     }
 
     /* ==============================
@@ -1626,6 +1779,7 @@
       drawStars();
       drawSun();
       drawRoad();
+      drawTunnel();
 
       ctx.save();
 
@@ -1638,7 +1792,6 @@
 
       drawEntities();
       drawParticles();
-      drawShip();
       drawTexts();
 
       ctx.restore();
@@ -1835,33 +1988,163 @@
       ctx.restore();
     }
 
+    function drawTunnel() {
+      if (state.tunnelAlpha <= 0.01) return;
+
+      ctx.save();
+
+      ctx.globalAlpha = state.tunnelAlpha;
+
+      const hue = state.tunnelHue + Math.sin(animTime * 1.5) * 25;
+
+      ctx.fillStyle = `hsla(${hue},80%,5%,0.22)`;
+      ctx.fillRect(0, 0, W, H);
+
+      const seg = 220;
+      const offset = (animTime * 520) % seg;
+      const maxK = Math.ceil(Z_FAR / seg) + 1;
+
+      for (let k = maxK; k >= 0; k--) {
+        let z = k * seg - offset;
+
+        if (z < 0 || z > Z_FAR) continue;
+
+        const pr = project(z, 0);
+        const half = roadHalf * pr.s * 1.15;
+        const top = pr.y - half * 1.35;
+        const a = 0.10 + 0.28 * (1 - z / Z_FAR);
+
+        ctx.strokeStyle = `hsla(${hue + k * 12},100%,65%,${a})`;
+        ctx.lineWidth = Math.max(1, 4 * pr.s);
+        ctx.shadowBlur = 18 * pr.s;
+        ctx.shadowColor = `hsla(${hue + k * 12},100%,60%,0.8)`;
+
+        ctx.beginPath();
+        ctx.moveTo(pr.x - half, pr.y);
+        ctx.lineTo(pr.x - half, top);
+        ctx.quadraticCurveTo(pr.x, top - half * 0.35, pr.x + half, top);
+        ctx.lineTo(pr.x + half, pr.y);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
     function drawEntities() {
       const list = [];
 
+      walls.forEach(w => {
+        if (!w.dead) list.push({ z: w.z, kind: 0, ref: w });
+      });
+
       aliens.forEach(o => {
-        if (!o.dead) list.push({ z: o.z, kind: 0, ref: o });
+        if (!o.dead) list.push({ z: o.z, kind: 1, ref: o });
       });
 
       powerups.forEach(p => {
-        if (!p.dead) list.push({ z: p.z, kind: 1, ref: p });
+        if (!p.dead) list.push({ z: p.z, kind: 2, ref: p });
       });
+
+      list.push({ z: SHIP_Z, kind: 3, ref: null });
 
       enemyBullets.forEach(b => {
-        if (!b.dead) list.push({ z: b.z, kind: 2, ref: b });
-      });
-
-      bullets.forEach(b => {
-        if (!b.dead) list.push({ z: b.z, kind: 3, ref: b });
+        if (!b.dead) list.push({ z: b.z, kind: 4, ref: b });
       });
 
       list.sort((a, b) => b.z - a.z || a.kind - b.kind);
 
       list.forEach(item => {
-        if (item.kind === 0) drawAlien(item.ref);
-        if (item.kind === 1) drawPower(item.ref);
-        if (item.kind === 2) drawEnemyBullet(item.ref);
-        if (item.kind === 3) drawBullet(item.ref);
+        if (item.kind === 0) drawWall(item.ref);
+        if (item.kind === 1) drawAlien(item.ref);
+        if (item.kind === 2) drawPower(item.ref);
+        if (item.kind === 3) drawShip();
+        if (item.kind === 4) drawEnemyBullet(item.ref);
       });
+
+      bullets.forEach(b => {
+        if (!b.dead) drawBullet(b);
+      });
+    }
+
+    function drawWall(w) {
+      const z1 = Math.max(0, w.z);
+      const z2 = Math.max(0, w.z + w.thickness);
+
+      const a = project(z1, 0);
+      const b = project(z2, 0);
+
+      const h1 = Math.max(24, 135 * a.s * sizeScale);
+      const h2 = Math.max(18, 135 * b.s * sizeScale);
+
+      const L1 = W / 2 - roadHalf * a.s;
+      const R1 = W / 2 + roadHalf * a.s;
+      const L2 = W / 2 - roadHalf * b.s;
+      const R2 = W / 2 + roadHalf * b.s;
+
+      const GL1 = W / 2 + (w.gapCenter - w.gapHalf) * roadHalf * a.s;
+      const GR1 = W / 2 + (w.gapCenter + w.gapHalf) * roadHalf * a.s;
+      const GL2 = W / 2 + (w.gapCenter - w.gapHalf) * roadHalf * b.s;
+      const GR2 = W / 2 + (w.gapCenter + w.gapHalf) * roadHalf * b.s;
+
+      const blink = w.z > 1100 ? (Math.sin(animTime * 18) > 0 ? 0.70 : 0.30) : 1;
+
+      ctx.save();
+
+      ctx.globalAlpha = blink;
+
+      const drawPart = (x1a, x1b, x2a, x2b) => {
+        if (Math.abs(x1b - x1a) < 1 && Math.abs(x2b - x2a) < 1) return;
+
+        ctx.fillStyle = `hsla(${w.hue},100%,60%,0.10)`;
+        ctx.beginPath();
+        ctx.moveTo(x1a, a.y - h1);
+        ctx.lineTo(x1b, a.y - h1);
+        ctx.lineTo(x2b, b.y - h2);
+        ctx.lineTo(x2a, b.y - h2);
+        ctx.closePath();
+        ctx.fill();
+
+        const grad = ctx.createLinearGradient(0, a.y - h1, 0, a.y);
+        grad.addColorStop(0, `hsla(${w.hue},100%,70%,0.28)`);
+        grad.addColorStop(1, `hsla(${w.hue},100%,50%,0.10)`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(x1a, a.y);
+        ctx.lineTo(x1b, a.y);
+        ctx.lineTo(x1b, a.y - h1);
+        ctx.lineTo(x1a, a.y - h1);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = `hsla(${w.hue},100%,75%,0.9)`;
+        ctx.lineWidth = Math.max(1, 2 * a.s);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x1a, a.y);
+        ctx.lineTo(x2a, b.y);
+        ctx.moveTo(x1b, a.y);
+        ctx.lineTo(x2b, b.y);
+        ctx.stroke();
+      };
+
+      drawPart(L1, GL1, L2, GL2);
+      drawPart(GR1, R1, GR2, R2);
+
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = `hsla(${w.hue},100%,60%,0.9)`;
+      ctx.strokeStyle = `hsla(${w.hue},100%,85%,0.95)`;
+      ctx.lineWidth = Math.max(2, 5 * a.s);
+
+      [GL1, GR1].forEach(x => {
+        ctx.beginPath();
+        ctx.moveTo(x, a.y);
+        ctx.lineTo(x, a.y - h1);
+        ctx.stroke();
+      });
+
+      ctx.restore();
     }
 
     function drawAlien(o) {
@@ -2268,7 +2551,7 @@
       }
 
       const pr = project(b.z, b.worldX);
-      const tail = b.z > 170 ? project(b.z - 150, b.worldX) : { x: ox, y: oy };
+      const tail = b.z > SHIP_Z + 170 ? project(b.z - 150, b.worldX) : { x: ox, y: oy };
 
       ctx.save();
 
@@ -2339,7 +2622,7 @@
       ctx.fillStyle = '#000';
 
       ctx.beginPath();
-      ctx.ellipse(sr.x, sr.y + 34 * sr.sc, 42 * sr.sc, 12 * sr.sc, 0, 0, Math.PI * 2);
+      ctx.ellipse(sr.x, sr.baseY, 42 * sr.sc, 12 * sr.sc, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -2609,7 +2892,6 @@
     });
 
     document.addEventListener('contextmenu', e => e.preventDefault());
-
     document.addEventListener('gesturestart', e => e.preventDefault());
 
     document.addEventListener('visibilitychange', () => {
