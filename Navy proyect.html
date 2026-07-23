@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
   />
   <title>⚡ NAVY PROJECT ⚡</title>
   <style>
@@ -27,6 +27,8 @@
     }
 
     html, body {
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
@@ -34,11 +36,14 @@
       font-family: 'Orbitron', 'Courier New', monospace;
       touch-action: none;
       user-select: none;
+      overscroll-behavior: none;
     }
 
     #game {
-      position: fixed;
+      position: absolute;
       inset: 0;
+      width: 100%;
+      height: 100%;
       display: block;
       z-index: 0;
     }
@@ -183,13 +188,13 @@
     }
 
     .ctrl-btn {
-      width: clamp(56px, 11vh, 76px);
-      height: clamp(56px, 11vh, 76px);
+      width: clamp(52px, 10.5vh, 76px);
+      height: clamp(52px, 10.5vh, 76px);
       border-radius: 50%;
       border: 2px solid rgba(0, 255, 255, 0.65);
       background: rgba(0, 255, 255, 0.07);
       color: var(--cyan);
-      font-size: clamp(22px, 4.6vh, 30px);
+      font-size: clamp(20px, 4.3vh, 30px);
       font-weight: 900;
       box-shadow:
         0 0 18px rgba(0, 255, 255, 0.25),
@@ -198,15 +203,15 @@
     }
 
     #fireBtn {
-      width: clamp(76px, 15vh, 102px);
-      height: clamp(76px, 15vh, 102px);
+      width: clamp(70px, 14vh, 102px);
+      height: clamp(70px, 14vh, 102px);
       border-color: rgba(255, 0, 255, 0.75);
       color: var(--magenta);
       background: rgba(255, 0, 255, 0.08);
       box-shadow:
         0 0 24px rgba(255, 0, 255, 0.35),
         inset 0 0 22px rgba(255, 0, 255, 0.16);
-      font-size: clamp(28px, 6vh, 38px);
+      font-size: clamp(26px, 5.6vh, 38px);
     }
 
     .ctrl-btn:active {
@@ -229,6 +234,7 @@
       z-index: 20;
       color: #fff;
       overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .overlay h1, .overlay h2 {
@@ -430,18 +436,37 @@
     const CAM = 300;
     const Z_FAR = 1500;
 
+    function rand(a, b) {
+      return a + Math.random() * (b - a);
+    }
+
+    function randInt(a, b) {
+      return Math.floor(rand(a, b + 1));
+    }
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+
     function resize() {
-      W = window.innerWidth;
-      H = window.innerHeight;
+      const vv = window.visualViewport;
+
+      W = Math.round(vv ? vv.width : window.innerWidth);
+      H = Math.round(vv ? vv.height : window.innerHeight);
 
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      cvs.width = W * dpr;
-      cvs.height = H * dpr;
+
+      cvs.style.width = W + 'px';
+      cvs.style.height = H + 'px';
+
+      cvs.width = Math.round(W * dpr);
+      cvs.height = Math.round(H * dpr);
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      horizon = H * 0.32;
-      roadHalf = W * 0.38;
-      sizeScale = clamp(Math.min(W, H) / 520, 0.55, 1.15);
+      horizon = H * (W > H ? 0.28 : 0.32);
+      roadHalf = Math.min(W * 0.38, H * 0.85);
+      sizeScale = clamp(Math.min(W, H) / 420, 0.70, 1.50);
 
       stars = Array.from({ length: 90 }, () => ({
         x: Math.random(),
@@ -452,6 +477,11 @@
     }
 
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resize);
+    }
 
     const $ = id => document.getElementById(id);
 
@@ -466,18 +496,6 @@
     const finalScore = $('finalScore');
     const powerHud = $('powerHud');
     const autofireBtn = $('autofireBtn');
-
-    function rand(a, b) {
-      return a + Math.random() * (b - a);
-    }
-
-    function randInt(a, b) {
-      return Math.floor(rand(a, b + 1));
-    }
-
-    function clamp(v, a, b) {
-      return Math.max(a, Math.min(b, v));
-    }
 
     function loadHigh() {
       try {
@@ -505,45 +523,45 @@
     const ALIEN_TYPES = {
       eye: {
         hp: 1,
-        size: [20, 30],
-        speed: [260, 330],
-        shoot: [2.0, 3.4],
+        size: [30, 44],
+        speed: [320, 400],
+        shoot: [1.8, 3.1],
         score: 15,
         hue: [0, 35],
         aim: 0.72
       },
       drone: {
         hp: 2,
-        size: [24, 36],
-        speed: [240, 310],
-        shoot: [1.35, 2.3],
+        size: [36, 54],
+        speed: [290, 370],
+        shoot: [1.25, 2.15],
         score: 25,
         hue: [180, 215],
         aim: 0.62
       },
       squid: {
         hp: 2,
-        size: [26, 40],
-        speed: [215, 280],
-        shoot: [1.5, 2.6],
+        size: [40, 60],
+        speed: [265, 340],
+        shoot: [1.4, 2.45],
         score: 30,
         hue: [275, 320],
         aim: 0.52
       },
       crab: {
         hp: 3,
-        size: [30, 48],
-        speed: [170, 235],
-        shoot: [1.8, 3.0],
+        size: [46, 70],
+        speed: [215, 285],
+        shoot: [1.65, 2.8],
         score: 40,
         hue: [100, 165],
         aim: 0.40
       },
       titan: {
         hp: 5,
-        size: [50, 72],
-        speed: [125, 175],
-        shoot: [1.05, 1.9],
+        size: [70, 100],
+        speed: [155, 215],
+        shoot: [0.95, 1.75],
         score: 80,
         hue: [250, 300],
         aim: 0.46
@@ -554,44 +572,44 @@
       easy: {
         name: 'FÁCIL',
         lives: 6,
-        speed: 0.68,
-        spawn: 1.45,
+        speed: 0.82,
+        spawn: 1.25,
         power: 0.32,
         duration: 1.5,
-        fireDelay: 0.20,
-        rapidDelay: 0.09,
-        enemyShootMul: 1.60,
-        enemyShotSpeed: 0.72,
+        fireDelay: 0.18,
+        rapidDelay: 0.08,
+        enemyShootMul: 1.50,
+        enemyShotSpeed: 0.78,
         shotHit: 0.12,
-        toSpawn: lvl => 9 + lvl * 3
+        toSpawn: lvl => 10 + lvl * 3
       },
       normal: {
         name: 'NORMAL',
         lives: 5,
-        speed: 0.90,
-        spawn: 1.05,
+        speed: 1.08,
+        spawn: 0.90,
         power: 0.22,
         duration: 1.0,
-        fireDelay: 0.25,
-        rapidDelay: 0.11,
+        fireDelay: 0.22,
+        rapidDelay: 0.10,
         enemyShootMul: 1.0,
-        enemyShotSpeed: 0.95,
+        enemyShotSpeed: 1.0,
         shotHit: 0.15,
-        toSpawn: lvl => 12 + lvl * 4
+        toSpawn: lvl => 13 + lvl * 4
       },
       hard: {
         name: 'DIFÍCIL',
         lives: 3,
-        speed: 1.18,
-        spawn: 0.80,
+        speed: 1.38,
+        spawn: 0.68,
         power: 0.16,
         duration: 0.8,
-        fireDelay: 0.30,
-        rapidDelay: 0.14,
-        enemyShootMul: 0.72,
-        enemyShotSpeed: 1.22,
+        fireDelay: 0.26,
+        rapidDelay: 0.12,
+        enemyShootMul: 0.75,
+        enemyShotSpeed: 1.25,
         shotHit: 0.18,
-        toSpawn: lvl => 15 + lvl * 5
+        toSpawn: lvl => 16 + lvl * 5
       }
     };
 
@@ -649,8 +667,8 @@
       return {
         toSpawn: cfg.toSpawn(lvl),
         spawned: 0,
-        interval: Math.max(0.32, (1.05 - lvl * 0.045) * cfg.spawn),
-        timer: 1.2
+        interval: Math.max(0.22, (0.88 - lvl * 0.04) * cfg.spawn),
+        timer: 1.0
       };
     }
 
@@ -674,6 +692,14 @@
         y: horizon + (H - horizon) * p,
         s: p
       };
+    }
+
+    function getShipRender() {
+      const x = W / 2 + ship.worldX * roadHalf;
+      const y = H - Math.max(64, H * 0.18);
+      const sc = clamp(Math.min(W, H) / 420, 0.70, 1.50);
+
+      return { x, y, sc };
     }
 
     resize();
@@ -1126,10 +1152,10 @@
         hp += 1;
       }
 
-      const speed = rand(def.speed[0], def.speed[1]) * cfg.speed * (1 + state.level * 0.02);
+      const speed = rand(def.speed[0], def.speed[1]) * cfg.speed * (1 + state.level * 0.03);
 
-      const shootMin = def.shoot[0] * cfg.enemyShootMul / (1 + state.level * 0.02);
-      const shootMax = def.shoot[1] * cfg.enemyShootMul / (1 + state.level * 0.02);
+      const shootMin = def.shoot[0] * cfg.enemyShootMul / (1 + state.level * 0.03);
+      const shootMax = def.shoot[1] * cfg.enemyShootMul / (1 + state.level * 0.03);
 
       const worldX = rand(-0.82, 0.82);
 
@@ -1175,7 +1201,7 @@
         worldX,
         z,
         type,
-        speed: rand(220, 280) * cfg.speed,
+        speed: rand(260, 330) * cfg.speed,
         rot: 0,
         dead: false
       });
@@ -1216,14 +1242,14 @@
       ship.lastFire = state.time;
       ship.muzzle = 0.06;
 
-      const z = 40;
+      const z = 5;
 
       if (effects.triple > 0) {
-        bullets.push({ worldX: ship.worldX, z, vx: 0, dead: false });
-        bullets.push({ worldX: ship.worldX - 0.045, z, vx: -0.30, dead: false });
-        bullets.push({ worldX: ship.worldX + 0.045, z, vx: 0.30, dead: false });
+        bullets.push({ worldX: ship.worldX, z, vx: 0, side: 0, dead: false });
+        bullets.push({ worldX: ship.worldX - 0.05, z, vx: -0.32, side: -1, dead: false });
+        bullets.push({ worldX: ship.worldX + 0.05, z, vx: 0.32, side: 1, dead: false });
       } else {
-        bullets.push({ worldX: ship.worldX, z, vx: 0, dead: false });
+        bullets.push({ worldX: ship.worldX, z, vx: 0, side: 0, dead: false });
       }
 
       try {
@@ -1234,7 +1260,7 @@
     function fireEnemyBullet(o, targetOffset = 0) {
       const cfg = currentCfg();
 
-      const speed = rand(330, 430) * cfg.enemyShotSpeed * (1 + state.level * 0.02);
+      const speed = rand(360, 480) * cfg.enemyShotSpeed * (1 + state.level * 0.02);
       const time = Math.max(0.2, o.z / speed);
 
       const inaccuracy = (1 - o.aim) * 0.55;
@@ -1386,11 +1412,11 @@
       ship.prevWorldX = ship.worldX;
 
       if (moveDir !== 0) {
-        ship.targetWorldX += moveDir * 1.9 * dt;
+        ship.targetWorldX += moveDir * 2.1 * dt;
       }
 
       ship.targetWorldX = clamp(ship.targetWorldX, -1, 1);
-      ship.worldX += (ship.targetWorldX - ship.worldX) * Math.min(1, dt * 14);
+      ship.worldX += (ship.targetWorldX - ship.worldX) * Math.min(1, dt * 15);
       ship.worldX = clamp(ship.worldX, -1, 1);
 
       const vx = (ship.worldX - ship.prevWorldX) / Math.max(dt, 0.0001);
@@ -1412,7 +1438,7 @@
       }
 
       bullets.forEach(b => {
-        b.z += 1150 * dt;
+        b.z += 1350 * dt;
         b.worldX += b.vx * dt;
         b.worldX = clamp(b.worldX, -1.2, 1.2);
 
@@ -1455,8 +1481,8 @@
         for (const o of aliens) {
           if (o.dead) continue;
 
-          if (Math.abs(b.z - o.z) < 95) {
-            const hitRange = (o.rNear + 18) / roadHalf;
+          if (Math.abs(b.z - o.z) < 100) {
+            const hitRange = (o.rNear + 20) / roadHalf;
 
             if (Math.abs(b.worldX - o.worldX) < hitRange) {
               b.dead = true;
@@ -1708,7 +1734,7 @@
       ctx.clip();
 
       const seg = 260;
-      const speed = 320 * (currentCfg().speed || 1);
+      const speed = 420 * currentCfg().speed + state.level * 14;
       const offset = (animTime * speed) % seg;
       const maxK = Math.ceil(Z_FAR / seg) + 1;
 
@@ -2165,7 +2191,7 @@
     function drawPower(pu) {
       const def = POWER_TYPES[pu.type];
       const pr = project(pu.z, pu.worldX);
-      const size = Math.max(8, 26 * pr.s);
+      const size = Math.max(9, 30 * pr.s);
 
       ctx.save();
 
@@ -2191,7 +2217,7 @@
       ctx.rotate(-pu.rot);
 
       ctx.fillStyle = def.color;
-      ctx.font = `bold ${Math.max(8, 14 * pr.s)}px Orbitron, monospace`;
+      ctx.font = `bold ${Math.max(9, 15 * pr.s)}px Orbitron, monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(def.label, 0, 1);
@@ -2226,9 +2252,23 @@
     }
 
     function drawBullet(b) {
-      const origin = project(25, b.worldX);
+      const sr = getShipRender();
+
+      let ox = sr.x;
+      let oy = sr.y - 52 * sr.sc;
+
+      if (b.side === -1) {
+        ox = sr.x - 20 * sr.sc;
+        oy = sr.y + 2 * sr.sc;
+      }
+
+      if (b.side === 1) {
+        ox = sr.x + 20 * sr.sc;
+        oy = sr.y + 2 * sr.sc;
+      }
+
       const pr = project(b.z, b.worldX);
-      const tail = project(Math.max(25, b.z - 150), b.worldX);
+      const tail = b.z > 170 ? project(b.z - 150, b.worldX) : { x: ox, y: oy };
 
       ctx.save();
 
@@ -2236,15 +2276,15 @@
       ctx.shadowBlur = 16;
       ctx.shadowColor = '#0ff';
 
-      const beam = ctx.createLinearGradient(origin.x, origin.y, pr.x, pr.y);
+      const beam = ctx.createLinearGradient(ox, oy, pr.x, pr.y);
       beam.addColorStop(0, 'rgba(0,255,255,0)');
-      beam.addColorStop(1, 'rgba(0,255,255,0.18)');
+      beam.addColorStop(1, 'rgba(0,255,255,0.16)');
 
       ctx.strokeStyle = beam;
       ctx.lineWidth = Math.max(1.5, 3 * pr.s);
 
       ctx.beginPath();
-      ctx.moveTo(origin.x, origin.y);
+      ctx.moveTo(ox, oy);
       ctx.lineTo(pr.x, pr.y);
       ctx.stroke();
 
@@ -2291,9 +2331,7 @@
         return;
       }
 
-      const x = W / 2 + ship.worldX * roadHalf;
-      const y = H - Math.max(72, H * 0.20);
-      const sc = clamp(Math.min(W, H) / 520, 0.62, 1.25);
+      const sr = getShipRender();
 
       ctx.save();
 
@@ -2301,15 +2339,15 @@
       ctx.fillStyle = '#000';
 
       ctx.beginPath();
-      ctx.ellipse(x, y + 34 * sc, 42 * sc, 12 * sc, 0, 0, Math.PI * 2);
+      ctx.ellipse(sr.x, sr.y + 34 * sr.sc, 42 * sr.sc, 12 * sr.sc, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
 
       ctx.save();
 
-      ctx.translate(x, y);
-      ctx.scale(sc, sc);
+      ctx.translate(sr.x, sr.y);
+      ctx.scale(sr.sc, sr.sc);
       ctx.rotate(ship.bank * 0.18);
 
       ctx.shadowBlur = 25;
@@ -2375,11 +2413,11 @@
 
         if (effects.triple > 0) {
           ctx.beginPath();
-          ctx.arc(-18, 4, 6, 0, Math.PI * 2);
+          ctx.arc(-20, 2, 6, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.beginPath();
-          ctx.arc(18, 4, 6, 0, Math.PI * 2);
+          ctx.arc(20, 2, 6, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -2571,6 +2609,8 @@
     });
 
     document.addEventListener('contextmenu', e => e.preventDefault());
+
+    document.addEventListener('gesturestart', e => e.preventDefault());
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && state.mode === 'playing') {
