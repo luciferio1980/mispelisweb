@@ -1,7 +1,12 @@
 (function () {
   'use strict';
 
-  const GAME_LEVEL = 2;
+  const GAME_LEVEL = window.NAVY_LEVEL || 2;
+  const MAIN_MENU_FILE = 'navy_project.html';
+
+  const NEXT_LEVEL_FILE = window.NEXT_LEVEL_FILE === undefined
+    ? `navy_project_level${GAME_LEVEL + 1}.html`
+    : window.NEXT_LEVEL_FILE;
 
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
@@ -123,27 +128,6 @@
       text-shadow: 0 0 8px currentColor;
     }
 
-    #orientationHint {
-      display: none;
-      position: fixed;
-      top: calc(48px + env(safe-area-inset-top));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 30;
-      padding: 6px 12px;
-      border-radius: 12px;
-      background: rgba(0,255,200,.10);
-      border: 1px solid rgba(0,255,200,.35);
-      color: #7fffd4;
-      font-size: 11px;
-      pointer-events: none;
-      text-align: center;
-    }
-
-    @media (orientation: portrait) {
-      #orientationHint { display: block; }
-    }
-
     #controls {
       position: fixed;
       bottom: 0;
@@ -249,12 +233,6 @@
       box-shadow: 0 0 18px rgba(0,255,220,.4);
     }
 
-    .diff-btn.active {
-      border-color: #ff9a3d;
-      color: #ff9a3d;
-      background: rgba(255,120,0,.12);
-    }
-
     .btn {
       margin-top: 14px;
       padding: 14px 28px;
@@ -280,25 +258,24 @@
       font-weight: 900;
     }
 
-    .tiny {
-      margin-top: 12px;
-      font-size: clamp(10px, 1.7vh, 12px);
-      color: #8fdfff;
+    #gameOverOverlay {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(0,0,0,.58);
     }
 
-    .power-list {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(100px, 1fr));
-      gap: 7px;
-      margin-top: 10px;
-      font-size: clamp(10px, 1.8vh, 13px);
+    #gameOverOverlay h2 {
+      font-size: clamp(48px, 15vh, 120px);
+      color: #f33;
+      letter-spacing: 6px;
+      text-shadow:
+        0 0 18px #f33,
+        0 0 48px #f0f,
+        0 0 90px #f00;
     }
 
-    .power-list div {
-      padding: 7px 8px;
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 10px;
-      background: rgba(255,255,255,.04);
+    #gameOverOverlay p {
+      font-size: clamp(14px, 2.6vh, 20px);
     }
   `;
 
@@ -309,11 +286,10 @@
   const html = `
     <canvas id="game"></canvas>
 
-    <div id="orientationHint">📱 Gira el dispositivo a horizontal para una mejor experiencia</div>
-
     <div id="hud">
       <div class="hud-box">SCORE <span id="scoreVal">0</span></div>
-      <div class="hud-box">LVL <span id="levelVal">1</span></div>
+      <div class="hud-box">NIVEL <span id="levelVal">2</span></div>
+      <div class="hud-box">PROGRESO <span id="progressVal">0/0</span></div>
       <div class="hud-box" id="livesVal">♥♥♥</div>
       <button id="hudMusicBtn" class="hud-btn">♪</button>
       <button id="pauseBtn">⏸</button>
@@ -337,45 +313,27 @@
         <b>PANTALLA 2 — MAR DIGITAL</b><br />
         Arrastra sobre la pantalla para mover la nave.<br />
         Usa <b>◀ ▶</b> y <b>⚡</b> para disparar.<br />
-        Nueva zona: <b>HACK MODE</b> y <b>cadena de energía</b>.<br />
-        Si caes, regresarás a la pantalla 1.
+        La dificultad se cambia en el menú principal.
       </p>
-
-      <div class="menu-row">
-        <button class="toggle diff-btn" data-diff="easy">FÁCIL</button>
-        <button class="toggle diff-btn" data-diff="normal">NORMAL</button>
-        <button class="toggle diff-btn" data-diff="hard">DIFÍCIL</button>
-      </div>
 
       <div class="menu-row">
         <button id="autofireBtn" class="toggle">AUTOFIRE: OFF</button>
         <button id="musicBtn" class="toggle">MÚSICA: ON</button>
       </div>
 
-      <div class="power-list">
-        <div style="color:#0ff;">🛡 ESCUDO</div>
-        <div style="color:#f0f;">⚡ OVERDRIVE</div>
-        <div style="color:#ff0;">▲ TRI-SHOT</div>
-        <div style="color:#0f8;">♥ NANO-REPAIR</div>
-        <div style="color:#f33;">✸ EMP</div>
-        <div style="color:#b26bff;">×2 SCORE</div>
-      </div>
-
-      <button id="playBtn" class="btn">INICIAR PANTALLA 2</button>
-      <div class="tiny">Música y SFX synthwave generados en tiempo real</div>
+      <button id="playBtn" class="btn">INICIAR NIVEL 2</button>
     </div>
 
     <div id="pauseOverlay" class="overlay hidden">
-      <h2>⏸ NAVY PROJECT II</h2>
-      <p>Sistema en pausa.</p>
+      <h2>PAUSA</h2>
       <button id="resumeBtn" class="btn">CONTINUAR</button>
       <button id="restartBtn" class="btn">REINICIAR</button>
     </div>
 
     <div id="gameOverOverlay" class="overlay hidden">
-      <h2 id="gameOverTitle">HAS CAÍDO</h2>
+      <h2 id="gameOverTitle">GAME OVER</h2>
       <p id="finalScore"></p>
-      <button id="retryBtn" class="btn">VOLVER A PANTALLA 1</button>
+      <button id="retryBtn" class="btn">VOLVER AL MENÚ PRINCIPAL</button>
     </div>
 
     <div id="victoryOverlay" class="overlay hidden">
@@ -421,37 +379,66 @@
     } catch (e) {}
   }
 
+  const DIFFICULTIES = {
+    easy: {
+      lives: 6,
+      speed: 0.82,
+      spawn: 1.25,
+      power: 0.32,
+      duration: 1.5,
+      fireDelay: 0.18,
+      rapidDelay: 0.08,
+      enemyShootMul: 1.50,
+      enemyShotSpeed: 0.78,
+      shotHit: 0.12,
+      maxPlayerBullets: 18,
+      maxEnemyBullets: 16,
+      maxParticles: 130,
+      toSpawn: lvl => 10 + lvl * 3
+    },
+    normal: {
+      lives: 5,
+      speed: 1.08,
+      spawn: 0.90,
+      power: 0.22,
+      duration: 1.0,
+      fireDelay: 0.22,
+      rapidDelay: 0.10,
+      enemyShootMul: 1.0,
+      enemyShotSpeed: 1.0,
+      shotHit: 0.15,
+      maxPlayerBullets: 24,
+      maxEnemyBullets: 22,
+      maxParticles: 170,
+      toSpawn: lvl => 13 + lvl * 4
+    },
+    hard: {
+      lives: 3,
+      speed: 1.38,
+      spawn: 0.68,
+      power: 0.16,
+      duration: 0.8,
+      fireDelay: 0.26,
+      rapidDelay: 0.12,
+      enemyShootMul: 0.75,
+      enemyShotSpeed: 1.25,
+      shotHit: 0.18,
+      maxPlayerBullets: 30,
+      maxEnemyBullets: 28,
+      maxParticles: 210,
+      toSpawn: lvl => 16 + lvl * 5
+    }
+  };
+
   let difficulty = loadPref('navyDifficulty', 'normal');
+  if (!DIFFICULTIES[difficulty]) difficulty = 'normal';
+
   let autofire = loadPref('navyAutofire', 'off') === 'on';
   let musicEnabled = loadPref('navyMusic', 'on') === 'on';
 
-  if (!DIFFICULTIES()[difficulty]) difficulty = 'normal';
-
-  function DIFFICULTIES() {
-    return {
-      easy: {
-        lives: 6, speed: 0.82, spawn: 1.25, power: 0.32, duration: 1.5,
-        fireDelay: 0.18, rapidDelay: 0.08, enemyShootMul: 1.50, enemyShotSpeed: 0.78,
-        shotHit: 0.12, maxPlayerBullets: 18, maxEnemyBullets: 16,
-        maxParticles: 130, toSpawn: lvl => 10 + lvl * 3
-      },
-      normal: {
-        lives: 5, speed: 1.08, spawn: 0.90, power: 0.22, duration: 1.0,
-        fireDelay: 0.22, rapidDelay: 0.10, enemyShootMul: 1.0, enemyShotSpeed: 1.0,
-        shotHit: 0.15, maxPlayerBullets: 24, maxEnemyBullets: 22,
-        maxParticles: 170, toSpawn: lvl => 13 + lvl * 4
-      },
-      hard: {
-        lives: 3, speed: 1.38, spawn: 0.68, power: 0.16, duration: 0.8,
-        fireDelay: 0.26, rapidDelay: 0.12, enemyShootMul: 0.75, enemyShotSpeed: 1.25,
-        shotHit: 0.18, maxPlayerBullets: 30, maxEnemyBullets: 28,
-        maxParticles: 210, toSpawn: lvl => 16 + lvl * 5
-      }
-    };
-  }
-
   const scoreVal = $('scoreVal');
   const levelVal = $('levelVal');
+  const progressVal = $('progressVal');
   const livesVal = $('livesVal');
   const pauseBtn = $('pauseBtn');
   const controls = $('controls');
@@ -470,6 +457,7 @@
   const restartBtn = $('restartBtn');
   const nextLevelBtn = $('nextLevelBtn');
   const countdownScore = $('countdownScore');
+  const gameOverTitle = $('gameOverTitle');
 
   const cvs = $('game');
   const ctx = cvs.getContext('2d');
@@ -487,12 +475,6 @@
   const CAM = 300;
   const Z_FAR = 1500;
   const BPM = 124;
-
-  function computeShipZ() {
-    const desiredY = H - Math.max(88, H * 0.22);
-    const p = clamp((desiredY - horizon) / (H - horizon), 0.30, 0.88);
-    return Math.max(70, CAM / p - CAM);
-  }
 
   function resize() {
     const vv = window.visualViewport;
@@ -512,7 +494,7 @@
     horizon = H * (W > H ? 0.28 : 0.32);
     roadHalf = Math.min(W * 0.38, H * 0.85);
     sizeScale = clamp(Math.min(W, H) / 420, 0.70, 1.50);
-    SHIP_Z = computeShipZ();
+    SHIP_Z = 140;
 
     stars = Array.from({ length: 80 }, () => ({
       x: Math.random(),
@@ -559,28 +541,69 @@
 
   const ENEMY_TYPES = {
     bit: {
-      hp: 1, size: [22, 34], speed: [360, 440], shoot: [999, 999], score: 15,
-      hue: [160, 190], aim: 0, amp: [0.10, 0.30], freq: [1.2, 2.2]
+      hp: 1,
+      size: [22, 34],
+      speed: [360, 440],
+      shoot: [999, 999],
+      score: 15,
+      hue: [160, 190],
+      amp: [0.10, 0.30],
+      freq: [1.2, 2.2]
     },
     wasp: {
-      hp: 2, size: [30, 46], speed: [300, 380], shoot: [1.4, 2.4], score: 25,
-      hue: [35, 60], aim: 0.70, amp: [0.08, 0.20], freq: [0.8, 1.6]
+      hp: 2,
+      size: [30, 46],
+      speed: [300, 380],
+      shoot: [1.4, 2.4],
+      score: 25,
+      hue: [35, 60],
+      amp: [0.08, 0.20],
+      freq: [0.8, 1.6],
+      aim: 0.70
     },
     orbiter: {
-      hp: 3, size: [38, 58], speed: [230, 300], shoot: [1.6, 2.6], score: 35,
-      hue: [280, 320], aim: 0.50, amp: [0.05, 0.15], freq: [0.6, 1.2]
+      hp: 3,
+      size: [38, 58],
+      speed: [230, 300],
+      shoot: [1.6, 2.6],
+      score: 35,
+      hue: [280, 320],
+      amp: [0.05, 0.15],
+      freq: [0.6, 1.2],
+      aim: 0.50
     },
     angler: {
-      hp: 4, size: [52, 78], speed: [160, 220], shoot: [1.8, 2.8], score: 50,
-      hue: [195, 235], aim: 0.60, amp: [0.03, 0.10], freq: [0.4, 0.8]
+      hp: 4,
+      size: [52, 78],
+      speed: [160, 220],
+      shoot: [1.8, 2.8],
+      score: 50,
+      hue: [195, 235],
+      amp: [0.03, 0.10],
+      freq: [0.4, 0.8],
+      aim: 0.60
     },
     reaper: {
-      hp: 2, size: [34, 52], speed: [340, 420], shoot: [2.0, 3.2], score: 30,
-      hue: [350, 380], aim: 0.65, amp: [0.20, 0.40], freq: [1.4, 2.4]
+      hp: 2,
+      size: [34, 52],
+      speed: [340, 420],
+      shoot: [2.0, 3.2],
+      score: 30,
+      hue: [350, 380],
+      amp: [0.20, 0.40],
+      freq: [1.4, 2.4],
+      aim: 0.65
     },
     boss: {
-      hp: 1, size: [150, 180], speed: [70, 90], shoot: [1.1, 1.6], score: 1500,
-      hue: [300, 340], aim: 0.80, amp: [0.35, 0.35], freq: [0.4, 0.4]
+      hp: 1,
+      size: [150, 180],
+      speed: [70, 90],
+      shoot: [1.1, 1.6],
+      score: 1500,
+      hue: [300, 340],
+      amp: [0.35, 0.35],
+      freq: [0.4, 0.4],
+      aim: 0.80
     }
   };
 
@@ -595,11 +618,13 @@
     last: 0,
     shake: 0,
     flash: 0,
-    combo: 0,
-    comboTimer: 0,
     bossActive: false,
     victoryPending: false,
-    hackEnergy: 0
+    hackEnergy: 0,
+    quota: 20,
+    killed: 0,
+    spawned: 0,
+    spawnTimer: 1
   };
 
   const ship = {
@@ -636,7 +661,7 @@
   };
 
   function currentCfg() {
-    return DIFFICULTIES()[difficulty] || DIFFICULTIES().normal;
+    return DIFFICULTIES[difficulty];
   }
 
   function makeLevelCfg(lvl) {
@@ -665,7 +690,13 @@
 
   function updateHUD() {
     scoreVal.textContent = state.score;
-    levelVal.textContent = state.level;
+    levelVal.textContent = GAME_LEVEL;
+
+    if (levelCfg.boss) {
+      progressVal.textContent = 'JEFE';
+    } else {
+      progressVal.textContent = `${state.killed}/${state.quota}`;
+    }
 
     const lives = Math.max(0, state.lives);
     const empty = Math.max(0, state.maxLives - lives);
@@ -702,10 +733,6 @@
     const y = horizon + (b.originY - horizon) * (p / b.pShip);
 
     return { x, y, s: p };
-  }
-
-  function getComboMult() {
-    return Math.min(4, 1 + Math.floor(state.combo / 8) * 0.5);
   }
 
   function saveHighIfNecessary() {
@@ -896,26 +923,10 @@
       const s = step % 16;
 
       const chords = [
-        {
-          bass: 82.41,
-          arp: [164.81, 196.00, 246.94, 329.63],
-          pad: [82.41, 123.47, 164.81, 246.94]
-        },
-        {
-          bass: 65.41,
-          arp: [130.81, 164.81, 196.00, 261.63],
-          pad: [65.41, 98.00, 130.81, 196.00]
-        },
-        {
-          bass: 98.00,
-          arp: [146.83, 196.00, 246.94, 293.66],
-          pad: [98.00, 146.83, 196.00, 246.94]
-        },
-        {
-          bass: 73.42,
-          arp: [146.83, 185.00, 220.00, 293.66],
-          pad: [73.42, 110.00, 146.83, 220.00]
-        }
+        { bass: 82.41, arp: [164.81, 196.00, 246.94, 329.63], pad: [82.41, 123.47, 164.81, 246.94] },
+        { bass: 65.41, arp: [130.81, 164.81, 196.00, 261.63], pad: [65.41, 98.00, 130.81, 196.00] },
+        { bass: 98.00, arp: [146.83, 196.00, 246.94, 293.66], pad: [98.00, 146.83, 196.00, 246.94] },
+        { bass: 73.42, arp: [146.83, 185.00, 220.00, 293.66], pad: [73.42, 110.00, 146.83, 220.00] }
       ];
 
       const c = chords[bar];
@@ -1021,21 +1032,11 @@
   };
 
   function updateMusicButtons() {
-    if (musicBtn) {
-      musicBtn.textContent = `MÚSICA: ${musicEnabled ? 'ON' : 'OFF'}`;
-      musicBtn.classList.toggle('active', musicEnabled);
-    }
+    musicBtn.textContent = `MÚSICA: ${musicEnabled ? 'ON' : 'OFF'}`;
+    musicBtn.classList.toggle('active', musicEnabled);
 
-    if (hudMusicBtn) {
-      hudMusicBtn.textContent = musicEnabled ? '♪' : '♪✕';
-      hudMusicBtn.classList.toggle('off', !musicEnabled);
-    }
-  }
-
-  function updateDifficultyButtons() {
-    document.querySelectorAll('.diff-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.diff === difficulty);
-    });
+    hudMusicBtn.textContent = musicEnabled ? '♪' : '♪✕';
+    hudMusicBtn.classList.toggle('off', !musicEnabled);
   }
 
   function updateAutofireButton() {
@@ -1094,11 +1095,15 @@
     state.time = 0;
     state.shake = 0;
     state.flash = 0;
-    state.combo = 0;
-    state.comboTimer = 0;
     state.bossActive = false;
     state.victoryPending = false;
     state.hackEnergy = 0;
+
+    levelCfg = makeLevelCfg(1);
+    state.quota = levelCfg.toSpawn;
+    state.killed = 0;
+    state.spawned = 0;
+    state.spawnTimer = 1;
 
     bullets = [];
     aliens = [];
@@ -1121,8 +1126,6 @@
     ship.invuln = 1.5;
     ship.lastFire = -999;
     ship.muzzle = 0;
-
-    levelCfg = makeLevelCfg(1);
 
     firing = false;
     moveDir = 0;
@@ -1150,6 +1153,7 @@
 
   function endGame() {
     state.mode = 'gameover';
+
     saveHighIfNecessary();
 
     try {
@@ -1159,29 +1163,63 @@
 
     controls.classList.add('hidden');
 
-    finalScore.innerHTML = `PUNTUACIÓN: ${state.score}<br>RÉCORD: ${state.high}<br><br>Regresando a Pantalla 1...`;
+    gameOverTitle.textContent = 'GAME OVER';
+
+    finalScore.innerHTML =
+      `PUNTUACIÓN: ${state.score}<br>RÉCORD: ${state.high}<br><br>Volviendo al menú principal...`;
+
+    retryBtn.textContent = 'VOLVER AL MENÚ PRINCIPAL';
 
     gameOverOverlay.classList.remove('hidden');
 
     if (redirectTimeout) clearTimeout(redirectTimeout);
 
     redirectTimeout = setTimeout(() => {
-      window.location.href = 'navy_project.html';
+      window.location.href = MAIN_MENU_FILE;
     }, 3500);
   }
 
-  function nextLevel() {
-    state.level++;
-    levelCfg = makeLevelCfg(state.level);
-    ship.invuln = Math.max(ship.invuln, 1.4);
-    enemyBullets = [];
+  function showVictory() {
+    state.mode = 'victory';
+
+    controls.classList.add('hidden');
+    victoryOverlay.classList.remove('hidden');
+
+    saveHighIfNecessary();
+
+    if (NEXT_LEVEL_FILE) {
+      nextLevelBtn.textContent = `INICIAR NIVEL ${GAME_LEVEL + 1}`;
+      nextLevelBtn.disabled = true;
+    } else {
+      nextLevelBtn.textContent = 'FIN DEL JUEGO';
+      nextLevelBtn.disabled = true;
+    }
+
+    let displayScore = state.score;
+    countdownScore.textContent = displayScore;
+
+    const step = Math.max(25, Math.floor(displayScore / 80) || 25);
+
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    countdownInterval = setInterval(() => {
+      displayScore -= step;
+
+      if (displayScore <= 0) {
+        displayScore = 0;
+        clearInterval(countdownInterval);
+
+        if (NEXT_LEVEL_FILE) {
+          nextLevelBtn.disabled = false;
+        }
+      }
+
+      countdownScore.textContent = displayScore;
+    }, 50);
 
     try {
       Synth.level();
     } catch (e) {}
-
-    addText(W / 2, H * 0.35, `NIVEL ${state.level}`, '#7fffd4', 1.4, 30);
-    updateHUD();
   }
 
   function loseLife() {
@@ -1192,8 +1230,6 @@
     ship.invuln = 2.2;
     state.shake = 18;
     state.flash = 1;
-    state.combo = 0;
-    state.comboTimer = 0;
 
     try {
       Synth.hit();
@@ -1208,7 +1244,6 @@
 
   function chooseEnemyType() {
     const lvl = state.level;
-
     const table = [
       { type: 'bit', w: 28 },
       { type: 'wasp', w: 22 + lvl },
@@ -1263,6 +1298,7 @@
     });
 
     levelCfg.spawned = 1;
+    state.bossActive = true;
 
     addText(W / 2, H * 0.24, 'KRAKEN NÚCLEO', '#f0f', 1.6, 34);
     addText(W / 2, H * 0.30, 'Prepárate para esquivar', '#ff9a3d', 1.2, 18);
@@ -1270,6 +1306,8 @@
     try {
       Synth.bossWarn();
     } catch (e) {}
+
+    updateHUD();
   }
 
   function spawnAlien() {
@@ -1286,7 +1324,6 @@
     const rNear = base * sizeScale;
 
     let hp = def.hp;
-
     if (state.level > 4) hp += 1;
 
     const speed = rand(def.speed[0], def.speed[1]) * cfg.speed * (1 + state.level * 0.03);
@@ -1311,11 +1348,12 @@
       shootMin,
       shootMax,
       score: def.score,
-      aim: clamp(def.aim + state.level * 0.02, 0, 0.9),
+      aim: clamp((def.aim || 0.5) + state.level * 0.02, 0, 0.9),
       dead: false
     });
 
-    levelCfg.spawned++;
+    state.spawned++;
+    updateHUD();
   }
 
   function spawnPower(worldX, z) {
@@ -1343,7 +1381,7 @@
   }
 
   function addScore(amount, x, y, color) {
-    const mult = (effects.multi > 0 ? 2 : 1) * getComboMult();
+    const mult = (effects.multi > 0 ? 2 : 1);
     const gained = Math.round(amount * mult);
 
     state.score += gained;
@@ -1451,7 +1489,7 @@
     const speed = rand(360, 480) * cfg.enemyShotSpeed * speedMul * (1 + state.level * 0.02);
     const time = Math.max(0.2, o.z / speed);
 
-    const inaccuracy = (1 - o.aim) * 0.55;
+    const inaccuracy = (1 - (o.aim || 0.5)) * 0.55;
     const targetX = clamp(ship.worldX + targetOffset + rand(-inaccuracy, inaccuracy), -1.1, 1.1);
 
     const vx = (targetX - o.worldX) / time;
@@ -1461,7 +1499,6 @@
       z: o.z,
       vx,
       speed,
-      rNear: 7 * sizeScale,
       hue: o.hue,
       checked: false,
       dead: false
@@ -1484,7 +1521,6 @@
       z: o.z,
       vx,
       speed,
-      rNear: 7 * sizeScale,
       hue: o.hue,
       checked: false,
       dead: false
@@ -1560,46 +1596,6 @@
     }
   }
 
-  function startVictorySequence() {
-    if (state.victoryPending) return;
-
-    state.victoryPending = true;
-
-    setTimeout(() => {
-      showVictory();
-    }, 1600);
-  }
-
-  function showVictory() {
-    state.mode = 'victory';
-    controls.classList.add('hidden');
-    victoryOverlay.classList.remove('hidden');
-
-    saveHighIfNecessary();
-
-    nextLevelBtn.textContent = 'VOLVER A PANTALLA 1';
-    nextLevelBtn.disabled = true;
-
-    let displayScore = state.score;
-    countdownScore.textContent = displayScore;
-
-    const step = Math.max(25, Math.floor(displayScore / 80));
-
-    if (countdownInterval) clearInterval(countdownInterval);
-
-    countdownInterval = setInterval(() => {
-      displayScore -= step;
-
-      if (displayScore <= 0) {
-        displayScore = 0;
-        clearInterval(countdownInterval);
-        nextLevelBtn.disabled = false;
-      }
-
-      countdownScore.textContent = displayScore;
-    }, 50);
-  }
-
   function damageAlien(o, dmg, chainDepth = 0) {
     if (!o || o.dead) return;
 
@@ -1621,16 +1617,10 @@
     const cfg = currentCfg();
     const pr = project(o.z, o.worldX);
 
-    state.combo++;
-    state.comboTimer = 2.8;
-
-    if (state.combo > 0 && state.combo % 10 === 0) {
-      addText(W / 2, H * 0.26, `COMBO x${state.combo}!`, '#ff0', 1.0, 26);
-    }
-
     if (o.type === 'boss') {
       state.shake = 35;
       state.flash = 1;
+      state.bossActive = false;
 
       explode(pr.x, pr.y, o.hue, 130, 2.8);
 
@@ -1657,7 +1647,11 @@
       spawnPower(clamp(o.worldX - 0.12, -1, 1), o.z);
       spawnPower(clamp(o.worldX + 0.12, -1, 1), o.z);
 
-      startVictorySequence();
+      state.victoryPending = true;
+
+      setTimeout(() => {
+        showVictory();
+      }, 1600);
     } else {
       explode(pr.x, pr.y, o.hue, 16, Math.max(0.5, pr.s));
 
@@ -1667,6 +1661,7 @@
 
       addScore(o.score, pr.x, pr.y, `hsl(${o.hue},100%,70%)`);
 
+      state.killed++;
       addHack(o.type === 'angler' ? 10 : o.type === 'orbiter' ? 8 : 5);
 
       if (givePower) {
@@ -1700,6 +1695,8 @@
           }
         }
       }
+
+      updateHUD();
     }
   }
 
@@ -1763,6 +1760,31 @@
     }
   }
 
+  function nextLevel() {
+    state.level++;
+    levelCfg = makeLevelCfg(state.level);
+    state.killed = 0;
+    state.quota = levelCfg.toSpawn;
+    state.spawned = 0;
+    state.spawnTimer = 1;
+    state.bossActive = false;
+
+    ship.invuln = Math.max(ship.invuln, 1.4);
+    enemyBullets = [];
+
+    try {
+      Synth.level();
+    } catch (e) {}
+
+    if (levelCfg.boss) {
+      addText(W / 2, H * 0.35, '¡JEFE!', '#f33', 1.4, 34);
+    } else {
+      addText(W / 2, H * 0.35, `OLEADA ${state.level}`, '#7fffd4', 1.4, 30);
+    }
+
+    updateHUD();
+  }
+
   function updateParticlesTexts(dt) {
     particles.forEach(p => {
       p.x += p.vx * dt;
@@ -1801,11 +1823,6 @@
     effects.shield = Math.max(0, effects.shield - dt);
     effects.hack = Math.max(0, effects.hack - dt);
 
-    if (state.comboTimer > 0) {
-      state.comboTimer -= dt;
-      if (state.comboTimer <= 0) state.combo = 0;
-    }
-
     ship.invuln = Math.max(0, ship.invuln - dt);
     ship.muzzle = Math.max(0, ship.muzzle - dt);
 
@@ -1820,9 +1837,6 @@
       updatePowerHud();
       return;
     }
-
-    const hasBoss = levelCfg.boss || aliens.some(a => a.type === 'boss');
-    state.bossActive = hasBoss;
 
     ship.prevWorldX = ship.worldX;
 
@@ -1844,14 +1858,12 @@
     }
 
     if (levelCfg.spawned < levelCfg.toSpawn) {
-      levelCfg.timer -= dt;
+      state.spawnTimer -= dt;
 
-      if (levelCfg.timer <= 0) {
+      if (state.spawnTimer <= 0) {
         spawnAlien();
-        levelCfg.timer = levelCfg.interval * rand(0.7, 1.3);
+        state.spawnTimer = levelCfg.interval * rand(0.7, 1.3);
       }
-    } else if (aliens.length === 0 && !state.victoryPending) {
-      nextLevel();
     }
 
     bullets.forEach(b => {
@@ -1970,9 +1982,7 @@
         const pr = project(2, o.worldX);
         explode(pr.x, H - 25, o.hue, 18, 1.4);
 
-        if (effects.shield > 0) {
-          addScore(Math.floor(o.score / 2), pr.x, pr.y, '#0ff');
-        } else {
+        if (effects.shield <= 0) {
           loseLife();
         }
       }
@@ -2066,32 +2076,38 @@
     powerups = powerups.filter(x => !x.dead);
 
     updatePowerHud();
+
+    if (!levelCfg.boss && state.spawned >= state.quota && aliens.length === 0) {
+      nextLevel();
+    }
   }
 
   function updatePowerHud() {
     let html = '';
 
-    if (effects.shield > 0) html += powerTag('🛡 ESCUDO', '#0ff', effects.shield);
-    if (effects.rapid > 0) html += powerTag('⚡ OVERDRIVE', '#f0f', effects.rapid);
-    if (effects.triple > 0) html += powerTag('▲ TRI-SHOT', '#ff0', effects.triple);
-    if (effects.multi > 0) html += powerTag('×2 SCORE', '#b26bff', effects.multi);
-
-    if (effects.hack > 0) {
-      html += powerTag('🧠 HACK MODE', '#0ff', effects.hack);
-    } else if (state.hackEnergy > 0) {
-      html += powerTag(`🧠 HACK ${Math.floor(state.hackEnergy)}%`, '#7fffd4', 0);
+    if (effects.shield > 0) {
+      html += `<div class="power-tag" style="color:#0ff;border-color:#0ff;box-shadow:0 0 10px #0ff;">🛡 ESCUDO ${effects.shield.toFixed(1)}s</div>`;
     }
 
-    if (state.combo >= 5) {
-      html += powerTag(`🔥 COMBO x${getComboMult().toFixed(1)}`, '#ff0', state.comboTimer);
+    if (effects.rapid > 0) {
+      html += `<div class="power-tag" style="color:#f0f;border-color:#f0f;box-shadow:0 0 10px #f0f;">⚡ OVERDRIVE ${effects.rapid.toFixed(1)}s</div>`;
+    }
+
+    if (effects.triple > 0) {
+      html += `<div class="power-tag" style="color:#ff0;border-color:#ff0;box-shadow:0 0 10px #ff0;">▲ TRI-SHOT ${effects.triple.toFixed(1)}s</div>`;
+    }
+
+    if (effects.multi > 0) {
+      html += `<div class="power-tag" style="color:#b26bff;border-color:#b26bff;box-shadow:0 0 10px #b26bff;">×2 SCORE ${effects.multi.toFixed(1)}s</div>`;
+    }
+
+    if (effects.hack > 0) {
+      html += `<div class="power-tag" style="color:#0ff;border-color:#0ff;box-shadow:0 0 10px #0ff;">🧠 HACK MODE ${effects.hack.toFixed(1)}s</div>`;
+    } else if (state.hackEnergy > 0) {
+      html += `<div class="power-tag" style="color:#7fffd4;border-color:#7fffd4;box-shadow:0 0 10px #7fffd4;">🧠 HACK ${Math.floor(state.hackEnergy)}%</div>`;
     }
 
     powerHud.innerHTML = html;
-  }
-
-  function powerTag(label, color, t) {
-    const timeText = t > 0 ? ` ${t.toFixed(1)}s` : '';
-    return `<div class="power-tag" style="color:${color};border-color:${color};box-shadow:0 0 10px ${color};">${label}${timeText}</div>`;
   }
 
   let animTime = 0;
@@ -2595,12 +2611,6 @@
       ctx.fillStyle = '#0a0a0a';
 
       ctx.beginPath();
-      ctx.arc(r * 0.35, -r * 0.95, r * 0.035, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#050505';
-
-      ctx.beginPath();
       ctx.arc(0, r * 0.15, r * 0.35, 0, Math.PI);
       ctx.fill();
 
@@ -3055,11 +3065,13 @@
   resize();
   requestAnimationFrame(loop);
 
+  playBtn.textContent = `INICIAR NIVEL ${GAME_LEVEL}`;
+
   playBtn.addEventListener('click', startGame);
 
   retryBtn.addEventListener('click', () => {
     if (redirectTimeout) clearTimeout(redirectTimeout);
-    window.location.href = 'navy_project.html';
+    window.location.href = MAIN_MENU_FILE;
   });
 
   restartBtn.addEventListener('click', () => {
@@ -3071,15 +3083,9 @@
   pauseBtn.addEventListener('click', togglePause);
 
   nextLevelBtn.addEventListener('click', () => {
-    window.location.href = 'navy_project.html';
-  });
-
-  document.querySelectorAll('.diff-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      difficulty = btn.dataset.diff;
-      savePref('navyDifficulty', difficulty);
-      updateDifficultyButtons();
-    });
+    if (NEXT_LEVEL_FILE) {
+      window.location.href = NEXT_LEVEL_FILE;
+    }
   });
 
   autofireBtn.addEventListener('click', () => {
@@ -3191,6 +3197,5 @@
 
   updateHUD();
   updateMusicButtons();
-  updateDifficultyButtons();
   updateAutofireButton();
 })();
