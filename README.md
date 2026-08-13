@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. Elige **Explorar Demo** para probar con streams HLS públicos, o añade tu propia lista M3U / API Xtream autorizada.
+Abre `http://localhost:5173/IPT2.html`. Elige **Explorar Demo** para probar con streams HLS públicos, o añade tu propia lista M3U / API Xtream autorizada.
 
 ## Producción
 

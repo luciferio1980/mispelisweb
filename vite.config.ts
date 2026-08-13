@@ -144,8 +144,48 @@ function iptvProxy(): Plugin {
   };
 }
 
+function ipt2HtmlEntry(): Plugin {
+  const toEntry = (req: IncomingMessage) => {
+    const raw = req.url ?? "/";
+    const [pathname, search = ""] = raw.split("?");
+    const qs = search ? `?${search}` : "";
+    if (pathname === "/" || pathname === "/index.html" || pathname === "/index") {
+      req.url = `/IPT2.html${qs}`;
+      return;
+    }
+    if (
+      req.method === "GET" &&
+      pathname &&
+      !pathname.startsWith("/src") &&
+      !pathname.startsWith("/@") &&
+      !pathname.startsWith("/node_modules") &&
+      !pathname.startsWith("/__proxy") &&
+      !pathname.startsWith("/IPT2.html") &&
+      !pathname.includes(".")
+    ) {
+      req.url = `/IPT2.html${qs}`;
+    }
+  };
+
+  return {
+    name: "ipt2-html-entry",
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        toEntry(req);
+        next();
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        toEntry(req);
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), iptvProxy()],
+  plugins: [ipt2HtmlEntry(), react(), iptvProxy()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -158,6 +198,7 @@ export default defineConfig({
     target: "es2022",
     sourcemap: false,
     rollupOptions: {
+      input: path.resolve(__dirname, "IPT2.html"),
       output: {
         manualChunks: {
           player: ["hls.js"],
